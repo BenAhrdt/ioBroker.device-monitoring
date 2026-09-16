@@ -1,0 +1,131 @@
+{
+	"common": {
+		"name": "watch-devices",
+		"version": "0.0.1",
+		"news": {
+			"0.0.1": {
+				"en": "initial release",
+				"de": "Erstveröffentlichung",
+				"ru": "Начальная версия",
+				"pt": "lançamento inicial",
+				"nl": "Eerste uitgave",
+				"fr": "Première version",
+				"it": "Versione iniziale",
+				"es": "Versión inicial",
+				"pl": "Pierwsze wydanie",
+				"uk": "Початкова версія",
+				"zh-cn": "首次出版"
+			}
+		},
+		"titleLang": {
+			"en": "Watch-Devices",
+			"de": "Uhren-Geräte",
+			"ru": "Часы-устройства",
+			"pt": "Dispositivos de relógio",
+			"nl": "Horloge-apparaten",
+			"fr": "Appareils de montre",
+			"it": "Dispositivi di orologio",
+			"es": "Dispositivos de reloj",
+			"pl": "Urządzenia do oglądania",
+			"uk": "Годинники-пристрої",
+			"zh-cn": "手表设备"
+		},
+		"desc": {
+			"en": "Watches your devined device states and build warnings and alerts",
+			"de": "Überwacht die Zustände Ihrer definierten Geräte und erstellt Warnungen und Alarme",
+			"ru": "Отслеживает состояния вашего устройства и создает предупреждения и оповещения.",
+			"pt": "Observa os estados do seu dispositivo e cria avisos e alertas",
+			"nl": "Houdt de status van uw apparaat in de gaten en genereert waarschuwingen en alerts",
+			"fr": "Surveille les états de votre appareil et crée des avertissements et des alertes",
+			"it": "Controlla gli stati del tuo dispositivo ideato e crea avvisi e avvisi",
+			"es": "Observa los estados de tu dispositivo y genera advertencias y alertas.",
+			"pl": "Obserwuje stany Twojego urządzenia i tworzy ostrzeżenia i alerty",
+			"uk": "Спостерігає за станом вашого пристрою та створює попередження та сповіщення",
+			"zh-cn": "监视您的设备状态并构建警告和警报"
+		},
+		"authors": [
+			"BenAhrdt <github@ben-schmidt.net>"
+		],
+		"keywords": [
+			"watch",
+			"device",
+			"warning",
+			"alert"
+		],
+		"licenseInformation": {
+			"type": "free",
+			"license": "MIT"
+		},
+		"platform": "Javascript/Node.js",
+		"icon": "watch-devices.png",
+		"enabled": true,
+		"extIcon": "https://raw.githubusercontent.com/BenAhrdt/ioBroker.watch-devices/main/admin/watch-devices.png",
+		"readme": "https://github.com/BenAhrdt/ioBroker.watch-devices/blob/main/README.md",
+		"loglevel": "info",
+		"tier": 3,
+		"mode": "daemon",
+		"type": "alarm",
+		"compact": true,
+		"connectionType": "local",
+		"dataSource": "push",
+		"adminUI": {
+			"config": "json",
+			"tab": "materialize"
+		},
+		"adminTab": {
+			"singleton": true,
+			"name": {
+				"en": "Watch-Devices",
+				"de": "Uhren-Geräte",
+				"ru": "Часы-устройства",
+				"pt": "Dispositivos de relógio",
+				"nl": "Horloge-apparaten",
+				"fr": "Appareils de montre",
+				"it": "Dispositivi di orologio",
+				"es": "Dispositivos de reloj",
+				"pl": "Urządzenia do oglądania",
+				"uk": "Годинники-пристрої",
+				"zh-cn": "手表设备"
+			},
+			"link": ""
+		},
+		"dependencies": [
+			{
+				"js-controller": ">=6.0.11"
+			}
+		],
+		"globalDependencies": [
+			{
+				"admin": ">=7.0.23"
+			}
+		]
+	},
+	"native": {
+		"option1": true,
+		"option2": "42"
+	},
+	"objects": [],
+	"instanceObjects": [
+		{
+			"_id": "info",
+			"type": "channel",
+			"common": {
+				"name": "Information"
+			},
+			"native": {}
+		},
+		{
+			"_id": "info.connection",
+			"type": "state",
+			"common": {
+				"role": "indicator.connected",
+				"name": "Device or service connected",
+				"type": "boolean",
+				"read": true,
+				"write": false,
+				"def": false
+			},
+			"native": {}
+		}
+	]
+}
