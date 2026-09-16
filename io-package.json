@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.3",
+    "version": "0.0.4",
     "news": {
+      "0.0.4": {
+        "en": "Fix saving the function name and displaying the option to save it as a function template",
+        "de": "Fix: Den Funktionsnamen speichern und als Funktionsvorlage anzeigen",
+        "ru": "Исправить сохранение имени функции и отображение возможности сохранения его в качестве шаблона функции",
+        "pt": "Corrige salvar o nome da função e exibir a opção de salvá-la como modelo",
+        "nl": "Fix: het opslaan van de functienaam en het weergeven van de optie om deze als functiesjabloon op te slaan",
+        "fr": "Correction du nom de la fonction et de l'affichage de l'option comme modèle de fonction",
+        "it": "Risolto il problema con il salvataggio del nome della funzione come modello",
+        "es": "Corregir guardar el nombre de la función y mostrar la opción de guardarla como plantilla",
+        "pl": "Napraw zapisywanie nazwy funkcji i wyświetlanie opcji zapisania jej jako szablonu funkcji",
+        "uk": "Виправлено збереження назви функції та відображення опції збереження її як шаблону функції",
+        "zh-cn": "修复保存函数名称并显示将其另存为函数模板的选项"
+      },
       "0.0.3": {
         "en": "change Icon",
         "de": "Symbol ändern",
