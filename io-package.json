@@ -70,9 +70,9 @@
       "license": "MIT"
     },
     "platform": "Javascript/Node.js",
-    "icon": "device-monitoring-v2.png",
+    "icon": "device-monitoring.png",
     "enabled": true,
-    "extIcon": "https://raw.githubusercontent.com/BenAhrdt/ioBroker.device-monitoring/main/admin/device-monitoring-v2.png",
+    "extIcon": "https://raw.githubusercontent.com/BenAhrdt/ioBroker.device-monitoring/main/admin/device-monitoring.png",
     "readme": "https://github.com/BenAhrdt/ioBroker.device-monitoring/blob/main/README.md",
     "loglevel": "info",
     "tier": 3,
