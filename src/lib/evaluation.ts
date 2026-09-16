@@ -28,39 +28,18 @@ export interface DeviceConfiguration {
 	states: WatchedStateConfiguration[];
 }
 
-export type FunctionProfile = Pick<WatchedStateConfiguration, 'warning' | 'alarm' | 'staleWarning'>;
+export interface FunctionTemplate {
+	warning: Pick<LimitConfiguration, 'enabled' | 'mode'>;
+	alarm: Pick<LimitConfiguration, 'enabled' | 'mode'>;
+	staleWarning: Pick<StaleWarningConfiguration, 'enabled'>;
+}
 
-/**
- * Builds the templates offered by the function autocomplete.
- *
- * Configuration order is significant: the last state using a function is its
- * current template. A state being edited can be preferred explicitly so opening
- * its form never replaces its limits with those of another state with the same
- * function.
- */
-export function getFunctionProfiles(
-	devices: DeviceConfiguration[],
-	preferred?: WatchedStateConfiguration,
-): Record<string, FunctionProfile> {
-	const profiles: Record<string, FunctionProfile> = {};
-	const add = (watched: WatchedStateConfiguration): void => {
-		if (watched.function) {
-			profiles[watched.function] = {
-				warning: { ...watched.warning },
-				alarm: { ...watched.alarm },
-				staleWarning: { ...watched.staleWarning },
-			};
-		}
+export function createFunctionTemplate(watched: WatchedStateConfiguration): FunctionTemplate {
+	return {
+		warning: { enabled: watched.warning.enabled, mode: watched.warning.mode },
+		alarm: { enabled: watched.alarm.enabled, mode: watched.alarm.mode },
+		staleWarning: { enabled: watched.staleWarning.enabled },
 	};
-	for (const device of devices) {
-		for (const watched of device.states) {
-			add(watched);
-		}
-	}
-	if (preferred) {
-		add(preferred);
-	}
-	return profiles;
 }
 
 export type WatchStatus = 'ok' | 'warning' | 'alarm' | 'timeout' | 'unknown';

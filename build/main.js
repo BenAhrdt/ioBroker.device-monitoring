@@ -109,11 +109,14 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
         icon: "add",
         description: t("Add monitored state", "\xDCberwachungs-State hinzuf\xFCgen"),
         handler: async (_id, context) => {
-          const data = await context.showForm(stateForm(this.adapter.getFunctionProfiles()), {
-            title: t("Add monitored state", "\xDCberwachungs-State hinzuf\xFCgen"),
-            data: defaultStateForm(),
-            buttons: ["apply", "cancel"]
-          });
+          const data = await context.showForm(
+            stateForm(this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames()),
+            {
+              title: t("Add monitored state", "\xDCberwachungs-State hinzuf\xFCgen"),
+              data: defaultStateForm(),
+              buttons: ["apply", "cancel"]
+            }
+          );
           if (!(data == null ? void 0 : data.sourceId) || !(data == null ? void 0 : data.name)) {
             return { refresh: "none" };
           }
@@ -128,11 +131,14 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
         icon: "settings",
         description: t("Edit monitored states", "\xDCberwachungs-States bearbeiten"),
         handler: async (_deviceId, context) => {
-          const data = await context.showForm(statesForm(device.states, this.adapter.getFunctionProfiles()), {
-            title: t("Edit monitored states", "\xDCberwachungs-States bearbeiten"),
-            data: Object.fromEntries(device.states.map((watched) => [watched.id, watched])),
-            buttons: ["apply", "cancel"]
-          });
+          const data = await context.showForm(
+            statesForm(device.states, this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames()),
+            {
+              title: t("Edit monitored states", "\xDCberwachungs-States bearbeiten"),
+              data: Object.fromEntries(device.states.map((watched) => [watched.id, watched])),
+              buttons: ["apply", "cancel"]
+            }
+          );
           if (!data) {
             return { refresh: "none" };
           }
@@ -215,13 +221,14 @@ function defaultStateForm() {
     staleWarning: { enabled: false, minutes: 60 }
   };
 }
-function stateForm(functionProfiles, stateId) {
-  const functions = Object.keys(functionProfiles).sort();
+function stateForm(functionTemplates, functionNames, stateId) {
+  const functions = [.../* @__PURE__ */ new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
   const key = (path) => stateId ? `${stateId}.${path}` : path;
   const data = (path) => stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`;
-  const profileValue = (prefix, field) => ({
-    alsoDependsOn: [key("function")],
-    calculateFunc: `(${JSON.stringify(functionProfiles)}[${data("function")}]?.${prefix}.${field} ?? ${data(`${prefix}.${field}`)})`,
+  const target = stateId ? `data[${JSON.stringify(stateId)}]` : "data";
+  const applyProfile = `(() => { const profile = ${JSON.stringify(functionTemplates)}[${data("function")}]; if (profile) { ${target}.warning.enabled = profile.warning.enabled; ${target}.alarm.enabled = profile.alarm.enabled; ${target}.staleWarning.enabled = profile.staleWarning.enabled; } return ${data("function")}; })()`;
+  const profileMode = (prefix) => ({
+    calculateFunc: `(${JSON.stringify(functionTemplates)}[${data("function")}]?.${prefix}.mode ?? ${data(`${prefix}.mode`)})`,
     ignoreOwnChanges: true
   });
   const limits = (prefix, label) => ({
@@ -230,8 +237,7 @@ function stateForm(functionProfiles, stateId) {
       type: "checkbox",
       label: t("Enabled", "Aktiviert"),
       newLine: true,
-      xs: 12,
-      onChange: profileValue(prefix, "enabled")
+      xs: 12
     },
     [key(`${prefix}.mode`)]: {
       type: "select",
@@ -244,23 +250,20 @@ function stateForm(functionProfiles, stateId) {
         { value: "outside", label: t("outside the allowed range", "au\xDFerhalb des erlaubten Bereichs liegt") },
         { value: "inside", label: t("inside the forbidden range", "im verbotenen Bereich liegt") }
       ],
-      hidden: `!${data(`${prefix}.enabled`)}`,
-      onChange: profileValue(prefix, "mode")
+      hidden: `!${data(`${prefix}.enabled`)}`
     },
     [key(`${prefix}.min`)]: {
       type: "number",
       label: t("Lower limit", "Untergrenze"),
       newLine: true,
       xs: 6,
-      hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'above'`,
-      onChange: profileValue(prefix, "min")
+      hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'above'`
     },
     [key(`${prefix}.max`)]: {
       type: "number",
       label: t("Upper limit", "Obergrenze"),
       xs: 6,
-      hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'below'`,
-      onChange: profileValue(prefix, "max")
+      hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'below'`
     }
   });
   return {
@@ -286,6 +289,11 @@ function stateForm(functionProfiles, stateId) {
         label: t("Function", "Funktion"),
         options: functions,
         freeSolo: true,
+        onChange: { alsoDependsOn: [], calculateFunc: applyProfile },
+        onChangeDependsOn: [
+          { attr: key("warning.mode"), onChange: profileMode("warning") },
+          { attr: key("alarm.mode"), onChange: profileMode("alarm") }
+        ],
         newLine: true,
         xs: 12
       },
@@ -302,8 +310,7 @@ function stateForm(functionProfiles, stateId) {
         type: "checkbox",
         label: t("Warn if the state is not updated", "Warnen, wenn der State nicht aktualisiert wird"),
         newLine: true,
-        xs: 12,
-        onChange: profileValue("staleWarning", "enabled")
+        xs: 12
       },
       [key("staleWarning.minutes")]: {
         type: "number",
@@ -312,26 +319,24 @@ function stateForm(functionProfiles, stateId) {
         step: 1,
         newLine: true,
         xs: 12,
-        hidden: `!${data("staleWarning.enabled")}`,
-        onChange: profileValue("staleWarning", "minutes")
+        hidden: `!${data("staleWarning.enabled")}`
+      },
+      [key("_saveAsTemplate")]: {
+        type: "checkbox",
+        label: t("Save this selection as function template", "Diese Auswahl als Funktionsvorlage speichern"),
+        newLine: true,
+        xs: 12,
+        hidden: `!${data("function")}`
       }
     }
   };
 }
-function statesForm(states, functionProfiles) {
+function statesForm(states, functionTemplates, functionNames) {
   return {
     type: "tabs",
     items: Object.fromEntries(
       states.map((watched) => {
-        const profiles = watched.function ? {
-          ...functionProfiles,
-          [watched.function]: {
-            warning: { ...watched.warning },
-            alarm: { ...watched.alarm },
-            staleWarning: { ...watched.staleWarning }
-          }
-        } : functionProfiles;
-        const form = stateForm(profiles, watched.id);
+        const form = stateForm(functionTemplates, functionNames, watched.id);
         form.items[`${watched.id}._delete`] = {
           type: "checkbox",
           label: t("Delete this monitored state", "Diesen \xDCberwachungs-State l\xF6schen"),
@@ -345,6 +350,7 @@ function statesForm(states, functionProfiles) {
 }
 class DeviceMonitoring extends utils.Adapter {
   devices = [];
+  functionTemplates = {};
   nextDeviceNumber = 1;
   subscribed = /* @__PURE__ */ new Set();
   sourceUnits = /* @__PURE__ */ new Map();
@@ -415,8 +421,11 @@ class DeviceMonitoring extends utils.Adapter {
       await this.updateDeviceInfo();
     }
   }
-  getFunctionProfiles(preferred) {
-    return (0, import_evaluation.getFunctionProfiles)(this.devices, preferred);
+  getFunctionTemplates() {
+    return JSON.parse(JSON.stringify(this.functionTemplates));
+  }
+  getFunctionNames() {
+    return [...new Set(this.devices.flatMap((device) => device.states.map((state) => state.function)).filter(Boolean))];
   }
   async getDevicesWithStatus() {
     const rank = { timeout: 0, alarm: 1, warning: 2, unknown: 3, ok: 4 };
@@ -446,6 +455,7 @@ class DeviceMonitoring extends utils.Adapter {
       return;
     }
     const id = uniqueId(safeId(String(data.name), "state"), new Set(device.states.map((s) => s.id)));
+    this.saveFunctionTemplate(data);
     await this.saveDevices(
       this.devices.map(
         (d) => d.id === deviceId ? { ...d, states: [...d.states, this.normalizeState(data, id)] } : d
@@ -453,13 +463,14 @@ class DeviceMonitoring extends utils.Adapter {
     );
   }
   async updateWatchedState(deviceId, stateId, data) {
+    this.saveFunctionTemplate(data);
     await this.saveDevices(
       this.devices.map(
         (d) => d.id === deviceId ? {
           ...d,
-          // Keep the latest edit last: configuration order determines which of
-          // several states with the same function supplies its template.
-          states: [...d.states.filter((s) => s.id !== stateId), this.normalizeState(data, stateId)]
+          states: d.states.map(
+            (state) => state.id === stateId ? this.normalizeState(data, stateId) : state
+          )
         } : d
       )
     );
@@ -468,6 +479,9 @@ class DeviceMonitoring extends utils.Adapter {
     const device = this.devices.find((entry) => entry.id === deviceId);
     if (!device) {
       return;
+    }
+    for (const watched of device.states) {
+      this.saveFunctionTemplate(data[watched.id]);
     }
     const states = device.states.filter((watched) => {
       var _a;
@@ -501,6 +515,13 @@ class DeviceMonitoring extends utils.Adapter {
         minutes: typeof ((_b = data.staleWarning) == null ? void 0 : _b.minutes) === "number" && data.staleWarning.minutes > 0 ? data.staleWarning.minutes : 60
       }
     };
+  }
+  saveFunctionTemplate(data) {
+    const functionName = String((data == null ? void 0 : data.function) || "").trim();
+    if (!functionName || (data == null ? void 0 : data._saveAsTemplate) !== true) {
+      return;
+    }
+    this.functionTemplates[functionName] = (0, import_evaluation.createFunctionTemplate)(this.normalizeState(data, "template"));
   }
   normalizeDevices(value) {
     if (!Array.isArray(value)) {
@@ -541,7 +562,11 @@ class DeviceMonitoring extends utils.Adapter {
     await this.setObjectAsync("devices", {
       type: "folder",
       common: { name: t("Devices", "Ger\xE4te") },
-      native: { devices: this.devices, nextDeviceNumber: this.nextDeviceNumber }
+      native: {
+        devices: this.devices,
+        nextDeviceNumber: this.nextDeviceNumber,
+        functionTemplates: this.functionTemplates
+      }
     });
     const expected = /* @__PURE__ */ new Set();
     for (const device of this.devices) {
@@ -595,12 +620,33 @@ class DeviceMonitoring extends utils.Adapter {
     }
   }
   async loadDevicesFromObjects() {
-    var _a, _b;
+    var _a, _b, _c;
     const folder = await this.getObjectAsync("devices");
     if (typeof ((_a = folder == null ? void 0 : folder.native) == null ? void 0 : _a.nextDeviceNumber) === "number" && folder.native.nextDeviceNumber > 0) {
       this.nextDeviceNumber = Math.floor(folder.native.nextDeviceNumber);
     }
-    return this.normalizeDevices((_b = folder == null ? void 0 : folder.native) == null ? void 0 : _b.devices);
+    this.functionTemplates = this.normalizeFunctionTemplates((_b = folder == null ? void 0 : folder.native) == null ? void 0 : _b.functionTemplates);
+    return this.normalizeDevices((_c = folder == null ? void 0 : folder.native) == null ? void 0 : _c.devices);
+  }
+  normalizeFunctionTemplates(value) {
+    var _a, _b, _c, _d, _e;
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return {};
+    }
+    const templates = {};
+    for (const [name, template] of Object.entries(value)) {
+      const functionName = name.trim();
+      if (!functionName || !template || typeof template !== "object") {
+        continue;
+      }
+      const mode = (input) => ["below", "above", "outside", "inside"].includes(String(input)) ? input : "outside";
+      templates[functionName] = {
+        warning: { enabled: ((_a = template.warning) == null ? void 0 : _a.enabled) === true, mode: mode((_b = template.warning) == null ? void 0 : _b.mode) },
+        alarm: { enabled: ((_c = template.alarm) == null ? void 0 : _c.enabled) === true, mode: mode((_d = template.alarm) == null ? void 0 : _d.mode) },
+        staleWarning: { enabled: ((_e = template.staleWarning) == null ? void 0 : _e.enabled) === true }
+      };
+    }
+    return templates;
   }
   async removeLegacyDeviceConfig() {
     const instanceId = `system.adapter.${this.namespace}`;

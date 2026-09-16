@@ -1,10 +1,11 @@
 import * as utils from '@iobroker/adapter-core';
 import { DeviceManagement } from '@iobroker/dm-utils';
 import {
+	createFunctionTemplate,
 	getWatchStatus,
-	getFunctionProfiles,
 	isUpdateTimedOut,
 	type DeviceConfiguration,
+	type FunctionTemplate,
 	type LimitConfiguration,
 	type LimitMode,
 	type WatchedStateConfiguration,
@@ -106,11 +107,14 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				icon: 'add',
 				description: t('Add monitored state', 'Überwachungs-State hinzufügen'),
 				handler: async (_id: string, context: any) => {
-					const data = await context.showForm(stateForm(this.adapter.getFunctionProfiles()), {
-						title: t('Add monitored state', 'Überwachungs-State hinzufügen'),
-						data: defaultStateForm(),
-						buttons: ['apply', 'cancel'],
-					});
+					const data = await context.showForm(
+						stateForm(this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames()),
+						{
+							title: t('Add monitored state', 'Überwachungs-State hinzufügen'),
+							data: defaultStateForm(),
+							buttons: ['apply', 'cancel'],
+						},
+					);
 					if (!data?.sourceId || !data?.name) {
 						return { refresh: 'none' };
 					}
@@ -125,11 +129,14 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				icon: 'settings',
 				description: t('Edit monitored states', 'Überwachungs-States bearbeiten'),
 				handler: async (_deviceId: string, context: any) => {
-					const data = await context.showForm(statesForm(device.states, this.adapter.getFunctionProfiles()), {
-						title: t('Edit monitored states', 'Überwachungs-States bearbeiten'),
-						data: Object.fromEntries(device.states.map(watched => [watched.id, watched])),
-						buttons: ['apply', 'cancel'],
-					});
+					const data = await context.showForm(
+						statesForm(device.states, this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames()),
+						{
+							title: t('Edit monitored states', 'Überwachungs-States bearbeiten'),
+							data: Object.fromEntries(device.states.map(watched => [watched.id, watched])),
+							buttons: ['apply', 'cancel'],
+						},
+					);
 					if (!data) {
 						return { refresh: 'none' };
 					}
@@ -214,18 +221,17 @@ function defaultStateForm(): Partial<WatchedStateConfiguration> {
 	};
 }
 function stateForm(
-	functionProfiles: Record<string, Pick<WatchedStateConfiguration, 'warning' | 'alarm' | 'staleWarning'>>,
+	functionTemplates: Record<string, FunctionTemplate>,
+	functionNames: string[],
 	stateId?: string,
 ): any {
-	const functions = Object.keys(functionProfiles).sort();
+	const functions = [...new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
 	const key = (path: string): string => (stateId ? `${stateId}.${path}` : path);
 	const data = (path: string): string => (stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`);
-	const profileValue = (
-		prefix: 'warning' | 'alarm' | 'staleWarning',
-		field: 'enabled' | 'mode' | 'min' | 'max' | 'minutes',
-	): Record<string, unknown> => ({
-		alsoDependsOn: [key('function')],
-		calculateFunc: `(${JSON.stringify(functionProfiles)}[${data('function')}]?.${prefix}.${field} ?? ${data(`${prefix}.${field}`)})`,
+	const target = stateId ? `data[${JSON.stringify(stateId)}]` : 'data';
+	const applyProfile = `(() => { const profile = ${JSON.stringify(functionTemplates)}[${data('function')}]; if (profile) { ${target}.warning.enabled = profile.warning.enabled; ${target}.alarm.enabled = profile.alarm.enabled; ${target}.staleWarning.enabled = profile.staleWarning.enabled; } return ${data('function')}; })()`;
+	const profileMode = (prefix: 'warning' | 'alarm'): Record<string, unknown> => ({
+		calculateFunc: `(${JSON.stringify(functionTemplates)}[${data('function')}]?.${prefix}.mode ?? ${data(`${prefix}.mode`)})`,
 		ignoreOwnChanges: true,
 	});
 	const limits = (prefix: 'warning' | 'alarm', label: ioBroker.Translated): Record<string, any> => ({
@@ -235,7 +241,6 @@ function stateForm(
 			label: t('Enabled', 'Aktiviert'),
 			newLine: true,
 			xs: 12,
-			onChange: profileValue(prefix, 'enabled'),
 		},
 		[key(`${prefix}.mode`)]: {
 			type: 'select',
@@ -249,7 +254,6 @@ function stateForm(
 				{ value: 'inside', label: t('inside the forbidden range', 'im verbotenen Bereich liegt') },
 			],
 			hidden: `!${data(`${prefix}.enabled`)}`,
-			onChange: profileValue(prefix, 'mode'),
 		},
 		[key(`${prefix}.min`)]: {
 			type: 'number',
@@ -257,14 +261,12 @@ function stateForm(
 			newLine: true,
 			xs: 6,
 			hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'above'`,
-			onChange: profileValue(prefix, 'min'),
 		},
 		[key(`${prefix}.max`)]: {
 			type: 'number',
 			label: t('Upper limit', 'Obergrenze'),
 			xs: 6,
 			hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'below'`,
-			onChange: profileValue(prefix, 'max'),
 		},
 	});
 	return {
@@ -290,6 +292,11 @@ function stateForm(
 				label: t('Function', 'Funktion'),
 				options: functions,
 				freeSolo: true,
+				onChange: { alsoDependsOn: [], calculateFunc: applyProfile },
+				onChangeDependsOn: [
+					{ attr: key('warning.mode'), onChange: profileMode('warning') },
+					{ attr: key('alarm.mode'), onChange: profileMode('alarm') },
+				],
 				newLine: true,
 				xs: 12,
 			},
@@ -307,7 +314,6 @@ function stateForm(
 				label: t('Warn if the state is not updated', 'Warnen, wenn der State nicht aktualisiert wird'),
 				newLine: true,
 				xs: 12,
-				onChange: profileValue('staleWarning', 'enabled'),
 			},
 			[key('staleWarning.minutes')]: {
 				type: 'number',
@@ -317,30 +323,27 @@ function stateForm(
 				newLine: true,
 				xs: 12,
 				hidden: `!${data('staleWarning.enabled')}`,
-				onChange: profileValue('staleWarning', 'minutes'),
+			},
+			[key('_saveAsTemplate')]: {
+				type: 'checkbox',
+				label: t('Save this selection as function template', 'Diese Auswahl als Funktionsvorlage speichern'),
+				newLine: true,
+				xs: 12,
+				hidden: `!${data('function')}`,
 			},
 		},
 	};
 }
 function statesForm(
 	states: WatchedStateConfiguration[],
-	functionProfiles: Record<string, Pick<WatchedStateConfiguration, 'warning' | 'alarm' | 'staleWarning'>>,
+	functionTemplates: Record<string, FunctionTemplate>,
+	functionNames: string[],
 ): any {
 	return {
 		type: 'tabs',
 		items: Object.fromEntries(
 			states.map(watched => {
-				const profiles = watched.function
-					? {
-							...functionProfiles,
-							[watched.function]: {
-								warning: { ...watched.warning },
-								alarm: { ...watched.alarm },
-								staleWarning: { ...watched.staleWarning },
-							},
-						}
-					: functionProfiles;
-				const form = stateForm(profiles, watched.id);
+				const form = stateForm(functionTemplates, functionNames, watched.id);
 				form.items[`${watched.id}._delete`] = {
 					type: 'checkbox',
 					label: t('Delete this monitored state', 'Diesen Überwachungs-State löschen'),
@@ -354,6 +357,7 @@ function statesForm(
 }
 class DeviceMonitoring extends utils.Adapter {
 	private devices: DeviceConfiguration[] = [];
+	private functionTemplates: Record<string, FunctionTemplate> = {};
 	private nextDeviceNumber = 1;
 	private subscribed = new Set<string>();
 	private sourceUnits = new Map<string, string>();
@@ -422,10 +426,11 @@ class DeviceMonitoring extends utils.Adapter {
 			await this.updateDeviceInfo();
 		}
 	}
-	public getFunctionProfiles(
-		preferred?: WatchedStateConfiguration,
-	): Record<string, Pick<WatchedStateConfiguration, 'warning' | 'alarm' | 'staleWarning'>> {
-		return getFunctionProfiles(this.devices, preferred);
+	public getFunctionTemplates(): Record<string, FunctionTemplate> {
+		return JSON.parse(JSON.stringify(this.functionTemplates));
+	}
+	public getFunctionNames(): string[] {
+		return [...new Set(this.devices.flatMap(device => device.states.map(state => state.function)).filter(Boolean))];
 	}
 	public async getDevicesWithStatus(): Promise<
 		{
@@ -460,6 +465,7 @@ class DeviceMonitoring extends utils.Adapter {
 			return;
 		}
 		const id = uniqueId(safeId(String(data.name), 'state'), new Set(device.states.map(s => s.id)));
+		this.saveFunctionTemplate(data);
 		await this.saveDevices(
 			this.devices.map(d =>
 				d.id === deviceId ? { ...d, states: [...d.states, this.normalizeState(data, id)] } : d,
@@ -467,14 +473,15 @@ class DeviceMonitoring extends utils.Adapter {
 		);
 	}
 	public async updateWatchedState(deviceId: string, stateId: string, data: any): Promise<void> {
+		this.saveFunctionTemplate(data);
 		await this.saveDevices(
 			this.devices.map(d =>
 				d.id === deviceId
 					? {
 							...d,
-							// Keep the latest edit last: configuration order determines which of
-							// several states with the same function supplies its template.
-							states: [...d.states.filter(s => s.id !== stateId), this.normalizeState(data, stateId)],
+							states: d.states.map(state =>
+								state.id === stateId ? this.normalizeState(data, stateId) : state,
+							),
 						}
 					: d,
 			),
@@ -484,6 +491,9 @@ class DeviceMonitoring extends utils.Adapter {
 		const device = this.devices.find(entry => entry.id === deviceId);
 		if (!device) {
 			return;
+		}
+		for (const watched of device.states) {
+			this.saveFunctionTemplate(data[watched.id]);
 		}
 		const states = device.states
 			.filter(watched => !data[watched.id]?._delete)
@@ -518,6 +528,13 @@ class DeviceMonitoring extends utils.Adapter {
 						: 60,
 			},
 		};
+	}
+	private saveFunctionTemplate(data: any): void {
+		const functionName = String(data?.function || '').trim();
+		if (!functionName || data?._saveAsTemplate !== true) {
+			return;
+		}
+		this.functionTemplates[functionName] = createFunctionTemplate(this.normalizeState(data, 'template'));
 	}
 	private normalizeDevices(value: unknown): DeviceConfiguration[] {
 		if (!Array.isArray(value)) {
@@ -561,7 +578,11 @@ class DeviceMonitoring extends utils.Adapter {
 		await this.setObjectAsync('devices', {
 			type: 'folder',
 			common: { name: t('Devices', 'Geräte') },
-			native: { devices: this.devices, nextDeviceNumber: this.nextDeviceNumber },
+			native: {
+				devices: this.devices,
+				nextDeviceNumber: this.nextDeviceNumber,
+				functionTemplates: this.functionTemplates,
+			},
 		});
 		const expected = new Set<string>();
 		for (const device of this.devices) {
@@ -619,7 +640,28 @@ class DeviceMonitoring extends utils.Adapter {
 		if (typeof folder?.native?.nextDeviceNumber === 'number' && folder.native.nextDeviceNumber > 0) {
 			this.nextDeviceNumber = Math.floor(folder.native.nextDeviceNumber);
 		}
+		this.functionTemplates = this.normalizeFunctionTemplates(folder?.native?.functionTemplates);
 		return this.normalizeDevices(folder?.native?.devices);
+	}
+	private normalizeFunctionTemplates(value: unknown): Record<string, FunctionTemplate> {
+		if (!value || typeof value !== 'object' || Array.isArray(value)) {
+			return {};
+		}
+		const templates: Record<string, FunctionTemplate> = {};
+		for (const [name, template] of Object.entries(value as Record<string, any>)) {
+			const functionName = name.trim();
+			if (!functionName || !template || typeof template !== 'object') {
+				continue;
+			}
+			const mode = (input: unknown): LimitMode =>
+				['below', 'above', 'outside', 'inside'].includes(String(input)) ? (input as LimitMode) : 'outside';
+			templates[functionName] = {
+				warning: { enabled: template.warning?.enabled === true, mode: mode(template.warning?.mode) },
+				alarm: { enabled: template.alarm?.enabled === true, mode: mode(template.alarm?.mode) },
+				staleWarning: { enabled: template.staleWarning?.enabled === true },
+			};
+		}
+		return templates;
 	}
 	private async removeLegacyDeviceConfig(): Promise<void> {
 		const instanceId = `system.adapter.${this.namespace}`;

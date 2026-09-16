@@ -135,7 +135,7 @@
 			"_id": "devices",
 			"type": "folder",
 			"common": { "name": "Devices" },
-			"native": { "devices": [], "nextDeviceNumber": 1 }
+			"native": { "devices": [], "nextDeviceNumber": 1, "functionTemplates": {} }
 		}
 	]
 }

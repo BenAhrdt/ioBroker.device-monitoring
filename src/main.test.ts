@@ -1,11 +1,10 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import {
+	createFunctionTemplate,
 	evaluateLimit,
-	getFunctionProfiles,
 	getWatchStatus,
 	isUpdateTimedOut,
-	type DeviceConfiguration,
 	type LimitConfiguration,
 	type WatchedStateConfiguration,
 } from './lib/evaluation';
@@ -33,7 +32,7 @@ describe('threshold evaluation', () => {
 	});
 });
 
-describe('function templates', () => {
+describe('function template', () => {
 	const state = (id: string, functionName: string, warningAt: number): WatchedStateConfiguration => ({
 		id,
 		name: id,
@@ -44,32 +43,18 @@ describe('function templates', () => {
 		staleWarning: { enabled: false, minutes: 60 },
 	});
 
-	it('uses the last configured state when a function occurs more than once', () => {
-		const first = state('first', 'temperature', 20);
-		const latest = state('latest', 'temperature', 30);
-		const devices: DeviceConfiguration[] = [{ id: 'device', name: 'Device', states: [first, latest] }];
-
-		expect(getFunctionProfiles(devices).temperature.warning.max).to.equal(30);
-	});
-
-	it('prefers the edited state without changing other function templates', () => {
-		const edited = state('edited', 'temperature', 20);
-		const latest = state('latest', 'temperature', 30);
-		const humidity = state('humidity', 'humidity', 60);
-		const devices: DeviceConfiguration[] = [{ id: 'device', name: 'Device', states: [edited, latest, humidity] }];
-
-		const profiles = getFunctionProfiles(devices, edited);
-		expect(profiles.temperature.warning.max).to.equal(20);
-		expect(profiles.humidity.warning.max).to.equal(60);
-	});
-
-	it('returns detached limits so form changes cannot mutate the configuration', () => {
+	it('stores activation and modes but no individual limits or timeout duration', () => {
 		const configured = state('state', 'temperature', 20);
-		const devices: DeviceConfiguration[] = [{ id: 'device', name: 'Device', states: [configured] }];
-		const profiles = getFunctionProfiles(devices);
+		configured.staleWarning = { enabled: true, minutes: 45 };
+		const template = createFunctionTemplate(configured);
 
-		profiles.temperature.warning.max = 99;
-		expect(configured.warning.max).to.equal(20);
+		expect(template).to.deep.equal({
+			warning: { enabled: true, mode: 'above' },
+			alarm: { enabled: true, mode: 'above' },
+			staleWarning: { enabled: true },
+		});
+		expect(template).not.to.have.nested.property('warning.max');
+		expect(template).not.to.have.nested.property('staleWarning.minutes');
 	});
 });
 

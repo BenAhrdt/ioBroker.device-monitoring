@@ -18,32 +18,18 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var evaluation_exports = {};
 __export(evaluation_exports, {
+  createFunctionTemplate: () => createFunctionTemplate,
   evaluateLimit: () => evaluateLimit,
-  getFunctionProfiles: () => getFunctionProfiles,
   getWatchStatus: () => getWatchStatus,
   isUpdateTimedOut: () => isUpdateTimedOut
 });
 module.exports = __toCommonJS(evaluation_exports);
-function getFunctionProfiles(devices, preferred) {
-  const profiles = {};
-  const add = (watched) => {
-    if (watched.function) {
-      profiles[watched.function] = {
-        warning: { ...watched.warning },
-        alarm: { ...watched.alarm },
-        staleWarning: { ...watched.staleWarning }
-      };
-    }
+function createFunctionTemplate(watched) {
+  return {
+    warning: { enabled: watched.warning.enabled, mode: watched.warning.mode },
+    alarm: { enabled: watched.alarm.enabled, mode: watched.alarm.mode },
+    staleWarning: { enabled: watched.staleWarning.enabled }
   };
-  for (const device of devices) {
-    for (const watched of device.states) {
-      add(watched);
-    }
-  }
-  if (preferred) {
-    add(preferred);
-  }
-  return profiles;
 }
 function evaluateLimit(value, limit) {
   if (!limit.enabled || typeof value !== "number" || !Number.isFinite(value)) {
@@ -82,8 +68,8 @@ function isUpdateTimedOut(state, configuration, now = Date.now()) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  createFunctionTemplate,
   evaluateLimit,
-  getFunctionProfiles,
   getWatchStatus,
   isUpdateTimedOut
 });
