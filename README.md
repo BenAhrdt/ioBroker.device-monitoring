@@ -107,7 +107,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.5 (2026-09-16)
 * (BenAhrdt) Fix editing function names in the production Admin UI and enable trusted npm publishing
 
 ### 0.0.4 (2026-09-16)

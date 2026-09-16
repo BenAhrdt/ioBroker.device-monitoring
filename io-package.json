@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.4",
+    "version": "0.0.5",
     "news": {
+      "0.0.5": {
+        "en": "Fix editing function names in the production Admin UI and enable trusted npm publishing",
+        "de": "Funktionsnamen im Admin-UI korrigieren und Trusted NPM Publishing aktivieren",
+        "ru": "Исправьте имена функций редактирования в производственном пользовательском интерфейсе администратора и включите надежную публикацию npm",
+        "pt": "Corrija nomes de funções de edição na UI Admin de produção e ative o npm confiável",
+        "nl": "Wijzig de namen van bewerkingsfuncties in de gebruikersinterface van de productiebeheerder en schakel vertrouwde npm-publicatie in",
+        "fr": "Corrigez le nom des fonctions d'édition dans l'interface de production et activez la publication NPM",
+        "it": "Modifica i nomi delle funzioni nell'Admin UI di produzione e abilita NPM Publishing",
+        "es": "Corregir los nombres de las funciones en la interfaz de administración de producción y",
+        "pl": "Napraw nazwy funkcji edycji w interfejsie administratora produkcji i włącz zaufane publikowanie npm",
+        "uk": "Виправте редагування назв функцій у виробничому інтерфейсі адміністратора та увімкніть надійну публікацію npm",
+        "zh-cn": "修复生产管理界面中的编辑函数名称并启用可信的 npm 发布"
+      },
       "0.0.4": {
         "en": "Fix saving the function name and displaying the option to save it as a function template",
         "de": "Fix: Den Funktionsnamen speichern und als Funktionsvorlage anzeigen",
