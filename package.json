@@ -1,6 +1,6 @@
 {
   "name": "iobroker.device-monitoring",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Watches your devined device states and build warnings and alerts",
   "author": {
     "name": "BenAhrdt",

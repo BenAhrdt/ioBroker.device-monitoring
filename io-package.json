@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "news": {
+      "0.0.3": {
+        "en": "change Icon",
+        "de": "Symbol ändern",
+        "ru": "изменить значок",
+        "pt": "mudar ícone",
+        "nl": "pictogram wijzigen",
+        "fr": "change Icone",
+        "it": "cambia icona",
+        "es": "cambiar icono",
+        "pl": "zmień ikonę",
+        "uk": "змінити піктограму",
+        "zh-cn": "更改图标"
+      },
       "0.0.2": {
         "en": "initial release",
         "de": "erste Version",
