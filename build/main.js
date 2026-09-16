@@ -225,10 +225,9 @@ function stateForm(functionTemplates, functionNames, stateId) {
   const functions = [.../* @__PURE__ */ new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
   const key = (path) => stateId ? `${stateId}.${path}` : path;
   const data = (path) => stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`;
-  const target = stateId ? `data[${JSON.stringify(stateId)}]` : "data";
-  const applyProfile = `(() => { const profile = ${JSON.stringify(functionTemplates)}[${data("function")}]; if (profile) { ${target}.warning.enabled = profile.warning.enabled; ${target}.alarm.enabled = profile.alarm.enabled; ${target}.staleWarning.enabled = profile.staleWarning.enabled; } return ${data("function")}; })()`;
-  const profileMode = (prefix) => ({
-    calculateFunc: `(${JSON.stringify(functionTemplates)}[${data("function")}]?.${prefix}.mode ?? ${data(`${prefix}.mode`)})`,
+  const templateValue = (prefix, field) => ({
+    alsoDependsOn: [key("function")],
+    calculateFunc: `(${JSON.stringify(functionTemplates)}[${data("function")}]?.${prefix}.${field} ?? ${data(`${prefix}.${field}`)})`,
     ignoreOwnChanges: true
   });
   const limits = (prefix, label) => ({
@@ -237,7 +236,8 @@ function stateForm(functionTemplates, functionNames, stateId) {
       type: "checkbox",
       label: t("Enabled", "Aktiviert"),
       newLine: true,
-      xs: 12
+      xs: 12,
+      onChange: templateValue(prefix, "enabled")
     },
     [key(`${prefix}.mode`)]: {
       type: "select",
@@ -250,7 +250,8 @@ function stateForm(functionTemplates, functionNames, stateId) {
         { value: "outside", label: t("outside the allowed range", "au\xDFerhalb des erlaubten Bereichs liegt") },
         { value: "inside", label: t("inside the forbidden range", "im verbotenen Bereich liegt") }
       ],
-      hidden: `!${data(`${prefix}.enabled`)}`
+      hidden: `!${data(`${prefix}.enabled`)}`,
+      onChange: templateValue(prefix, "mode")
     },
     [key(`${prefix}.min`)]: {
       type: "number",
@@ -288,16 +289,11 @@ function stateForm(functionTemplates, functionNames, stateId) {
         // A freeSolo autocomplete only commits a newly typed value after an
         // explicit option/Enter interaction in the Admin JSON form. Clicking
         // Apply directly therefore returned the old (usually empty) value.
-        // A text control commits every edit and still lets the onChange rule
-        // apply an existing template when its exact name is entered.
+        // A text control commits every edit. Dependent fields apply an
+        // existing template when its exact name is entered.
         type: "text",
         label: t("Function", "Funktion"),
         help: functions.length ? t(`Existing functions: ${functions.join(", ")}`, `Vorhandene Funktionen: ${functions.join(", ")}`) : void 0,
-        onChange: { alsoDependsOn: [], calculateFunc: applyProfile },
-        onChangeDependsOn: [
-          { attr: key("warning.mode"), onChange: profileMode("warning") },
-          { attr: key("alarm.mode"), onChange: profileMode("alarm") }
-        ],
         newLine: true,
         xs: 12
       },
@@ -314,7 +310,8 @@ function stateForm(functionTemplates, functionNames, stateId) {
         type: "checkbox",
         label: t("Warn if the state is not updated", "Warnen, wenn der State nicht aktualisiert wird"),
         newLine: true,
-        xs: 12
+        xs: 12,
+        onChange: templateValue("staleWarning", "enabled")
       },
       [key("staleWarning.minutes")]: {
         type: "number",

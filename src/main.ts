@@ -228,10 +228,12 @@ function stateForm(
 	const functions = [...new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
 	const key = (path: string): string => (stateId ? `${stateId}.${path}` : path);
 	const data = (path: string): string => (stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`);
-	const target = stateId ? `data[${JSON.stringify(stateId)}]` : 'data';
-	const applyProfile = `(() => { const profile = ${JSON.stringify(functionTemplates)}[${data('function')}]; if (profile) { ${target}.warning.enabled = profile.warning.enabled; ${target}.alarm.enabled = profile.alarm.enabled; ${target}.staleWarning.enabled = profile.staleWarning.enabled; } return ${data('function')}; })()`;
-	const profileMode = (prefix: 'warning' | 'alarm'): Record<string, unknown> => ({
-		calculateFunc: `(${JSON.stringify(functionTemplates)}[${data('function')}]?.${prefix}.mode ?? ${data(`${prefix}.mode`)})`,
+	const templateValue = (
+		prefix: 'warning' | 'alarm' | 'staleWarning',
+		field: 'enabled' | 'mode',
+	): Record<string, unknown> => ({
+		alsoDependsOn: [key('function')],
+		calculateFunc: `(${JSON.stringify(functionTemplates)}[${data('function')}]?.${prefix}.${field} ?? ${data(`${prefix}.${field}`)})`,
 		ignoreOwnChanges: true,
 	});
 	const limits = (prefix: 'warning' | 'alarm', label: ioBroker.Translated): Record<string, any> => ({
@@ -241,6 +243,7 @@ function stateForm(
 			label: t('Enabled', 'Aktiviert'),
 			newLine: true,
 			xs: 12,
+			onChange: templateValue(prefix, 'enabled'),
 		},
 		[key(`${prefix}.mode`)]: {
 			type: 'select',
@@ -254,6 +257,7 @@ function stateForm(
 				{ value: 'inside', label: t('inside the forbidden range', 'im verbotenen Bereich liegt') },
 			],
 			hidden: `!${data(`${prefix}.enabled`)}`,
+			onChange: templateValue(prefix, 'mode'),
 		},
 		[key(`${prefix}.min`)]: {
 			type: 'number',
@@ -291,18 +295,13 @@ function stateForm(
 				// A freeSolo autocomplete only commits a newly typed value after an
 				// explicit option/Enter interaction in the Admin JSON form. Clicking
 				// Apply directly therefore returned the old (usually empty) value.
-				// A text control commits every edit and still lets the onChange rule
-				// apply an existing template when its exact name is entered.
+				// A text control commits every edit. Dependent fields apply an
+				// existing template when its exact name is entered.
 				type: 'text',
 				label: t('Function', 'Funktion'),
 				help: functions.length
 					? t(`Existing functions: ${functions.join(', ')}`, `Vorhandene Funktionen: ${functions.join(', ')}`)
 					: undefined,
-				onChange: { alsoDependsOn: [], calculateFunc: applyProfile },
-				onChangeDependsOn: [
-					{ attr: key('warning.mode'), onChange: profileMode('warning') },
-					{ attr: key('alarm.mode'), onChange: profileMode('alarm') },
-				],
 				newLine: true,
 				xs: 12,
 			},
@@ -320,6 +319,7 @@ function stateForm(
 				label: t('Warn if the state is not updated', 'Warnen, wenn der State nicht aktualisiert wird'),
 				newLine: true,
 				xs: 12,
+				onChange: templateValue('staleWarning', 'enabled'),
 			},
 			[key('staleWarning.minutes')]: {
 				type: 'number',
