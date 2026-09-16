@@ -288,10 +288,16 @@ function stateForm(
 				customFilter: { type: 'state', common: { type: 'number' } },
 			},
 			[key('function')]: {
-				type: 'autocomplete',
+				// A freeSolo autocomplete only commits a newly typed value after an
+				// explicit option/Enter interaction in the Admin JSON form. Clicking
+				// Apply directly therefore returned the old (usually empty) value.
+				// A text control commits every edit and still lets the onChange rule
+				// apply an existing template when its exact name is entered.
+				type: 'text',
 				label: t('Function', 'Funktion'),
-				options: functions,
-				freeSolo: true,
+				help: functions.length
+					? t(`Existing functions: ${functions.join(', ')}`, `Vorhandene Funktionen: ${functions.join(', ')}`)
+					: undefined,
 				onChange: { alsoDependsOn: [], calculateFunc: applyProfile },
 				onChangeDependsOn: [
 					{ attr: key('warning.mode'), onChange: profileMode('warning') },
