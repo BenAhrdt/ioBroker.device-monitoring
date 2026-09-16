@@ -89,8 +89,8 @@ jobs:
 #          # Then uncomment and customize the following block:
 #          sentry: true
 #          sentry-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
-#          sentry-project: "iobroker-watch-devices"
-#          sentry-version-prefix: "iobroker.watch-devices"
+#          sentry-project: "iobroker-device-monitoring"
+#          sentry-version-prefix: "iobroker.device-monitoring"
 #          sentry-sourcemap-paths: "build/"
 #          # If your sentry project is linked to a GitHub repository, you can enable the following option
 #          # sentry-github-integration: true

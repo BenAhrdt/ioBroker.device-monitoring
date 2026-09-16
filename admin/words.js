@@ -4,18 +4,18 @@
 'use strict';
 
 systemDictionary = {
-	'watch-devices adapter settings': {
-		'en': 'Adapter settings for watch-devices',
-		'de': 'Adaptereinstellungen für watch-devices',
-		'ru': 'Настройки адаптера для watch-devices',
-		'pt': 'Configurações do adaptador para watch-devices',
-		'nl': 'Adapterinstellingen voor watch-devices',
-		'fr': "Paramètres d'adaptateur pour watch-devices",
-		'it': "Impostazioni dell'adattatore per watch-devices",
-		'es': 'Ajustes del adaptador para watch-devices',
-		'pl': 'Ustawienia adaptera dla watch-devices',
-		'uk': 'Налаштування адаптера для watch-devices',
-		'zh-cn': 'watch-devices的适配器设置'
+	'device-monitoring adapter settings': {
+		'en': 'Adapter settings for device-monitoring',
+		'de': 'Adaptereinstellungen für device-monitoring',
+		'ru': 'Настройки адаптера для device-monitoring',
+		'pt': 'Configurações do adaptador para device-monitoring',
+		'nl': 'Adapterinstellingen voor device-monitoring',
+		'fr': "Paramètres d'adaptateur pour device-monitoring",
+		'it': "Impostazioni dell'adattatore per device-monitoring",
+		'es': 'Ajustes del adaptador para device-monitoring',
+		'pl': 'Ustawienia adaptera dla device-monitoring',
+		'uk': 'Налаштування адаптера для device-monitoring',
+		'zh-cn': 'device-monitoring的适配器设置'
 	},
 	'option1': {
 		'en': 'option1',

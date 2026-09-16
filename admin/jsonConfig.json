@@ -2,25 +2,25 @@
 	"i18n": true,
 	"type": "panel",
 	"items": {
-		"option1": {
-			"type": "checkbox",
-			"label": "option1",
+		"info": {
+			"type": "staticText",
+			"text": "This adapter is configured in the Device Monitoring adapter tab.",
 			"newLine": true,
 			"xs": 12,
-			"sm": 12,
-			"md": 6,
-			"lg": 4,
-			"xl": 4
+			"style": { "fontSize": 16, "lineHeight": 1.5 }
 		},
-		"option2": {
-			"type": "text",
-			"label": "option2",
+		"link": {
+			"type": "staticLink",
+			"label": "Open Device Monitoring",
+			"href": "#tab-device-monitoring",
+			"target": "_self",
+			"button": true,
+			"variant": "contained",
+			"color": "primary",
 			"newLine": true,
 			"xs": 12,
-			"sm": 12,
-			"md": 6,
-			"lg": 4,
-			"xl": 4
+			"sm": 8,
+			"md": 6
 		}
 	}
 }

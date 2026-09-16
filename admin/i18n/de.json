@@ -1,5 +1,5 @@
 {
-	"watch-devices adapter settings": "Adaptereinstellungen für watch-devices",
-	"option1": "Option1",
-	"option2": "Option2"
+	"device-monitoring adapter settings": "Einstellungen für Geräteüberwachung",
+	"This adapter is configured in the Device Monitoring adapter tab.": "Dieser Adapter wird im Tab Geräteüberwachung konfiguriert.",
+	"Open Device Monitoring": "Geräteüberwachung öffnen"
 }

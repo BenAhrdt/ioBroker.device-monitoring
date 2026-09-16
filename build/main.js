@@ -22,106 +22,711 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 var utils = __toESM(require("@iobroker/adapter-core"));
-class WatchDevices extends utils.Adapter {
+var import_dm_utils = require("@iobroker/dm-utils");
+var import_evaluation = require("./lib/evaluation");
+const t = (en, de) => ({ en, de });
+const COLORS = {
+  timeout: "#1976d2",
+  alarm: "#c62828",
+  warning: "#d6a500",
+  ok: "#3f7d45",
+  unknown: "#607d8b"
+};
+const svgIcon = (content) => `data:image/svg+xml,${encodeURIComponent(content)}`;
+const STATUS_ICONS = {
+  timeout: svgIcon(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1976d2"/><circle cx="12" cy="12" r="5.7" fill="none" stroke="white" stroke-width="1.8"/><path d="M12 8.4v4l2.8 1.7" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  ),
+  ok: svgIcon(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#2e9d38"/><path d="M7 12.5l3.1 3.1L17.5 8" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+  ),
+  warning: svgIcon(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#e6a700"/><path d="M12 6.4l6.1 10.7H5.9L12 6.4z" fill="white"/><path d="M12 9.3v4.2" stroke="#b77900" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="15.6" r="1" fill="#b77900"/></svg>'
+  ),
+  alarm: svgIcon(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#d62828"/><path d="M12 6.8v7" stroke="white" stroke-width="2.5" stroke-linecap="round"/><circle cx="12" cy="17.2" r="1.35" fill="white"/></svg>'
+  ),
+  unknown: svgIcon(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#607d8b"/><path d="M9.5 9a2.7 2.7 0 115 1.4c-.8 1.2-2.5 1.4-2.5 3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.2" fill="white"/></svg>'
+  )
+};
+function safeId(value, fallback) {
+  return value.trim().toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || fallback;
+}
+function uniqueId(base, used) {
+  let id = base;
+  let i = 2;
+  while (used.has(id)) {
+    id = `${base}_${i++}`;
+  }
+  return id;
+}
+class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
+  constructor(adapter) {
+    super(adapter, true);
+  }
+  async refreshCards() {
+    await this.sendCommandToGui({ command: "all" });
+  }
+  getInstanceInfo() {
+    return {
+      apiVersion: "v3",
+      communicationStateId: "info.deviceManager",
+      actions: [
+        {
+          id: "addDevice",
+          icon: "add",
+          title: t("+ Add device", "+ Ger\xE4t hinzuf\xFCgen"),
+          variant: "contained",
+          style: { backgroundColor: "#455a64", color: "#fff" },
+          handler: async (context) => {
+            const data = await context.showForm(deviceForm(), {
+              title: t("Add device", "Ger\xE4t hinzuf\xFCgen"),
+              data: { name: "" },
+              buttons: ["apply", "cancel"]
+            });
+            if (!(data == null ? void 0 : data.name)) {
+              return { refresh: false };
+            }
+            await this.adapter.addDevice(String(data.name));
+            return { refresh: true };
+          }
+        }
+      ]
+    };
+  }
+  async loadDevices(context) {
+    const devices = await this.adapter.getDevicesWithStatus();
+    context.setTotalDevices(devices.length);
+    for (const entry of devices) {
+      context.addDevice(this.deviceInfo(entry.device));
+    }
+  }
+  deviceInfo(device) {
+    const actions = [
+      {
+        id: "addState",
+        icon: "add",
+        description: t("Add monitored state", "\xDCberwachungs-State hinzuf\xFCgen"),
+        handler: async (_id, context) => {
+          const data = await context.showForm(stateForm(this.adapter.getFunctionProfiles()), {
+            title: t("Add monitored state", "\xDCberwachungs-State hinzuf\xFCgen"),
+            data: defaultStateForm(),
+            buttons: ["apply", "cancel"]
+          });
+          if (!(data == null ? void 0 : data.sourceId) || !(data == null ? void 0 : data.name)) {
+            return { refresh: "none" };
+          }
+          await this.adapter.addWatchedState(device.id, data);
+          return { refresh: "devices" };
+        }
+      }
+    ];
+    if (device.states.length) {
+      actions.push({
+        id: "editStates",
+        icon: "settings",
+        description: t("Edit monitored states", "\xDCberwachungs-States bearbeiten"),
+        handler: async (_deviceId, context) => {
+          const data = await context.showForm(statesForm(device.states, this.adapter.getFunctionProfiles()), {
+            title: t("Edit monitored states", "\xDCberwachungs-States bearbeiten"),
+            data: Object.fromEntries(device.states.map((watched) => [watched.id, watched])),
+            buttons: ["apply", "cancel"]
+          });
+          if (!data) {
+            return { refresh: "none" };
+          }
+          await this.adapter.replaceWatchedStates(device.id, data);
+          return { refresh: "devices" };
+        }
+      });
+    }
+    actions.push(
+      {
+        id: "rename",
+        icon: "edit",
+        description: t("Rename device", "Ger\xE4t umbenennen"),
+        handler: async (_id, context) => {
+          const data = await context.showForm(deviceForm(), {
+            title: t("Rename device", "Ger\xE4t umbenennen"),
+            data: { name: device.name },
+            buttons: ["apply", "cancel"]
+          });
+          if (!(data == null ? void 0 : data.name)) {
+            return { refresh: "none" };
+          }
+          await this.adapter.renameDevice(device.id, String(data.name));
+          return { refresh: "devices" };
+        }
+      },
+      {
+        id: "delete",
+        icon: "delete",
+        color: "secondary",
+        description: t("Delete device", "Ger\xE4t l\xF6schen"),
+        confirmation: t("Delete this device?", "Dieses Ger\xE4t l\xF6schen?"),
+        handler: async () => {
+          await this.adapter.removeDevice(device.id);
+          return { refresh: "devices" };
+        }
+      }
+    );
+    return {
+      id: device.id,
+      name: device.name,
+      icon: { stateId: `${this.adapter.namespace}.devices.${device.id}.icon` },
+      backgroundColor: { stateId: `${this.adapter.namespace}.devices.${device.id}.color` },
+      indicators: device.states.map((watched, order) => ({
+        id: `state_${watched.id}`,
+        value: { stateId: `${this.adapter.namespace}.devices.${device.id}.${watched.id}.status` },
+        icon: STATUS_ICONS.unknown,
+        text: { stateId: `${this.adapter.namespace}.devices.${device.id}.${watched.id}.display` },
+        levels: [
+          { value: "timeout", color: "info", icon: STATUS_ICONS.timeout },
+          { value: "alarm", color: "error", icon: STATUS_ICONS.alarm },
+          { value: "warning", color: "warning", icon: STATUS_ICONS.warning },
+          { value: "ok", color: "ok", icon: STATUS_ICONS.ok },
+          { color: "inactive", icon: STATUS_ICONS.unknown }
+        ],
+        tooltip: watched.function || watched.name,
+        hideIfEmpty: false,
+        order
+      })),
+      actions
+    };
+  }
+}
+function deviceForm() {
+  return {
+    type: "panel",
+    items: { name: { type: "text", label: t("Device name", "Ger\xE4tename"), newLine: true, xs: 12 } }
+  };
+}
+function defaultLimit(mode) {
+  return { enabled: false, mode };
+}
+function defaultStateForm() {
+  return {
+    name: "",
+    sourceId: "",
+    function: "",
+    warning: defaultLimit("outside"),
+    alarm: defaultLimit("outside"),
+    staleWarning: { enabled: false, minutes: 60 }
+  };
+}
+function stateForm(functionProfiles, stateId) {
+  const functions = Object.keys(functionProfiles).sort();
+  const key = (path) => stateId ? `${stateId}.${path}` : path;
+  const data = (path) => stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`;
+  const profileValue = (prefix, field) => ({
+    alsoDependsOn: [key("function")],
+    calculateFunc: `(${JSON.stringify(functionProfiles)}[${data("function")}]?.${prefix}.${field} ?? ${data(`${prefix}.${field}`)})`,
+    ignoreOwnChanges: true
+  });
+  const limits = (prefix, label) => ({
+    [key(`${prefix}Header`)]: { type: "header", text: label, size: 3, newLine: true, xs: 12 },
+    [key(`${prefix}.enabled`)]: {
+      type: "checkbox",
+      label: t("Enabled", "Aktiviert"),
+      newLine: true,
+      xs: 12,
+      onChange: profileValue(prefix, "enabled")
+    },
+    [key(`${prefix}.mode`)]: {
+      type: "select",
+      label: t("Violation when value is \u2026", "Verletzung, wenn der Wert \u2026"),
+      newLine: true,
+      xs: 12,
+      options: [
+        { value: "below", label: t("below the limit", "unter dem Grenzwert liegt") },
+        { value: "above", label: t("above the limit", "\xFCber dem Grenzwert liegt") },
+        { value: "outside", label: t("outside the allowed range", "au\xDFerhalb des erlaubten Bereichs liegt") },
+        { value: "inside", label: t("inside the forbidden range", "im verbotenen Bereich liegt") }
+      ],
+      hidden: `!${data(`${prefix}.enabled`)}`,
+      onChange: profileValue(prefix, "mode")
+    },
+    [key(`${prefix}.min`)]: {
+      type: "number",
+      label: t("Lower limit", "Untergrenze"),
+      newLine: true,
+      xs: 6,
+      hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'above'`,
+      onChange: profileValue(prefix, "min")
+    },
+    [key(`${prefix}.max`)]: {
+      type: "number",
+      label: t("Upper limit", "Obergrenze"),
+      xs: 6,
+      hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'below'`,
+      onChange: profileValue(prefix, "max")
+    }
+  });
+  return {
+    type: "panel",
+    items: {
+      visual: {
+        type: "staticText",
+        format: "html",
+        text: "<div style='display:flex;justify-content:center;gap:6px;margin:4px 0 16px'><span style='height:10px;width:32%;background:#c62828;border-radius:5px'></span><span style='height:10px;width:32%;background:#d6a500;border-radius:5px'></span><span style='height:10px;width:32%;background:#3f7d45;border-radius:5px'></span></div>",
+        newLine: true,
+        xs: 12
+      },
+      [key("name")]: { type: "text", label: t("Name", "Name"), newLine: true, xs: 12 },
+      [key("sourceId")]: {
+        type: "objectId",
+        label: t("ioBroker state", "ioBroker-State"),
+        newLine: true,
+        xs: 12,
+        customFilter: { type: "state", common: { type: "number" } }
+      },
+      [key("function")]: {
+        type: "autocomplete",
+        label: t("Function", "Funktion"),
+        options: functions,
+        freeSolo: true,
+        newLine: true,
+        xs: 12
+      },
+      ...limits("warning", t("Warning limits", "Warngrenzen")),
+      ...limits("alarm", t("Alarm limits", "Alarmgrenzen")),
+      [key("staleWarningHeader")]: {
+        type: "header",
+        text: t("Update timeout", "Aktualisierungs-Timeout"),
+        size: 3,
+        newLine: true,
+        xs: 12
+      },
+      [key("staleWarning.enabled")]: {
+        type: "checkbox",
+        label: t("Warn if the state is not updated", "Warnen, wenn der State nicht aktualisiert wird"),
+        newLine: true,
+        xs: 12,
+        onChange: profileValue("staleWarning", "enabled")
+      },
+      [key("staleWarning.minutes")]: {
+        type: "number",
+        label: t("Timeout in minutes", "Zeitlimit in Minuten"),
+        min: 1,
+        step: 1,
+        newLine: true,
+        xs: 12,
+        hidden: `!${data("staleWarning.enabled")}`,
+        onChange: profileValue("staleWarning", "minutes")
+      }
+    }
+  };
+}
+function statesForm(states, functionProfiles) {
+  return {
+    type: "tabs",
+    items: Object.fromEntries(
+      states.map((watched) => {
+        const profiles = watched.function ? {
+          ...functionProfiles,
+          [watched.function]: {
+            warning: { ...watched.warning },
+            alarm: { ...watched.alarm },
+            staleWarning: { ...watched.staleWarning }
+          }
+        } : functionProfiles;
+        const form = stateForm(profiles, watched.id);
+        form.items[`${watched.id}._delete`] = {
+          type: "checkbox",
+          label: t("Delete this monitored state", "Diesen \xDCberwachungs-State l\xF6schen"),
+          newLine: true,
+          xs: 12
+        };
+        return [watched.id, { ...form, label: watched.name }];
+      })
+    )
+  };
+}
+class DeviceMonitoring extends utils.Adapter {
+  devices = [];
+  nextDeviceNumber = 1;
+  subscribed = /* @__PURE__ */ new Set();
+  sourceUnits = /* @__PURE__ */ new Map();
+  deviceManagement;
+  sortRefreshTimer;
+  staleCheckTimer;
   constructor(options = {}) {
-    super({
-      ...options,
-      name: "watch-devices"
-    });
+    super({ ...options, name: "device-monitoring" });
     this.on("ready", this.onReady.bind(this));
     this.on("stateChange", this.onStateChange.bind(this));
-    this.on("unload", this.onUnload.bind(this));
+    this.on("message", this.onMessage.bind(this));
+    this.on("unload", (callback) => {
+      if (this.sortRefreshTimer) {
+        clearInterval(this.sortRefreshTimer);
+      }
+      if (this.staleCheckTimer) {
+        clearInterval(this.staleCheckTimer);
+      }
+      callback();
+    });
   }
-  /**
-   * Is called when databases are connected and adapter received configuration.
-   */
   async onReady() {
-    this.setState("info.connection", false, true);
-    this.log.debug("config option1: ${this.config.option1}");
-    this.log.debug("config option2: ${this.config.option2}");
-    await this.setObjectNotExistsAsync("testVariable", {
+    this.deviceManagement = new DeviceMonitoringManagement(this);
+    const legacyDevices = this.normalizeDevices(this.config.devices);
+    this.devices = legacyDevices.length ? legacyDevices : await this.loadDevicesFromObjects();
+    await this.ensureState("info.deviceInfo", t("Device information", "Ger\xE4teinformationen"), "string", "json");
+    await this.rebuildObjects();
+    if (legacyDevices.length) {
+      await this.removeLegacyDeviceConfig();
+    }
+    this.refreshSubscriptions();
+    await this.updateAll();
+    await this.setState("info.connection", true, true);
+    this.sortRefreshTimer = setInterval(() => {
+      var _a;
+      void ((_a = this.deviceManagement) == null ? void 0 : _a.refreshCards());
+    }, 1e4);
+    this.staleCheckTimer = setInterval(() => {
+      void this.updateAll();
+    }, 6e4);
+  }
+  onMessage(message) {
+    var _a;
+    if (!((_a = message.command) == null ? void 0 : _a.startsWith("dm:"))) {
+      this.log.debug(`Unhandled command: ${message.command}`);
+    }
+  }
+  async onStateChange(id, state) {
+    if (!state) {
+      return;
+    }
+    const affectedDevices = /* @__PURE__ */ new Set();
+    for (const device of this.devices) {
+      for (const watched of device.states) {
+        if (watched.sourceId === id) {
+          await this.updateValue(device, watched, state);
+          affectedDevices.add(device.id);
+        }
+      }
+    }
+    for (const deviceId of affectedDevices) {
+      const device = this.devices.find((entry) => entry.id === deviceId);
+      if (device) {
+        await this.updateDeviceSummary(device);
+      }
+    }
+    if (affectedDevices.size) {
+      await this.updateDeviceInfo();
+    }
+  }
+  getFunctionProfiles(preferred) {
+    return (0, import_evaluation.getFunctionProfiles)(this.devices, preferred);
+  }
+  async getDevicesWithStatus() {
+    const rank = { timeout: 0, alarm: 1, warning: 2, unknown: 3, ok: 4 };
+    const result = await Promise.all(
+      this.devices.map(async (device) => ({ device, status: await this.getDeviceStatus(device) }))
+    );
+    return result.sort((a, b) => rank[a.status] - rank[b.status] || a.device.name.localeCompare(b.device.name));
+  }
+  async addDevice(name) {
+    const used = new Set(this.devices.map((device) => device.id));
+    let id;
+    do {
+      id = `device_${String(this.nextDeviceNumber++).padStart(3, "0")}`;
+    } while (used.has(id));
+    await this.saveDevices([...this.devices, { id, name: name.trim(), states: [] }]);
+  }
+  async renameDevice(id, name) {
+    await this.saveDevices(this.devices.map((d) => d.id === id ? { ...d, name: name.trim() } : d));
+  }
+  async removeDevice(id) {
+    await this.delObjectAsync(`devices.${id}`, { recursive: true });
+    await this.saveDevices(this.devices.filter((d) => d.id !== id));
+  }
+  async addWatchedState(deviceId, data) {
+    const device = this.devices.find((d) => d.id === deviceId);
+    if (!device) {
+      return;
+    }
+    const id = uniqueId(safeId(String(data.name), "state"), new Set(device.states.map((s) => s.id)));
+    await this.saveDevices(
+      this.devices.map(
+        (d) => d.id === deviceId ? { ...d, states: [...d.states, this.normalizeState(data, id)] } : d
+      )
+    );
+  }
+  async updateWatchedState(deviceId, stateId, data) {
+    await this.saveDevices(
+      this.devices.map(
+        (d) => d.id === deviceId ? {
+          ...d,
+          // Keep the latest edit last: configuration order determines which of
+          // several states with the same function supplies its template.
+          states: [...d.states.filter((s) => s.id !== stateId), this.normalizeState(data, stateId)]
+        } : d
+      )
+    );
+  }
+  async replaceWatchedStates(deviceId, data) {
+    const device = this.devices.find((entry) => entry.id === deviceId);
+    if (!device) {
+      return;
+    }
+    const states = device.states.filter((watched) => {
+      var _a;
+      return !((_a = data[watched.id]) == null ? void 0 : _a._delete);
+    }).map((watched) => this.normalizeState(data[watched.id] || watched, watched.id));
+    await this.saveDevices(this.devices.map((entry) => entry.id === deviceId ? { ...entry, states } : entry));
+  }
+  async removeWatchedState(deviceId, stateId) {
+    await this.delObjectAsync(`devices.${deviceId}.${stateId}`, { recursive: true });
+    await this.saveDevices(
+      this.devices.map((d) => d.id === deviceId ? { ...d, states: d.states.filter((s) => s.id !== stateId) } : d)
+    );
+  }
+  normalizeState(data, id) {
+    var _a, _b;
+    const limit = (input, fallback) => ({
+      enabled: (input == null ? void 0 : input.enabled) === true,
+      mode: ["below", "above", "outside", "inside"].includes(input == null ? void 0 : input.mode) ? input.mode : fallback,
+      min: typeof (input == null ? void 0 : input.min) === "number" ? input.min : void 0,
+      max: typeof (input == null ? void 0 : input.max) === "number" ? input.max : void 0
+    });
+    return {
+      id,
+      name: String(data.name || id).trim(),
+      sourceId: String(data.sourceId || "").trim(),
+      function: String(data.function || "").trim(),
+      warning: limit(data.warning, "outside"),
+      alarm: limit(data.alarm, "outside"),
+      staleWarning: {
+        enabled: ((_a = data.staleWarning) == null ? void 0 : _a.enabled) === true,
+        minutes: typeof ((_b = data.staleWarning) == null ? void 0 : _b.minutes) === "number" && data.staleWarning.minutes > 0 ? data.staleWarning.minutes : 60
+      }
+    };
+  }
+  normalizeDevices(value) {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    const used = /* @__PURE__ */ new Set();
+    return value.filter((item) => item && typeof item === "object").map((item, i) => {
+      const configuredId = String(item.id || "");
+      const match = /^device_(\d+)$/.exec(configuredId);
+      let number = match && Number(match[1]) > 0 ? Number(match[1]) : this.nextDeviceNumber;
+      let id = `device_${String(number).padStart(3, "0")}`;
+      while (used.has(id)) {
+        number = this.nextDeviceNumber;
+        id = `device_${String(number).padStart(3, "0")}`;
+        this.nextDeviceNumber++;
+      }
+      used.add(id);
+      this.nextDeviceNumber = Math.max(this.nextDeviceNumber, number + 1);
+      return {
+        id,
+        name: String(item.name || `Device ${i + 1}`),
+        states: Array.isArray(item.states) ? item.states.map(
+          (s, j) => this.normalizeState(s, safeId(String(s.id || s.name || ""), `state_${j + 1}`))
+        ) : []
+      };
+    });
+  }
+  async saveDevices(devices) {
+    var _a;
+    this.devices = devices;
+    await this.rebuildObjects();
+    await this.removeLegacyDeviceConfig();
+    this.refreshSubscriptions();
+    await this.updateAll();
+    await ((_a = this.deviceManagement) == null ? void 0 : _a.refreshCards());
+  }
+  async rebuildObjects() {
+    await this.setObjectAsync("devices", {
+      type: "folder",
+      common: { name: t("Devices", "Ger\xE4te") },
+      native: { devices: this.devices, nextDeviceNumber: this.nextDeviceNumber }
+    });
+    const expected = /* @__PURE__ */ new Set();
+    for (const device of this.devices) {
+      expected.add(device.id);
+      expected.add(`${device.id}.color`);
+      expected.add(`${device.id}.icon`);
+      await this.setObjectAsync(`devices.${device.id}`, {
+        type: "device",
+        common: { name: device.name },
+        native: {}
+      });
+      await this.ensureState(`devices.${device.id}.color`, t("Card color", "Kachelfarbe"), "string", "text");
+      await this.ensureState(`devices.${device.id}.icon`, t("Card icon", "Kachelsymbol"), "string", "text");
+      for (const watched of device.states) {
+        expected.add(`${device.id}.${watched.id}`);
+        const base = `devices.${device.id}.${watched.id}`;
+        const unit = await this.getSourceUnit(watched.sourceId);
+        await this.setObjectAsync(base, {
+          type: "channel",
+          common: { name: watched.name },
+          native: { sourceId: watched.sourceId, function: watched.function }
+        });
+        await this.ensureState(`${base}.value`, t("Current value", "Aktueller Wert"), "mixed", "value", unit);
+        await this.ensureState(`${base}.status`, t("Status", "Status"), "string", "text");
+        await this.ensureState(`${base}.display`, t("Display value", "Anzeigewert"), "string", "text");
+        await this.ensureState(`${base}.warning`, t("Warning", "Warnung"), "boolean", "indicator");
+        await this.ensureState(`${base}.alarm`, t("Alarm", "Alarm"), "boolean", "indicator.alarm");
+        await this.ensureState(
+          `${base}.updateTimeout`,
+          t("Update timeout", "Aktualisierungs-Timeout"),
+          "boolean",
+          "indicator.maintenance"
+        );
+      }
+    }
+    const objects = await this.getAdapterObjectsAsync();
+    for (const id of Object.keys(objects)) {
+      const fullId = id.startsWith(`${this.namespace}.`) ? id : `${this.namespace}.${id}`;
+      if (!fullId.startsWith(`${this.namespace}.devices.`)) {
+        continue;
+      }
+      const relative = fullId.slice(`${this.namespace}.devices.`.length);
+      if (!relative) {
+        continue;
+      }
+      const parts = relative.split(".");
+      const key = parts.length === 1 ? parts[0] : `${parts[0]}.${parts[1]}`;
+      if (!expected.has(key)) {
+        await this.delObjectAsync(`devices.${key}`, { recursive: true });
+      }
+    }
+  }
+  async loadDevicesFromObjects() {
+    var _a, _b;
+    const folder = await this.getObjectAsync("devices");
+    if (typeof ((_a = folder == null ? void 0 : folder.native) == null ? void 0 : _a.nextDeviceNumber) === "number" && folder.native.nextDeviceNumber > 0) {
+      this.nextDeviceNumber = Math.floor(folder.native.nextDeviceNumber);
+    }
+    return this.normalizeDevices((_b = folder == null ? void 0 : folder.native) == null ? void 0 : _b.devices);
+  }
+  async removeLegacyDeviceConfig() {
+    const instanceId = `system.adapter.${this.namespace}`;
+    const object = await this.getForeignObjectAsync(instanceId);
+    if (!object || !Object.prototype.hasOwnProperty.call(object.native, "devices")) {
+      return;
+    }
+    const { devices: _devices, ...native } = object.native;
+    await this.setForeignObjectAsync(instanceId, { ...object, native });
+  }
+  async ensureState(id, name, type, role, unit) {
+    await this.setObjectAsync(id, {
       type: "state",
-      common: {
-        name: "testVariable",
-        type: "boolean",
-        role: "indicator",
-        read: true,
-        write: true
-      },
+      common: { name, type, role, read: true, write: false, ...unit ? { unit } : {} },
       native: {}
     });
-    this.subscribeStates("testVariable");
-    await this.setState("testVariable", true);
-    await this.setState("testVariable", { val: true, ack: true });
-    await this.setState("testVariable", { val: true, ack: true, expire: 30 });
-    const pwdResult = await this.checkPasswordAsync("admin", "iobroker");
-    this.log.info(`check user admin pw iobroker: ${JSON.stringify(pwdResult)}`);
-    const groupResult = await this.checkGroupAsync("admin", "admin");
-    this.log.info(`check group user admin group admin: ${JSON.stringify(groupResult)}`);
   }
-  /**
-   * Is called when adapter shuts down - callback has to be called under any circumstances!
-   *
-   * @param callback - Callback function
-   */
-  onUnload(callback) {
-    try {
-      callback();
-    } catch (error) {
-      this.log.error(`Error during unloading: ${error.message}`);
-      callback();
+  refreshSubscriptions() {
+    for (const id of this.subscribed) {
+      this.unsubscribeForeignStates(id);
+    }
+    this.subscribed = new Set(this.devices.flatMap((d) => d.states.map((s) => s.sourceId)).filter(Boolean));
+    for (const id of this.subscribed) {
+      this.subscribeForeignStates(id);
     }
   }
-  // If you need to react to object changes, uncomment the following block and the corresponding line in the constructor.
-  // You also need to subscribe to the objects with `this.subscribeObjects`, similar to `this.subscribeStates`.
-  // /**
-  //  * Is called if a subscribed object changes
-  //  */
-  // private onObjectChange(id: string, obj: ioBroker.Object | null | undefined): void {
-  // 	if (obj) {
-  // 		// The object was changed
-  // 		this.log.info(`object ${id} changed: ${JSON.stringify(obj)}`);
-  // 	} else {
-  // 		// The object was deleted
-  // 		this.log.info(`object ${id} deleted`);
-  // 	}
-  // }
-  /**
-   * Is called if a subscribed state changes
-   *
-   * @param id - State ID
-   * @param state - State object
-   */
-  onStateChange(id, state) {
-    if (state) {
-      this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-      if (state.ack === false) {
-        this.log.info(`User command received for ${id}: ${state.val}`);
+  async getSourceUnit(sourceId) {
+    if (this.sourceUnits.has(sourceId)) {
+      return this.sourceUnits.get(sourceId) || "";
+    }
+    const object = await this.getForeignObjectAsync(sourceId);
+    const unit = (object == null ? void 0 : object.type) === "state" && typeof object.common.unit === "string" ? object.common.unit : "";
+    this.sourceUnits.set(sourceId, unit);
+    return unit;
+  }
+  async updateAll() {
+    for (const device of this.devices) {
+      for (const watched of device.states) {
+        await this.updateValue(device, watched, await this.getForeignStateAsync(watched.sourceId));
       }
-    } else {
-      this.log.info(`state ${id} deleted`);
+      await this.updateDeviceSummary(device);
     }
+    await this.updateDeviceInfo();
   }
-  // If you need to accept messages in your adapter, uncomment the following block and the corresponding line in the constructor.
-  // /**
-  //  * Some message was sent to this instance over message box. Used by email, pushover, text2speech, ...
-  //  * Using this method requires "common.messagebox" property to be set to true in io-package.json
-  //  */
-  //
-  // private onMessage(obj: ioBroker.Message): void {
-  // 	if (typeof obj === 'object' && obj.message) {
-  // 		if (obj.command === 'send') {
-  // 			// e.g. send email or pushover or whatever
-  // 			this.log.info('send command');
-  // 			// Send response in callback if required
-  // 			if (obj.callback) this.sendTo(obj.from, obj.command, 'Message received', obj.callback);
-  // 		}
-  // 	}
-  // }
+  async updateDeviceInfo() {
+    const devices = await Promise.all(
+      this.devices.map(async (device) => {
+        const states = await Promise.all(
+          device.states.map(async (watched) => {
+            var _a;
+            const sourceState = await this.getForeignStateAsync(watched.sourceId);
+            const updateTimeout = (0, import_evaluation.isUpdateTimedOut)(sourceState, watched.staleWarning);
+            const status = (0, import_evaluation.getWatchStatus)(
+              (_a = sourceState == null ? void 0 : sourceState.val) != null ? _a : null,
+              watched.warning,
+              watched.alarm,
+              updateTimeout
+            );
+            return {
+              id: watched.id,
+              name: watched.name,
+              sourceId: watched.sourceId,
+              function: watched.function,
+              status,
+              warning: status === "warning",
+              alarm: status === "alarm",
+              updateTimeout
+            };
+          })
+        );
+        return { id: device.id, name: device.name, status: await this.getDeviceStatus(device), states };
+      })
+    );
+    await this.setStateChangedAsync("info.deviceInfo", {
+      val: JSON.stringify({ devices }),
+      ack: true
+    });
+  }
+  async getDeviceStatus(device) {
+    var _a;
+    const rank = { timeout: 0, alarm: 1, warning: 2, unknown: 3, ok: 4 };
+    let status = "ok";
+    for (const watched of device.states) {
+      const state = await this.getForeignStateAsync(watched.sourceId);
+      const current = (0, import_evaluation.getWatchStatus)(
+        (_a = state == null ? void 0 : state.val) != null ? _a : null,
+        watched.warning,
+        watched.alarm,
+        (0, import_evaluation.isUpdateTimedOut)(state, watched.staleWarning)
+      );
+      if (rank[current] < rank[status]) {
+        status = current;
+      }
+    }
+    return status;
+  }
+  async updateDeviceSummary(device) {
+    const status = await this.getDeviceStatus(device);
+    await Promise.all([
+      this.setStateChangedAsync(`devices.${device.id}.color`, { val: COLORS[status], ack: true }),
+      this.setStateChangedAsync(`devices.${device.id}.icon`, { val: STATUS_ICONS[status], ack: true })
+    ]);
+  }
+  async updateValue(device, watched, sourceState) {
+    var _a;
+    const base = `devices.${device.id}.${watched.id}`;
+    const value = (_a = sourceState == null ? void 0 : sourceState.val) != null ? _a : null;
+    const updateTimedOut = (0, import_evaluation.isUpdateTimedOut)(sourceState, watched.staleWarning);
+    const status = (0, import_evaluation.getWatchStatus)(value, watched.warning, watched.alarm, updateTimedOut);
+    const unit = await this.getSourceUnit(watched.sourceId);
+    await Promise.all([
+      this.setStateChangedAsync(`${base}.value`, { val: value, ack: true }),
+      this.setStateChangedAsync(`${base}.status`, { val: status, ack: true }),
+      this.setStateChangedAsync(`${base}.display`, {
+        val: `${watched.name}: ${value === null ? "\u2014" : `${String(value)}${unit ? ` ${unit}` : ""}`}`,
+        ack: true
+      }),
+      this.setStateChangedAsync(`${base}.warning`, { val: status === "warning", ack: true }),
+      this.setStateChangedAsync(`${base}.alarm`, { val: status === "alarm", ack: true }),
+      this.setStateChangedAsync(`${base}.updateTimeout`, { val: updateTimedOut, ack: true })
+    ]);
+  }
 }
 if (require.main !== module) {
-  module.exports = (options) => new WatchDevices(options);
+  module.exports = (options) => new DeviceMonitoring(options);
 } else {
-  (() => new WatchDevices())();
+  new DeviceMonitoring();
 }
 //# sourceMappingURL=main.js.map

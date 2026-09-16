@@ -1,14 +1,10 @@
-// This file extends the AdapterConfig type from "@iobroker/types"
-
-// Augment the globally declared type ioBroker.AdapterConfig
+import type { DeviceConfiguration } from './evaluation';
 declare global {
 	namespace ioBroker {
 		interface AdapterConfig {
-			option1: boolean;
-			option2: string;
+			/** Legacy storage; migrated to the objects below `devices` on startup. */
+			devices?: DeviceConfiguration[];
 		}
 	}
 }
-
-// this is required so the above AdapterConfig is found by TypeScript / type checking
 export {};

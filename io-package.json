@@ -1,6 +1,6 @@
 {
 	"common": {
-		"name": "watch-devices",
+		"name": "device-monitoring",
 		"version": "0.0.1",
 		"news": {
 			"0.0.1": {
@@ -18,20 +18,20 @@
 			}
 		},
 		"titleLang": {
-			"en": "Watch-Devices",
-			"de": "Uhren-Geräte",
-			"ru": "Часы-устройства",
-			"pt": "Dispositivos de relógio",
-			"nl": "Horloge-apparaten",
-			"fr": "Appareils de montre",
-			"it": "Dispositivi di orologio",
-			"es": "Dispositivos de reloj",
-			"pl": "Urządzenia do oglądania",
-			"uk": "Годинники-пристрої",
-			"zh-cn": "手表设备"
+			"en": "Device Monitoring",
+			"de": "Geräteüberwachung",
+			"ru": "Мониторинг устройств",
+			"pt": "Monitoramento de dispositivos",
+			"nl": "Apparaatbewaking",
+			"fr": "Surveillance des appareils",
+			"it": "Monitoraggio dispositivi",
+			"es": "Monitorización de dispositivos",
+			"pl": "Monitorowanie urządzeń",
+			"uk": "Моніторинг пристроїв",
+			"zh-cn": "设备监控"
 		},
 		"desc": {
-			"en": "Watches your devined device states and build warnings and alerts",
+			"en": "monitores your devined device states and build warnings and alerts",
 			"de": "Überwacht die Zustände Ihrer definierten Geräte und erstellt Warnungen und Alarme",
 			"ru": "Отслеживает состояния вашего устройства и создает предупреждения и оповещения.",
 			"pt": "Observa os estados do seu dispositivo e cria avisos e alertas",
@@ -43,24 +43,17 @@
 			"uk": "Спостерігає за станом вашого пристрою та створює попередження та сповіщення",
 			"zh-cn": "监视您的设备状态并构建警告和警报"
 		},
-		"authors": [
-			"BenAhrdt <github@ben-schmidt.net>"
-		],
-		"keywords": [
-			"watch",
-			"device",
-			"warning",
-			"alert"
-		],
+		"authors": ["BenAhrdt <github@ben-schmidt.net>"],
+		"keywords": ["watch", "device", "warning", "alert"],
 		"licenseInformation": {
 			"type": "free",
 			"license": "MIT"
 		},
 		"platform": "Javascript/Node.js",
-		"icon": "watch-devices.png",
+		"icon": "device-monitoring-v2.png",
 		"enabled": true,
-		"extIcon": "https://raw.githubusercontent.com/BenAhrdt/ioBroker.watch-devices/main/admin/watch-devices.png",
-		"readme": "https://github.com/BenAhrdt/ioBroker.watch-devices/blob/main/README.md",
+		"extIcon": "https://raw.githubusercontent.com/BenAhrdt/ioBroker.device-monitoring/main/admin/device-monitoring-v2.png",
+		"readme": "https://github.com/BenAhrdt/ioBroker.device-monitoring/blob/main/README.md",
 		"loglevel": "info",
 		"tier": 3,
 		"mode": "daemon",
@@ -68,26 +61,27 @@
 		"compact": true,
 		"connectionType": "local",
 		"dataSource": "push",
+		"supportedMessages": { "deviceManager": true },
 		"adminUI": {
 			"config": "json",
-			"tab": "materialize"
+			"tab": "json"
 		},
 		"adminTab": {
 			"singleton": true,
 			"name": {
-				"en": "Watch-Devices",
-				"de": "Uhren-Geräte",
-				"ru": "Часы-устройства",
-				"pt": "Dispositivos de relógio",
-				"nl": "Horloge-apparaten",
-				"fr": "Appareils de montre",
-				"it": "Dispositivi di orologio",
-				"es": "Dispositivos de reloj",
-				"pl": "Urządzenia do oglądania",
-				"uk": "Годинники-пристрої",
-				"zh-cn": "手表设备"
+				"en": "Device Monitoring",
+				"de": "Geräte-Überwachung",
+				"ru": "Мониторинг устройств",
+				"pt": "Monitoramento de dispositivos",
+				"nl": "Apparaatbewaking",
+				"fr": "Surveillance des appareils",
+				"it": "Monitoraggio dispositivi",
+				"es": "Monitorización de dispositivos",
+				"pl": "Monitorowanie urządzeń",
+				"uk": "Моніторинг пристроїв",
+				"zh-cn": "设备监控"
 			},
-			"link": ""
+			"link": "jsonTab.json5"
 		},
 		"dependencies": [
 			{
@@ -100,10 +94,7 @@
 			}
 		]
 	},
-	"native": {
-		"option1": true,
-		"option2": "42"
-	},
+	"native": {},
 	"objects": [],
 	"instanceObjects": [
 		{
@@ -126,6 +117,25 @@
 				"def": false
 			},
 			"native": {}
+		},
+		{
+			"_id": "info.deviceInfo",
+			"type": "state",
+			"common": {
+				"role": "json",
+				"name": "Device information",
+				"type": "string",
+				"read": true,
+				"write": false,
+				"def": "{\"devices\":[]}"
+			},
+			"native": {}
+		},
+		{
+			"_id": "devices",
+			"type": "folder",
+			"common": { "name": "Devices" },
+			"native": { "devices": [], "nextDeviceNumber": 1 }
 		}
 	]
 }

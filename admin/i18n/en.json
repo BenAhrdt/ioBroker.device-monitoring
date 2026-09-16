@@ -1,5 +1,5 @@
 {
-	"watch-devices adapter settings": "Adapter settings for watch-devices",
-	"option1": "option1",
-	"option2": "option2"
+	"device-monitoring adapter settings": "Device Monitoring settings",
+	"This adapter is configured in the Device Monitoring adapter tab.": "This adapter is configured in the Device Monitoring adapter tab.",
+	"Open Device Monitoring": "Open Device Monitoring"
 }

@@ -1,16 +1,16 @@
-![Logo](admin/watch-devices.png)
-# ioBroker.watch-devices
+![Logo](admin/device-monitoring.png)
+# ioBroker.device-monitoring
 
-[![NPM version](https://img.shields.io/npm/v/iobroker.watch-devices.svg)](https://www.npmjs.com/package/iobroker.watch-devices)
-[![Downloads](https://img.shields.io/npm/dm/iobroker.watch-devices.svg)](https://www.npmjs.com/package/iobroker.watch-devices)
-![Number of Installations](https://iobroker.live/badges/watch-devices-installed.svg)
-![Current version in stable repository](https://iobroker.live/badges/watch-devices-stable.svg)
+[![NPM version](https://img.shields.io/npm/v/iobroker.device-monitoring.svg)](https://www.npmjs.com/package/iobroker.device-monitoring)
+[![Downloads](https://img.shields.io/npm/dm/iobroker.device-monitoring.svg)](https://www.npmjs.com/package/iobroker.device-monitoring)
+![Number of Installations](https://iobroker.live/badges/device-monitoring-installed.svg)
+![Current version in stable repository](https://iobroker.live/badges/device-monitoring-stable.svg)
 
-[![NPM](https://nodei.co/npm/iobroker.watch-devices.png?downloads=true)](https://nodei.co/npm/iobroker.watch-devices/)
+[![NPM](https://nodei.co/npm/iobroker.device-monitoring.png?downloads=true)](https://nodei.co/npm/iobroker.device-monitoring/)
 
-**Tests:** ![Test and Release](https://github.com/BenAhrdt/ioBroker.watch-devices/workflows/Test%20and%20Release/badge.svg)
+**Tests:** ![Test and Release](https://github.com/BenAhrdt/ioBroker.device-monitoring/workflows/Test%20and%20Release/badge.svg)
 
-## watch-devices adapter for ioBroker
+## device-monitoring adapter for ioBroker
 
 Watches your devined device states and build warnings and alerts
 
@@ -25,13 +25,13 @@ You can check other adapters for examples or ask in the developer community. Usi
 ### Getting started
 
 You are almost done, only a few steps left:
-1. Create a new repository on GitHub with the name `ioBroker.watch-devices`
+1. Create a new repository on GitHub with the name `ioBroker.device-monitoring`
 
 1. Push all files to the GitHub repo. The creator has already set up the local repository for you:  
 	```bash
 	git push origin main
 	```
-1. Add a new secret under https://github.com/BenAhrdt/ioBroker.watch-devices/settings/secrets. It must be named `AUTO_MERGE_TOKEN` and contain a personal access token with push access to the repository, e.g. yours. You can create a new token under https://github.com/settings/tokens.
+1. Add a new secret under https://github.com/BenAhrdt/ioBroker.device-monitoring/settings/secrets. It must be named `AUTO_MERGE_TOKEN` and contain a personal access token with push access to the repository, e.g. yours. You can create a new token under https://github.com/settings/tokens.
 
 1. Head over to [src/main.ts](src/main.ts) and start programming!
 
