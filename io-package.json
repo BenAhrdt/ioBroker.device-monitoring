@@ -1,141 +1,169 @@
 {
-	"common": {
-		"name": "device-monitoring",
-		"version": "0.0.1",
-		"news": {
-			"0.0.1": {
-				"en": "initial release",
-				"de": "Erstveröffentlichung",
-				"ru": "Начальная версия",
-				"pt": "lançamento inicial",
-				"nl": "Eerste uitgave",
-				"fr": "Première version",
-				"it": "Versione iniziale",
-				"es": "Versión inicial",
-				"pl": "Pierwsze wydanie",
-				"uk": "Початкова версія",
-				"zh-cn": "首次出版"
-			}
-		},
-		"titleLang": {
-			"en": "Device Monitoring",
-			"de": "Geräteüberwachung",
-			"ru": "Мониторинг устройств",
-			"pt": "Monitoramento de dispositivos",
-			"nl": "Apparaatbewaking",
-			"fr": "Surveillance des appareils",
-			"it": "Monitoraggio dispositivi",
-			"es": "Monitorización de dispositivos",
-			"pl": "Monitorowanie urządzeń",
-			"uk": "Моніторинг пристроїв",
-			"zh-cn": "设备监控"
-		},
-		"desc": {
-			"en": "monitores your devined device states and build warnings and alerts",
-			"de": "Überwacht die Zustände Ihrer definierten Geräte und erstellt Warnungen und Alarme",
-			"ru": "Отслеживает состояния вашего устройства и создает предупреждения и оповещения.",
-			"pt": "Observa os estados do seu dispositivo e cria avisos e alertas",
-			"nl": "Houdt de status van uw apparaat in de gaten en genereert waarschuwingen en alerts",
-			"fr": "Surveille les états de votre appareil et crée des avertissements et des alertes",
-			"it": "Controlla gli stati del tuo dispositivo ideato e crea avvisi e avvisi",
-			"es": "Observa los estados de tu dispositivo y genera advertencias y alertas.",
-			"pl": "Obserwuje stany Twojego urządzenia i tworzy ostrzeżenia i alerty",
-			"uk": "Спостерігає за станом вашого пристрою та створює попередження та сповіщення",
-			"zh-cn": "监视您的设备状态并构建警告和警报"
-		},
-		"authors": ["BenAhrdt <github@ben-schmidt.net>"],
-		"keywords": ["watch", "device", "warning", "alert"],
-		"licenseInformation": {
-			"type": "free",
-			"license": "MIT"
-		},
-		"platform": "Javascript/Node.js",
-		"icon": "device-monitoring-v2.png",
-		"enabled": true,
-		"extIcon": "https://raw.githubusercontent.com/BenAhrdt/ioBroker.device-monitoring/main/admin/device-monitoring-v2.png",
-		"readme": "https://github.com/BenAhrdt/ioBroker.device-monitoring/blob/main/README.md",
-		"loglevel": "info",
-		"tier": 3,
-		"mode": "daemon",
-		"type": "alarm",
-		"compact": true,
-		"connectionType": "local",
-		"dataSource": "push",
-		"supportedMessages": { "deviceManager": true },
-		"adminUI": {
-			"config": "json",
-			"tab": "json"
-		},
-		"adminTab": {
-			"singleton": true,
-			"name": {
-				"en": "Device Monitoring",
-				"de": "Geräte-Überwachung",
-				"ru": "Мониторинг устройств",
-				"pt": "Monitoramento de dispositivos",
-				"nl": "Apparaatbewaking",
-				"fr": "Surveillance des appareils",
-				"it": "Monitoraggio dispositivi",
-				"es": "Monitorización de dispositivos",
-				"pl": "Monitorowanie urządzeń",
-				"uk": "Моніторинг пристроїв",
-				"zh-cn": "设备监控"
-			},
-			"link": "jsonTab.json5"
-		},
-		"dependencies": [
-			{
-				"js-controller": ">=6.0.11"
-			}
-		],
-		"globalDependencies": [
-			{
-				"admin": ">=7.0.23"
-			}
-		]
-	},
-	"native": {},
-	"objects": [],
-	"instanceObjects": [
-		{
-			"_id": "info",
-			"type": "channel",
-			"common": {
-				"name": "Information"
-			},
-			"native": {}
-		},
-		{
-			"_id": "info.connection",
-			"type": "state",
-			"common": {
-				"role": "indicator.connected",
-				"name": "Device or service connected",
-				"type": "boolean",
-				"read": true,
-				"write": false,
-				"def": false
-			},
-			"native": {}
-		},
-		{
-			"_id": "info.deviceInfo",
-			"type": "state",
-			"common": {
-				"role": "json",
-				"name": "Device information",
-				"type": "string",
-				"read": true,
-				"write": false,
-				"def": "{\"devices\":[]}"
-			},
-			"native": {}
-		},
-		{
-			"_id": "devices",
-			"type": "folder",
-			"common": { "name": "Devices" },
-			"native": { "devices": [], "nextDeviceNumber": 1, "functionTemplates": {} }
-		}
-	]
+  "common": {
+    "name": "device-monitoring",
+    "version": "0.0.2",
+    "news": {
+      "0.0.2": {
+        "en": "initial release",
+        "de": "erste Version",
+        "ru": "первоначальный релиз",
+        "pt": "versão inicial",
+        "nl": "eerste uitgave",
+        "fr": "sortie initiale",
+        "it": "prima versione",
+        "es": "versión inicial",
+        "pl": "wstępne wydanie",
+        "uk": "первинний випуск",
+        "zh-cn": "初始版本"
+      },
+      "0.0.1": {
+        "en": "initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "lançamento inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Première version",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Pierwsze wydanie",
+        "uk": "Початкова версія",
+        "zh-cn": "首次出版"
+      }
+    },
+    "titleLang": {
+      "en": "Device Monitoring",
+      "de": "Geräteüberwachung",
+      "ru": "Мониторинг устройств",
+      "pt": "Monitoramento de dispositivos",
+      "nl": "Apparaatbewaking",
+      "fr": "Surveillance des appareils",
+      "it": "Monitoraggio dispositivi",
+      "es": "Monitorización de dispositivos",
+      "pl": "Monitorowanie urządzeń",
+      "uk": "Моніторинг пристроїв",
+      "zh-cn": "设备监控"
+    },
+    "desc": {
+      "en": "monitores your devined device states and build warnings and alerts",
+      "de": "Überwacht die Zustände Ihrer definierten Geräte und erstellt Warnungen und Alarme",
+      "ru": "Отслеживает состояния вашего устройства и создает предупреждения и оповещения.",
+      "pt": "Observa os estados do seu dispositivo e cria avisos e alertas",
+      "nl": "Houdt de status van uw apparaat in de gaten en genereert waarschuwingen en alerts",
+      "fr": "Surveille les états de votre appareil et crée des avertissements et des alertes",
+      "it": "Controlla gli stati del tuo dispositivo ideato e crea avvisi e avvisi",
+      "es": "Observa los estados de tu dispositivo y genera advertencias y alertas.",
+      "pl": "Obserwuje stany Twojego urządzenia i tworzy ostrzeżenia i alerty",
+      "uk": "Спостерігає за станом вашого пристрою та створює попередження та сповіщення",
+      "zh-cn": "监视您的设备状态并构建警告和警报"
+    },
+    "authors": [
+      "BenAhrdt <github@ben-schmidt.net>"
+    ],
+    "keywords": [
+      "watch",
+      "device",
+      "warning",
+      "alert"
+    ],
+    "licenseInformation": {
+      "type": "free",
+      "license": "MIT"
+    },
+    "platform": "Javascript/Node.js",
+    "icon": "device-monitoring-v2.png",
+    "enabled": true,
+    "extIcon": "https://raw.githubusercontent.com/BenAhrdt/ioBroker.device-monitoring/main/admin/device-monitoring-v2.png",
+    "readme": "https://github.com/BenAhrdt/ioBroker.device-monitoring/blob/main/README.md",
+    "loglevel": "info",
+    "tier": 3,
+    "mode": "daemon",
+    "type": "alarm",
+    "compact": true,
+    "connectionType": "local",
+    "dataSource": "push",
+    "supportedMessages": {
+      "deviceManager": true
+    },
+    "adminUI": {
+      "config": "json",
+      "tab": "json"
+    },
+    "adminTab": {
+      "singleton": true,
+      "name": {
+        "en": "Device Monitoring",
+        "de": "Geräte-Überwachung",
+        "ru": "Мониторинг устройств",
+        "pt": "Monitoramento de dispositivos",
+        "nl": "Apparaatbewaking",
+        "fr": "Surveillance des appareils",
+        "it": "Monitoraggio dispositivi",
+        "es": "Monitorización de dispositivos",
+        "pl": "Monitorowanie urządzeń",
+        "uk": "Моніторинг пристроїв",
+        "zh-cn": "设备监控"
+      },
+      "link": "jsonTab.json5"
+    },
+    "dependencies": [
+      {
+        "js-controller": ">=6.0.11"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.0.23"
+      }
+    ]
+  },
+  "native": {},
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "indicator.connected",
+        "name": "Device or service connected",
+        "type": "boolean",
+        "read": true,
+        "write": false,
+        "def": false
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.deviceInfo",
+      "type": "state",
+      "common": {
+        "role": "json",
+        "name": "Device information",
+        "type": "string",
+        "read": true,
+        "write": false,
+        "def": "{\"devices\":[]}"
+      },
+      "native": {}
+    },
+    {
+      "_id": "devices",
+      "type": "folder",
+      "common": {
+        "name": "Devices"
+      },
+      "native": {
+        "devices": [],
+        "nextDeviceNumber": 1,
+        "functionTemplates": {}
+      }
+    }
+  ]
 }
