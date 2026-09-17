@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "news": {
+      "0.0.9": {
+        "en": "Validate selected source states and mark deleted or invalid states on device cards",
+        "de": "Bestätige Quellstatus und markiere gelöschte oder ungültige Werte auf Gerätekarten",
+        "ru": "Проверьте выбранные исходные состояния и отметьте удаленные или недействительные состояния на картах устройств",
+        "pt": "Valide os estados de origem e marque os excluídos ou inválidos nas placas",
+        "nl": "Valideer geselecteerde bronstatussen en markeer verwijderde of ongeldige staten op de toestelkaarten",
+        "fr": "Validez les états sources sélectionnés et marquez les états supprimés ou invalides sur les cartes",
+        "it": "Convalida gli stati di origine selezionati e cancellati o non validi",
+        "es": "Validar los estados de origen seleccionados y marcar los estados borrados o no válidos",
+        "pl": "Sprawdzanie poprawności wybranych stanów źródłowych i zaznaczanie usuniętych lub nieprawidłowych stanów na kartach urządzeń",
+        "uk": "Перевірка вибраних станів джерела та позначення видалених або недійсних станів на картках пристроїв",
+        "zh-cn": "验证选定的源状态并在设备卡上标记已删除或无效状态"
+      },
       "0.0.8": {
         "en": "Store and apply all limits and timeout values in function templates",
         "de": "Alle Limits und Timeouts in Funktionsvorlagen speichern und anwenden",
@@ -80,19 +93,6 @@
         "pl": "zmień ikonę",
         "uk": "змінити піктограму",
         "zh-cn": "更改图标"
-      },
-      "0.0.2": {
-        "en": "initial release",
-        "de": "erste Version",
-        "ru": "первоначальный релиз",
-        "pt": "versão inicial",
-        "nl": "eerste uitgave",
-        "fr": "sortie initiale",
-        "it": "prima versione",
-        "es": "versión inicial",
-        "pl": "wstępne wydanie",
-        "uk": "первинний випуск",
-        "zh-cn": "初始版本"
       }
     },
     "titleLang": {
