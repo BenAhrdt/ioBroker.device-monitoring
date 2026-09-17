@@ -72,7 +72,7 @@ export function createFunctionTemplate(watched: WatchedStateConfiguration): Func
 	};
 }
 
-export type WatchStatus = 'ok' | 'warning' | 'alarm' | 'timeout' | 'unknown';
+export type WatchStatus = 'ok' | 'warning' | 'alarm' | 'timeout' | 'invalid' | 'unknown';
 
 /**
  * Checks whether a numeric state value violates a configured limit.

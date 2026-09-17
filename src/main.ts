@@ -14,6 +14,7 @@ import {
 
 const t = (en: string, de: string): ioBroker.Translated => ({ en, de });
 const COLORS: Record<WatchStatus, string> = {
+	invalid: '#6d4c41',
 	timeout: '#1976d2',
 	alarm: '#c62828',
 	warning: '#d6a500',
@@ -22,6 +23,9 @@ const COLORS: Record<WatchStatus, string> = {
 };
 const svgIcon = (content: string): string => `data:image/svg+xml,${encodeURIComponent(content)}`;
 const STATUS_ICONS = {
+	invalid: svgIcon(
+		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#6d4c41"/><path d="M8.2 8.2l7.6 7.6M9.2 14.8l-1.4 1.4a2.8 2.8 0 01-4-4l2.4-2.4a2.8 2.8 0 014 0M14.8 9.2l1.4-1.4a2.8 2.8 0 014 4l-2.4 2.4a2.8 2.8 0 01-4 0" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>',
+	),
 	timeout: svgIcon(
 		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1976d2"/><circle cx="12" cy="12" r="5.7" fill="none" stroke="white" stroke-width="1.8"/><path d="M12 8.4v4l2.8 1.7" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 	),
@@ -186,6 +190,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				icon: STATUS_ICONS.unknown,
 				text: { stateId: `${this.adapter.namespace}.devices.${device.id}.${watched.id}.display` },
 				levels: [
+					{ value: 'invalid', color: 'error', icon: STATUS_ICONS.invalid },
 					{ value: 'timeout', color: 'info', icon: STATUS_ICONS.timeout },
 					{ value: 'alarm', color: 'error', icon: STATUS_ICONS.alarm },
 					{ value: 'warning', color: 'warning', icon: STATUS_ICONS.warning },
@@ -228,6 +233,7 @@ function stateForm(
 	const functions = [...new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
 	const key = (path: string): string => (stateId ? `${stateId}.${path}` : path);
 	const data = (path: string): string => (stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`);
+	const sourceValidator = `(${stateId ? `${data('_delete')} || ` : ''}(async () => { const object = await getObject(${data('sourceId')}); return !!${data('sourceId')} && object?.type === 'state' && object?.common?.type === 'number'; })())`;
 	const target = stateId ? `data[${JSON.stringify(stateId)}]` : 'data';
 	const templates = JSON.stringify(functionTemplates);
 	const applyFunctionTemplate = `(() => { const template = ${templates}[${data('function')}]; if (template) { ${target}.warning = { ...${target}.warning, ...template.warning }; ${target}.alarm = { ...${target}.alarm, ...template.alarm }; ${target}.staleWarning = { ...${target}.staleWarning, ...template.staleWarning }; } return ${data('function')}; })()`;
@@ -292,6 +298,12 @@ function stateForm(
 				newLine: true,
 				xs: 12,
 				customFilter: { type: 'state', common: { type: 'number' } },
+				validator: sourceValidator,
+				validatorErrorText: t(
+					'Please select an existing numeric ioBroker state',
+					'Bitte einen vorhandenen numerischen ioBroker-State auswählen',
+				),
+				validatorNoSaveOnError: true,
 			},
 			[key('function')]: {
 				type: 'autocomplete',
@@ -376,6 +388,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private functionTemplates: Record<string, FunctionTemplate> = {};
 	private nextDeviceNumber = 1;
 	private subscribed = new Set<string>();
+	private invalidSources = new Set<string>();
 	private sourceUnits = new Map<string, string>();
 	private deviceManagement?: DeviceMonitoringManagement;
 	private sortRefreshTimer?: NodeJS.Timeout;
@@ -384,6 +397,7 @@ class DeviceMonitoring extends utils.Adapter {
 		super({ ...options, name: 'device-monitoring' });
 		this.on('ready', this.onReady.bind(this));
 		this.on('stateChange', this.onStateChange.bind(this));
+		this.on('objectChange', this.onObjectChange.bind(this));
 		this.on('message', this.onMessage.bind(this));
 		this.on('unload', callback => {
 			if (this.sortRefreshTimer) {
@@ -404,7 +418,7 @@ class DeviceMonitoring extends utils.Adapter {
 		if (legacyDevices.length) {
 			await this.removeLegacyDeviceConfig();
 		}
-		this.refreshSubscriptions();
+		await this.refreshSubscriptions();
 		await this.updateAll();
 		await this.setState('info.connection', true, true);
 		this.sortRefreshTimer = setInterval(() => {
@@ -442,6 +456,37 @@ class DeviceMonitoring extends utils.Adapter {
 			await this.updateDeviceInfo();
 		}
 	}
+	private async onObjectChange(id: string, object: ioBroker.Object | null | undefined): Promise<void> {
+		if (!this.subscribed.has(id)) {
+			return;
+		}
+		if (this.isValidSourceObject(object)) {
+			this.invalidSources.delete(id);
+			this.sourceUnits.set(id, typeof object.common.unit === 'string' ? object.common.unit : '');
+		} else {
+			this.invalidSources.add(id);
+			this.sourceUnits.delete(id);
+		}
+		const affectedDevices = new Set<string>();
+		for (const device of this.devices) {
+			for (const watched of device.states) {
+				if (watched.sourceId === id) {
+					await this.updateValue(device, watched, await this.getForeignStateAsync(id));
+					affectedDevices.add(device.id);
+				}
+			}
+		}
+		for (const deviceId of affectedDevices) {
+			const device = this.devices.find(entry => entry.id === deviceId);
+			if (device) {
+				await this.updateDeviceSummary(device);
+			}
+		}
+		if (affectedDevices.size) {
+			await this.updateDeviceInfo();
+			await this.deviceManagement?.refreshCards();
+		}
+	}
 	public getFunctionTemplates(): Record<string, FunctionTemplate> {
 		return JSON.parse(JSON.stringify(this.functionTemplates));
 	}
@@ -454,7 +499,7 @@ class DeviceMonitoring extends utils.Adapter {
 			status: WatchStatus;
 		}[]
 	> {
-		const rank: Record<WatchStatus, number> = { timeout: 0, alarm: 1, warning: 2, unknown: 3, ok: 4 };
+		const rank: Record<WatchStatus, number> = { invalid: 0, timeout: 1, alarm: 2, warning: 3, unknown: 4, ok: 5 };
 		const result = await Promise.all(
 			this.devices.map(async device => ({ device, status: await this.getDeviceStatus(device) })),
 		);
@@ -586,7 +631,7 @@ class DeviceMonitoring extends utils.Adapter {
 		this.devices = devices;
 		await this.rebuildObjects();
 		await this.removeLegacyDeviceConfig();
-		this.refreshSubscriptions();
+		await this.refreshSubscriptions();
 		await this.updateAll();
 		await this.deviceManagement?.refreshCards();
 	}
@@ -716,14 +761,34 @@ class DeviceMonitoring extends utils.Adapter {
 			native: {},
 		});
 	}
-	private refreshSubscriptions(): void {
+	private async refreshSubscriptions(): Promise<void> {
 		for (const id of this.subscribed) {
 			this.unsubscribeForeignStates(id);
+			this.unsubscribeForeignObjects(id);
 		}
 		this.subscribed = new Set(this.devices.flatMap(d => d.states.map(s => s.sourceId)).filter(Boolean));
 		for (const id of this.subscribed) {
 			this.subscribeForeignStates(id);
+			this.subscribeForeignObjects(id);
 		}
+		await this.refreshSourceValidity();
+	}
+	private isValidSourceObject(object: ioBroker.Object | null | undefined): object is ioBroker.StateObject {
+		return object?.type === 'state' && object.common.type === 'number';
+	}
+	private async refreshSourceValidity(): Promise<void> {
+		this.invalidSources.clear();
+		this.sourceUnits.clear();
+		await Promise.all(
+			[...this.subscribed].map(async id => {
+				const object = await this.getForeignObjectAsync(id);
+				if (this.isValidSourceObject(object)) {
+					this.sourceUnits.set(id, typeof object.common.unit === 'string' ? object.common.unit : '');
+				} else {
+					this.invalidSources.add(id);
+				}
+			}),
+		);
 	}
 	private async getSourceUnit(sourceId: string): Promise<string> {
 		if (this.sourceUnits.has(sourceId)) {
@@ -750,17 +815,13 @@ class DeviceMonitoring extends utils.Adapter {
 					device.states.map(async watched => {
 						const sourceState = await this.getForeignStateAsync(watched.sourceId);
 						const updateTimeout = isUpdateTimedOut(sourceState, watched.staleWarning);
-						const status = getWatchStatus(
-							sourceState?.val ?? null,
-							watched.warning,
-							watched.alarm,
-							updateTimeout,
-						);
+						const status = this.getWatchedStatus(watched, sourceState, updateTimeout);
 						return {
 							id: watched.id,
 							name: watched.name,
 							sourceId: watched.sourceId,
 							function: watched.function,
+							sourceValid: status !== 'invalid',
 							status,
 							warning: status === 'warning',
 							alarm: status === 'alarm',
@@ -777,21 +838,25 @@ class DeviceMonitoring extends utils.Adapter {
 		});
 	}
 	private async getDeviceStatus(device: DeviceConfiguration): Promise<WatchStatus> {
-		const rank: Record<WatchStatus, number> = { timeout: 0, alarm: 1, warning: 2, unknown: 3, ok: 4 };
+		const rank: Record<WatchStatus, number> = { invalid: 0, timeout: 1, alarm: 2, warning: 3, unknown: 4, ok: 5 };
 		let status: WatchStatus = 'ok';
 		for (const watched of device.states) {
 			const state = await this.getForeignStateAsync(watched.sourceId);
-			const current = getWatchStatus(
-				state?.val ?? null,
-				watched.warning,
-				watched.alarm,
-				isUpdateTimedOut(state, watched.staleWarning),
-			);
+			const current = this.getWatchedStatus(watched, state);
 			if (rank[current] < rank[status]) {
 				status = current;
 			}
 		}
 		return status;
+	}
+	private getWatchedStatus(
+		watched: WatchedStateConfiguration,
+		state: ioBroker.State | null | undefined,
+		updateTimeout = isUpdateTimedOut(state, watched.staleWarning),
+	): WatchStatus {
+		return this.invalidSources.has(watched.sourceId)
+			? 'invalid'
+			: getWatchStatus(state?.val ?? null, watched.warning, watched.alarm, updateTimeout);
 	}
 	private async updateDeviceSummary(device: DeviceConfiguration): Promise<void> {
 		const status = await this.getDeviceStatus(device);
@@ -808,13 +873,16 @@ class DeviceMonitoring extends utils.Adapter {
 		const base = `devices.${device.id}.${watched.id}`;
 		const value = sourceState?.val ?? null;
 		const updateTimedOut = isUpdateTimedOut(sourceState, watched.staleWarning);
-		const status = getWatchStatus(value, watched.warning, watched.alarm, updateTimedOut);
+		const status = this.getWatchedStatus(watched, sourceState, updateTimedOut);
 		const unit = await this.getSourceUnit(watched.sourceId);
 		await Promise.all([
 			this.setStateChangedAsync(`${base}.value`, { val: value, ack: true }),
 			this.setStateChangedAsync(`${base}.status`, { val: status, ack: true }),
 			this.setStateChangedAsync(`${base}.display`, {
-				val: `${watched.name}: ${value === null ? '—' : `${String(value)}${unit ? ` ${unit}` : ''}`}`,
+				val:
+					status === 'invalid'
+						? `${watched.name}: ⚠ ${watched.sourceId}`
+						: `${watched.name}: ${value === null ? '—' : `${String(value)}${unit ? ` ${unit}` : ''}`}`,
 				ack: true,
 			}),
 			this.setStateChangedAsync(`${base}.warning`, { val: status === 'warning', ack: true }),
