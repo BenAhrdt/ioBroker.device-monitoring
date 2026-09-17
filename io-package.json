@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.9",
+    "version": "0.0.10",
     "news": {
+      "0.0.10": {
+        "en": "Show active limits, timeout settings, update timestamps and intervals on device cards\nAccept existing mixed-type states while retaining runtime numeric-value checks",
+        "de": "Aktive Limits, Timeouts, Aktualisierungszeitstempel und Intervalle auf Gerätekarten anzeigen\nAkzeptiert bestehende gemischte Zustände unter Beibehaltung von Zahlenwertprüfungen",
+        "ru": "Отображение активных лимитов, настроек тайм-аута, временных меток и интервалов обновления на картах устройств\nПринимайте существующие состояния смешанного типа, сохраняя при этом проверки числовых значений во время выполнения",
+        "pt": "Mostre limites ativos, limites de tempo limite e intervalos nas placas do dispositivo\nAceite estados mistos existentes, mantendo as verificações numéricas",
+        "nl": "Actieve limieten, time-outinstellingen weergeven, tijdstempels en intervallen bijwerken op apparaatkaarten\nAccepteer bestaande staten van verschillende typen met behoud van de numerieke waarden tijdens de looptijd",
+        "fr": "Afficher les limites d'activité, les délais et les intervalles sur les cartes des appareils\nAcceptez les états mixtes existants tout en vérifiant les valeurs numériques à l'exécution",
+        "it": "Mostra limiti attivi, timeout, aggiorna i timestamp e gli intervalli sulle schede\nAccetti gli stati misti esistenti mantenendo i controlli numerici in runtime",
+        "es": "Mostrar los límites activos, los tiempos de espera y los intervalos de actualización en las tarjetas\nAceptar los estados de tipo mixto existentes sin perder los valores numéricos",
+        "pl": "Wyświetlanie aktywnych limitów, ustawień limitu czasu, aktualizacji znaczników czasowych i interwałów na kartach urządzeń\nAkceptuj istniejące stany typu mieszanego przy zachowaniu kontroli wartości liczbowych w czasie wykonywania",
+        "uk": "Показувати активні ліміти, налаштування тайм-ауту, оновлення часових міток і інтервалів на картках пристроїв\nПриймайте існуючі стани змішаного типу, зберігаючи при цьому перевірки числових значень під час виконання",
+        "zh-cn": "显示设备卡上的活动限制、超时设置、更新时间戳和间隔\n接受现有的混合类型状态，同时保留运行时数值检查"
+      },
       "0.0.9": {
         "en": "Validate selected source states and mark deleted or invalid states on device cards",
         "de": "Bestätige Quellstatus und markiere gelöschte oder ungültige Werte auf Gerätekarten",
@@ -80,19 +93,6 @@
         "pl": "Napraw zapisywanie nazwy funkcji i wyświetlanie opcji zapisania jej jako szablonu funkcji",
         "uk": "Виправлено збереження назви функції та відображення опції збереження її як шаблону функції",
         "zh-cn": "修复保存函数名称并显示将其另存为函数模板的选项"
-      },
-      "0.0.3": {
-        "en": "change Icon",
-        "de": "Symbol ändern",
-        "ru": "изменить значок",
-        "pt": "mudar ícone",
-        "nl": "pictogram wijzigen",
-        "fr": "change Icone",
-        "it": "cambia icona",
-        "es": "cambiar icono",
-        "pl": "zmień ikonę",
-        "uk": "змінити піктограму",
-        "zh-cn": "更改图标"
       }
     },
     "titleLang": {
