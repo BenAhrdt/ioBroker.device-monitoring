@@ -271,9 +271,7 @@ function stateForm(functionTemplates, functionNames, states, stateId) {
   const otherStateIds = JSON.stringify(states.filter((state) => state.id !== stateId).map((state) => state.id));
   const nameValidator = stateId ? `return (${data("_delete")} || (() => { const name = String(${data("name")} || '').trim().toLowerCase(); return !!name && !${otherStateIds}.some(id => !data[id]?._delete && String(data[id]?.name || '').trim().toLowerCase() === name); })())` : `return (() => { const name = String(${data("name")} || '').trim().toLowerCase(); return !!name && !${existingNames}.includes(name); })()`;
   const sourceValidator = `return (${stateId ? `${data("_delete")} || ` : ""}(Array.isArray(data._validSourceIds) && data._validSourceIds.includes(String(${data("sourceId")} || '').trim())))`;
-  const target = stateId ? `data[${JSON.stringify(stateId)}]` : "data";
   const templates = JSON.stringify(functionTemplates);
-  const applyFunctionTemplate = `(() => { const template = ${templates}[${data("function")}]; if (template) { ${target}.warning = { ...${target}.warning, ...template.warning }; ${target}.alarm = { ...${target}.alarm, ...template.alarm }; ${target}.staleWarning = { ...${target}.staleWarning, ...template.staleWarning }; } return ${data("function")}; })()`;
   const templateValue = (path) => ({
     calculateFunc: `(${templates}[${data("function")}] ? ${templates}[${data("function")}].${path} : ${data(path)})`,
     ignoreOwnChanges: true
@@ -358,7 +356,6 @@ function stateForm(functionTemplates, functionNames, states, stateId) {
         label: t("Function", "Funktion"),
         options: functions,
         freeSolo: true,
-        onChange: { alsoDependsOn: [], calculateFunc: applyFunctionTemplate },
         onChangeDependsOn: [
           ...[
             "warning.enabled",
