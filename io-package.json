@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.10",
+    "version": "0.0.11",
     "news": {
+      "0.0.11": {
+        "en": "Add delayed and manual backup and restore of the device configuration\nReset update intervals on adapter start while retaining the current source timestamp\nAlways show the option to save or update a function template",
+        "de": "Manuelles Backup und Restore der Gerätekonfiguration hinzufügen\nAktualisierungsintervalle beim Adapterstart unter Beibehaltung des Quellzeitstempels\nFunktionsvorlagen immer speichern oder aktualisieren",
+        "ru": "Добавьте отложенное и ручное резервное копирование и восстановление конфигурации устройства\nСбросьте интервалы обновления при запуске адаптера с сохранением текущей исходной временной метки\nВсегда показывайте возможность сохранить или обновить шаблон функции",
+        "pt": "Adicione backup e restauração atrasados e manuais do dispositivo\nRedefina os intervalos de atualização ao iniciar o adaptador, mantendo a fonte atual\nSempre exiba a opção de salvar ou atualizar um modelo",
+        "nl": "Voeg een vertraagde en handmatige back-up en herstel van de apparaatconfiguratie toe\nDe update-intervallen opnieuw instellen bij het starten van de adapter, met behoud van de huidige tijdstempel van de bron\nLaat altijd de optie zien om een functiesjabloon op te slaan of bij te werken",
+        "fr": "Ajouter une sauvegarde et une restauration manuelles différées de l'appareil\nRéinitialiser les mises à jour au démarrage de l'adaptateur en conservant l'horodatage de la source\nChoisissez toujours de sauvegarder ou de mettre à jour un modèle de fonction",
+        "it": "Aggiungere backup e ripristino manuale e ritardato del dispositivo\nReimposta gli intervalli di aggiornamento all'avvio dell'adattatore mantenendo la fonte\nMostri sempre di salvare o aggiornare un modello di funzione",
+        "es": "Añadir respaldo y restauración retrasados y manuales de la configuración del dispositivo\nRestablecer los intervalos de actualización al iniciar el adaptador conservando la hora fuente actual\nMostrar siempre la opción de guardar o actualizar una plantilla",
+        "pl": "Dodaj opóźnione i ręczne tworzenie kopii zapasowych oraz przywracanie konfiguracji urządzenia\nZresetuj interwały aktualizacji po uruchomieniu adaptera, zachowując aktualny znacznik czasowy źródła\nZawsze wyświetlaj opcję zapisywania lub aktualizacji szablonu funkcji",
+        "uk": "Додайте відкладене та ручне резервне копіювання та відновлення конфігурації пристрою\nСкидання інтервалів оновлення при запуску адаптера, зберігаючи поточну позначку часу джерела\nЗавжди показувати можливість збереження або оновлення шаблону функції",
+        "zh-cn": "添加设备配置的延迟和手动备份和恢复\n在适配器启动时重置更新间隔，同时保留当前源时间戳\n始终显示保存或更新函数模板的选项"
+      },
       "0.0.10": {
         "en": "Show active limits, timeout settings, update timestamps and intervals on device cards\nAccept existing mixed-type states while retaining runtime numeric-value checks",
         "de": "Aktive Limits, Timeouts, Aktualisierungszeitstempel und Intervalle auf Gerätekarten anzeigen\nAkzeptiert bestehende gemischte Zustände unter Beibehaltung von Zahlenwertprüfungen",
@@ -80,19 +93,6 @@
         "pl": "Napraw nazwy funkcji edycji w interfejsie administratora produkcji i włącz zaufane publikowanie npm",
         "uk": "Виправте редагування назв функцій у виробничому інтерфейсі адміністратора та увімкніть надійну публікацію npm",
         "zh-cn": "修复生产管理界面中的编辑函数名称并启用可信的 npm 发布"
-      },
-      "0.0.4": {
-        "en": "Fix saving the function name and displaying the option to save it as a function template",
-        "de": "Fix: Den Funktionsnamen speichern und als Funktionsvorlage anzeigen",
-        "ru": "Исправить сохранение имени функции и отображение возможности сохранения его в качестве шаблона функции",
-        "pt": "Corrige salvar o nome da função e exibir a opção de salvá-la como modelo",
-        "nl": "Fix: het opslaan van de functienaam en het weergeven van de optie om deze als functiesjabloon op te slaan",
-        "fr": "Correction du nom de la fonction et de l'affichage de l'option comme modèle de fonction",
-        "it": "Risolto il problema con il salvataggio del nome della funzione come modello",
-        "es": "Corregir guardar el nombre de la función y mostrar la opción de guardarla como plantilla",
-        "pl": "Napraw zapisywanie nazwy funkcji i wyświetlanie opcji zapisania jej jako szablonu funkcji",
-        "uk": "Виправлено збереження назви функції та відображення опції збереження її як шаблону функції",
-        "zh-cn": "修复保存函数名称并显示将其另存为函数模板的选项"
       }
     },
     "titleLang": {

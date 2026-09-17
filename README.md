@@ -107,7 +107,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.11 (2026-09-17)
 * (BenAhrdt) Add delayed and manual backup and restore of the device configuration
 * (BenAhrdt) Reset update intervals on adapter start while retaining the current source timestamp
 * (BenAhrdt) Always show the option to save or update a function template
