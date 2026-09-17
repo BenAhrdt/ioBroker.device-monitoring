@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.6",
+    "version": "0.0.7",
     "news": {
+      "0.0.7": {
+        "en": "Fix applying activation and violation settings from selected function templates",
+        "de": "Aktivierungs- und Verstoßeinstellungen ausgewählter Funktionsvorlagen behoben",
+        "ru": "Исправить применение настроек активации и нарушений из выбранных шаблонов функций",
+        "pt": "Corrige a aplicação de ativações e violações em modelos de função selecionados",
+        "nl": "Oplossing voor het toepassen van activerings- en overtredingsinstellingen op geselecteerde functiesjablonen",
+        "fr": "Correction des paramètres d'activation et de violation de certains modèles de fonctions",
+        "it": "Correggere le impostazioni di attivazione e violazione dai modelli di funzione",
+        "es": "Corregir la aplicación de ajustes de activación e infracción de plantillas de funciones",
+        "pl": "Napraw stosowanie ustawień aktywacji i naruszenia z wybranych szablonów funkcji",
+        "uk": "Виправлено застосування налаштувань активації та порушення з вибраних шаблонів функцій",
+        "zh-cn": "修复应用所选函数模板中的激活和违规设置的问题"
+      },
       "0.0.6": {
         "en": "Add autocomplete suggestions for function templates\nImprove and compact the monitored-state dialog layout\nClarify updating existing function templates",
         "de": "Füge Autocomplete-Vorschläge für Funktionsvorlagen hinzu\nVerbessern und komprimieren Sie das Monitor-Layout\nUpdate vorhandener Funktionsvorlagen klären",
