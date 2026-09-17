@@ -1,5 +1,18 @@
 {
 	"device-monitoring adapter settings": "Einstellungen für Geräteüberwachung",
 	"This adapter is configured in the Device Monitoring adapter tab.": "Dieser Adapter wird im Tab Geräteüberwachung konfiguriert.",
-	"Open Device Monitoring": "Geräteüberwachung öffnen"
+	"Open Device Monitoring": "Geräteüberwachung öffnen",
+	"Device configuration backup": "Sicherung der Gerätekonfiguration",
+	"Backup delay in minutes": "Sicherungsverzögerung in Minuten",
+	"The timer starts when the adapter starts and restarts after every device configuration change. Set to 0 to disable automatic backups.": "Der Timer startet beim Adapterstart und wird nach jeder Änderung der Gerätekonfiguration neu gestartet. Mit 0 wird die automatische Sicherung deaktiviert.",
+	"Compare and back up now": "Jetzt vergleichen und sichern",
+	"The device configuration backup was updated.": "Die Sicherung der Gerätekonfiguration wurde aktualisiert.",
+	"The device configuration backup is already up to date.": "Die Sicherung der Gerätekonfiguration ist bereits aktuell.",
+	"Restore device configuration backup": "Sicherung der Gerätekonfiguration wiederherstellen",
+	"Restore device configuration?": "Gerätekonfiguration wiederherstellen?",
+	"The current device configuration will be replaced by the backup.": "Die aktuelle Gerätekonfiguration wird durch die Sicherung ersetzt.",
+	"Restore": "Wiederherstellen",
+	"Cancel": "Abbrechen",
+	"The device configuration backup was restored.": "Die Sicherung der Gerätekonfiguration wurde wiederhergestellt.",
+	"No device configuration backup is available.": "Es ist keine Sicherung der Gerätekonfiguration vorhanden."
 }

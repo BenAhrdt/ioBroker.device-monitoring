@@ -21,6 +21,64 @@
 			"xs": 12,
 			"sm": 8,
 			"md": 6
+		},
+		"backupHeader": {
+			"type": "header",
+			"text": "Device configuration backup",
+			"size": 2,
+			"newLine": true,
+			"xs": 12
+		},
+		"configurationBackupDelayMinutes": {
+			"type": "number",
+			"label": "Backup delay in minutes",
+			"help": "The timer starts when the adapter starts and restarts after every device configuration change. Set to 0 to disable automatic backups.",
+			"min": 0,
+			"max": 35791,
+			"step": 1,
+			"default": 60,
+			"newLine": true,
+			"xs": 12,
+			"sm": 8,
+			"md": 6
+		},
+		"backupNow": {
+			"type": "sendTo",
+			"command": "backupDeviceConfiguration",
+			"label": "Compare and back up now",
+			"variant": "contained",
+			"color": "primary",
+			"showProcess": true,
+			"result": {
+				"backupUpdated": "The device configuration backup was updated.",
+				"backupCurrent": "The device configuration backup is already up to date."
+			},
+			"newLine": true,
+			"xs": 12,
+			"sm": 6
+		},
+		"restoreBackup": {
+			"type": "sendTo",
+			"command": "restoreDeviceConfiguration",
+			"label": "Restore device configuration backup",
+			"variant": "outlined",
+			"color": "secondary",
+			"showProcess": true,
+			"confirm": {
+				"condition": "true",
+				"title": "Restore device configuration?",
+				"text": "The current device configuration will be replaced by the backup.",
+				"ok": "Restore",
+				"cancel": "Cancel",
+				"type": "warning"
+			},
+			"result": {
+				"backupRestored": "The device configuration backup was restored.",
+				"backupMissing": "No device configuration backup is available."
+			},
+			"newLine": true,
+			"xs": 12,
+			"sm": 6
 		}
 	}
 }

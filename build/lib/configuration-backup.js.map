@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/lib/configuration-backup.ts"],
+  "sourcesContent": ["import { isDeepStrictEqual } from 'node:util';\n\n/**\n * Returns whether the exact native device configuration differs from its stored backup.\n *\n * @param devicesNative Current native content of the devices folder.\n * @param backup Native content stored in the instance object.\n */\nexport function configurationBackupNeedsUpdate(devicesNative: Record<string, unknown>, backup: unknown): boolean {\n\treturn !isDeepStrictEqual(devicesNative, backup);\n}\n"],
+  "mappings": ";;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAAA,uBAAkC;AAQ3B,SAAS,+BAA+B,eAAwC,QAA0B;AAChH,SAAO,KAAC,oCAAkB,eAAe,MAAM;AAChD;",
+  "names": []
+}

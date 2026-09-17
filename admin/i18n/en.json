@@ -1,5 +1,18 @@
 {
 	"device-monitoring adapter settings": "Device Monitoring settings",
 	"This adapter is configured in the Device Monitoring adapter tab.": "This adapter is configured in the Device Monitoring adapter tab.",
-	"Open Device Monitoring": "Open Device Monitoring"
+	"Open Device Monitoring": "Open Device Monitoring",
+	"Device configuration backup": "Device configuration backup",
+	"Backup delay in minutes": "Backup delay in minutes",
+	"The timer starts when the adapter starts and restarts after every device configuration change. Set to 0 to disable automatic backups.": "The timer starts when the adapter starts and restarts after every device configuration change. Set to 0 to disable automatic backups.",
+	"Compare and back up now": "Compare and back up now",
+	"The device configuration backup was updated.": "The device configuration backup was updated.",
+	"The device configuration backup is already up to date.": "The device configuration backup is already up to date.",
+	"Restore device configuration backup": "Restore device configuration backup",
+	"Restore device configuration?": "Restore device configuration?",
+	"The current device configuration will be replaced by the backup.": "The current device configuration will be replaced by the backup.",
+	"Restore": "Restore",
+	"Cancel": "Cancel",
+	"The device configuration backup was restored.": "The device configuration backup was restored.",
+	"No device configuration backup is available.": "No device configuration backup is available."
 }

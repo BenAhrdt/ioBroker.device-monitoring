@@ -11,6 +11,7 @@ import {
 	type WatchedStateConfiguration,
 	type WatchStatus,
 } from './lib/evaluation';
+import { configurationBackupNeedsUpdate } from './lib/configuration-backup';
 
 const t = (en: string, de: string): ioBroker.Translated => ({ en, de });
 const COLORS: Record<WatchStatus, string> = {
@@ -417,7 +418,6 @@ function stateForm(
 				),
 				newLine: true,
 				xs: 12,
-				hidden: `!${data('function')}`,
 			},
 		},
 	};
@@ -463,6 +463,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private deviceManagement?: DeviceMonitoringManagement;
 	private sortRefreshTimer?: NodeJS.Timeout;
 	private staleCheckTimer?: NodeJS.Timeout;
+	private configurationBackupTimer?: NodeJS.Timeout;
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({ ...options, name: 'device-monitoring' });
 		this.on('ready', this.onReady.bind(this));
@@ -476,6 +477,9 @@ class DeviceMonitoring extends utils.Adapter {
 			if (this.staleCheckTimer) {
 				clearInterval(this.staleCheckTimer);
 			}
+			if (this.configurationBackupTimer) {
+				clearTimeout(this.configurationBackupTimer);
+			}
 			callback();
 		});
 	}
@@ -485,13 +489,18 @@ class DeviceMonitoring extends utils.Adapter {
 		this.deviceManagement = new DeviceMonitoringManagement(this);
 		const legacyDevices = this.normalizeDevices(this.config.devices);
 		this.devices = legacyDevices.length ? legacyDevices : await this.loadDevicesFromObjects();
+		if (!legacyDevices.length && !this.devices.length) {
+			if (await this.restoreDeviceConfigurationBackup(false)) {
+				this.log.info('Restored the device configuration from the instance backup');
+			}
+		}
 		await this.ensureState('info.deviceInfo', t('Device information', 'Geräteinformationen'), 'string', 'json');
 		await this.rebuildObjects();
 		if (legacyDevices.length) {
 			await this.removeLegacyDeviceConfig();
 		}
 		await this.refreshSubscriptions();
-		await this.initializeUpdateHistory();
+		await this.initializeUpdateHistory(true);
 		await this.updateAll();
 		await this.setState('info.connection', true, true);
 		this.sortRefreshTimer = setInterval(() => {
@@ -500,8 +509,37 @@ class DeviceMonitoring extends utils.Adapter {
 		this.staleCheckTimer = setInterval(() => {
 			void this.updateAll();
 		}, 60_000);
+		this.scheduleConfigurationBackup();
 	}
-	private onMessage(message: ioBroker.Message): void {
+	private async onMessage(message: ioBroker.Message): Promise<void> {
+		if (message.command === 'backupDeviceConfiguration') {
+			try {
+				const updated = await this.backupDeviceConfiguration();
+				this.sendTo(
+					message.from,
+					message.command,
+					{ result: updated ? 'backupUpdated' : 'backupCurrent' },
+					message.callback,
+				);
+			} catch (error) {
+				this.sendTo(message.from, message.command, { error: String(error) }, message.callback);
+			}
+			return;
+		}
+		if (message.command === 'restoreDeviceConfiguration') {
+			try {
+				const restored = await this.restoreDeviceConfigurationBackup(true);
+				this.sendTo(
+					message.from,
+					message.command,
+					{ result: restored ? 'backupRestored' : 'backupMissing' },
+					message.callback,
+				);
+			} catch (error) {
+				this.sendTo(message.from, message.command, { error: String(error) }, message.callback);
+			}
+			return;
+		}
 		if (!message.command?.startsWith('dm:')) {
 			this.log.debug(`Unhandled command: ${message.command}`);
 		}
@@ -716,6 +754,71 @@ class DeviceMonitoring extends utils.Adapter {
 		await this.initializeUpdateHistory();
 		await this.updateAll();
 		await this.deviceManagement?.refreshCards();
+		this.scheduleConfigurationBackup();
+	}
+	private scheduleConfigurationBackup(): void {
+		if (this.configurationBackupTimer) {
+			clearTimeout(this.configurationBackupTimer);
+			this.configurationBackupTimer = undefined;
+		}
+		const minutes = Number(this.config.configurationBackupDelayMinutes ?? 60);
+		if (!Number.isFinite(minutes) || minutes <= 0) {
+			return;
+		}
+		this.configurationBackupTimer = setTimeout(
+			() => {
+				this.configurationBackupTimer = undefined;
+				void this.backupDeviceConfiguration().catch(error =>
+					this.log.error(`Could not back up device configuration: ${String(error)}`),
+				);
+			},
+			Math.min(minutes, 35_791) * 60_000,
+		);
+	}
+	private async backupDeviceConfiguration(): Promise<boolean> {
+		const devicesFolder = await this.getObjectAsync('devices');
+		if (!devicesFolder?.native) {
+			throw new Error('The devices folder does not exist');
+		}
+		const instanceId = `system.adapter.${this.namespace}`;
+		const instanceObject = (await this.getForeignObjectAsync(instanceId)) as ioBroker.InstanceObject | null;
+		if (!instanceObject) {
+			throw new Error(`The instance object ${instanceId} does not exist`);
+		}
+		if (!configurationBackupNeedsUpdate(devicesFolder.native, instanceObject.native.deviceConfigurationBackup)) {
+			return false;
+		}
+		instanceObject.native.deviceConfigurationBackup = structuredClone(devicesFolder.native);
+		await this.setForeignObjectAsync(instanceId, instanceObject);
+		this.log.info('Updated the device configuration backup in the instance object');
+		return true;
+	}
+	private async restoreDeviceConfigurationBackup(rebuild: boolean): Promise<boolean> {
+		const instanceId = `system.adapter.${this.namespace}`;
+		const instanceObject = (await this.getForeignObjectAsync(instanceId)) as ioBroker.InstanceObject | null;
+		const backup = instanceObject?.native.deviceConfigurationBackup;
+		if (!backup || typeof backup !== 'object' || Array.isArray(backup)) {
+			return false;
+		}
+		this.nextDeviceNumber =
+			typeof backup.nextDeviceNumber === 'number' && backup.nextDeviceNumber > 0
+				? Math.floor(backup.nextDeviceNumber)
+				: 1;
+		const devices = this.normalizeDevices(backup.devices);
+		if (!devices.length) {
+			return false;
+		}
+		this.functionTemplates = this.normalizeFunctionTemplates(backup.functionTemplates);
+		this.devices = devices;
+		if (rebuild) {
+			await this.rebuildObjects();
+			await this.refreshSubscriptions();
+			await this.initializeUpdateHistory();
+			await this.updateAll();
+			await this.deviceManagement?.refreshCards();
+			this.scheduleConfigurationBackup();
+		}
+		return true;
 	}
 	private async rebuildObjects(): Promise<void> {
 		await this.setObjectAsync('devices', {
@@ -934,16 +1037,48 @@ class DeviceMonitoring extends utils.Adapter {
 		this.sourceUnits.set(sourceId, unit);
 		return unit;
 	}
-	private async initializeUpdateHistory(): Promise<void> {
+	private async initializeUpdateHistory(resetAfterAdapterStart = false): Promise<void> {
 		for (const device of this.devices) {
 			for (const watched of device.states) {
 				await this.ensureUpdateHistoryPlaceholders(device, watched);
 				const state = await this.getForeignStateAsync(watched.sourceId);
-				if (state) {
+				if (resetAfterAdapterStart) {
+					await this.resetUpdateHistory(device, watched, state?.ts);
+				} else if (state) {
 					await this.recordSourceUpdate(device, watched, state.ts);
 				}
 			}
 		}
+	}
+	private async resetUpdateHistory(
+		device: DeviceConfiguration,
+		watched: WatchedStateConfiguration,
+		timestamp: number | undefined,
+	): Promise<void> {
+		const base = `devices.${device.id}.${watched.id}`;
+		const lastTimestamp =
+			typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null;
+		await Promise.all([
+			this.setStateChangedAsync(`${base}.updateHistorySource`, { val: watched.sourceId, ack: true }),
+			this.setStateChangedAsync(`${base}.lastUpdate`, { val: lastTimestamp, ack: true }),
+			this.setStateChangedAsync(`${base}.lastUpdateDisplay`, {
+				val: this.localize(
+					`Last timestamp: ${lastTimestamp === null ? '-' : timestampDisplay(lastTimestamp)}`,
+					`Letzter Timestamp: ${lastTimestamp === null ? '-' : timestampDisplay(lastTimestamp)}`,
+				),
+				ack: true,
+			}),
+			this.setStateChangedAsync(`${base}.previousUpdate`, { val: null, ack: true }),
+			this.setStateChangedAsync(`${base}.previousUpdateDisplay`, {
+				val: this.localize('Previous timestamp: -', 'Vorletzter Timestamp: -'),
+				ack: true,
+			}),
+			this.setStateChangedAsync(`${base}.updateInterval`, { val: null, ack: true }),
+			this.setStateChangedAsync(`${base}.updateIntervalDisplay`, {
+				val: this.localize('Interval: -', 'Intervall: -'),
+				ack: true,
+			}),
+		]);
 	}
 	private async ensureUpdateHistoryPlaceholders(
 		device: DeviceConfiguration,

@@ -146,6 +146,7 @@
     "compact": true,
     "connectionType": "local",
     "dataSource": "push",
+    "messagebox": true,
     "supportedMessages": {
       "deviceManager": true
     },
@@ -181,7 +182,9 @@
       }
     ]
   },
-  "native": {},
+  "native": {
+    "configurationBackupDelayMinutes": 60
+  },
   "objects": [],
   "instanceObjects": [
     {
