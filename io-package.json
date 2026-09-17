@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.7",
+    "version": "0.0.8",
     "news": {
+      "0.0.8": {
+        "en": "Store and apply all limits and timeout values in function templates",
+        "de": "Alle Limits und Timeouts in Funktionsvorlagen speichern und anwenden",
+        "ru": "Храните и применяйте все ограничения и значения тайм-аута в шаблонах функций",
+        "pt": "Armazene e aplique todos os limites e timeout em modelos de função",
+        "nl": "Sla alle limieten en time-outwaarden op in functiesjablonen en pas ze toe",
+        "fr": "Stockez et appliquez toutes les limites et délais dans des modèles de fonctions",
+        "it": "Memorizza e applica tutti i limiti e i timeout nei modelli di funzione",
+        "es": "Almacene y aplique todos los límites y tiempos de espera en plantillas de funciones",
+        "pl": "Przechowuj i stosuj wszystkie limity i wartości limitu czasu w szablonach funkcji",
+        "uk": "Зберігайте та застосовуйте всі обмеження та значення тайм-ауту в шаблонів функцій",
+        "zh-cn": "在函数模板中存储和应用所有限制和超时值"
+      },
       "0.0.7": {
         "en": "Fix applying activation and violation settings from selected function templates",
         "de": "Aktivierungs- und Verstoßeinstellungen ausgewählter Funktionsvorlagen behoben",
@@ -80,19 +93,6 @@
         "pl": "wstępne wydanie",
         "uk": "первинний випуск",
         "zh-cn": "初始版本"
-      },
-      "0.0.1": {
-        "en": "initial release",
-        "de": "Erstveröffentlichung",
-        "ru": "Начальная версия",
-        "pt": "lançamento inicial",
-        "nl": "Eerste uitgave",
-        "fr": "Première version",
-        "it": "Versione iniziale",
-        "es": "Versión inicial",
-        "pl": "Pierwsze wydanie",
-        "uk": "Початкова версія",
-        "zh-cn": "首次出版"
       }
     },
     "titleLang": {
