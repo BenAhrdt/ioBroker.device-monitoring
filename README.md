@@ -107,6 +107,9 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Fix applying activation and violation settings from selected function templates
+
 ### 0.0.6 (2026-09-17)
 * (BenAhrdt) Add autocomplete suggestions for function templates
 * (BenAhrdt) Improve and compact the monitored-state dialog layout

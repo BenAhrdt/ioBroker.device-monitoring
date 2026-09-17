@@ -225,11 +225,8 @@ function stateForm(functionTemplates, functionNames, stateId) {
   const functions = [.../* @__PURE__ */ new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
   const key = (path) => stateId ? `${stateId}.${path}` : path;
   const data = (path) => stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`;
-  const templateValue = (prefix, field) => ({
-    alsoDependsOn: [key("function")],
-    calculateFunc: `(${JSON.stringify(functionTemplates)}[${data("function")}]?.${prefix}.${field} ?? ${data(`${prefix}.${field}`)})`,
-    ignoreOwnChanges: true
-  });
+  const target = stateId ? `data[${JSON.stringify(stateId)}]` : "data";
+  const applyFunctionTemplate = `(() => { const template = ${JSON.stringify(functionTemplates)}[${data("function")}]; if (template) { ${target}.warning.enabled = template.warning.enabled; ${target}.warning.mode = template.warning.mode; ${target}.alarm.enabled = template.alarm.enabled; ${target}.alarm.mode = template.alarm.mode; ${target}.staleWarning.enabled = template.staleWarning.enabled; } return ${data("function")}; })()`;
   const sectionHeader = (text, backgroundColor) => ({
     type: "staticText",
     text,
@@ -249,8 +246,7 @@ function stateForm(functionTemplates, functionNames, stateId) {
       type: "checkbox",
       label: t("Enabled", "Aktiviert"),
       newLine: true,
-      xs: 4,
-      onChange: templateValue(prefix, "enabled")
+      xs: 4
     },
     [key(`${prefix}.mode`)]: {
       type: "select",
@@ -262,8 +258,7 @@ function stateForm(functionTemplates, functionNames, stateId) {
         { value: "outside", label: t("outside the allowed range", "au\xDFerhalb des erlaubten Bereichs liegt") },
         { value: "inside", label: t("inside the forbidden range", "im verbotenen Bereich liegt") }
       ],
-      hidden: `!${data(`${prefix}.enabled`)}`,
-      onChange: templateValue(prefix, "mode")
+      hidden: `!${data(`${prefix}.enabled`)}`
     },
     [key(`${prefix}.min`)]: {
       type: "number",
@@ -295,6 +290,7 @@ function stateForm(functionTemplates, functionNames, stateId) {
         label: t("Function", "Funktion"),
         options: functions,
         freeSolo: true,
+        onChange: { alsoDependsOn: [], calculateFunc: applyFunctionTemplate },
         help: functions.length ? t(`Existing functions: ${functions.join(", ")}`, `Vorhandene Funktionen: ${functions.join(", ")}`) : void 0,
         newLine: true,
         xs: 12
@@ -306,8 +302,7 @@ function stateForm(functionTemplates, functionNames, stateId) {
         type: "checkbox",
         label: t("Warn if the state is not updated", "Warnen, wenn der State nicht aktualisiert wird"),
         newLine: true,
-        xs: 12,
-        onChange: templateValue("staleWarning", "enabled")
+        xs: 12
       },
       [key("staleWarning.minutes")]: {
         type: "number",

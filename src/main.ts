@@ -228,14 +228,8 @@ function stateForm(
 	const functions = [...new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
 	const key = (path: string): string => (stateId ? `${stateId}.${path}` : path);
 	const data = (path: string): string => (stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`);
-	const templateValue = (
-		prefix: 'warning' | 'alarm' | 'staleWarning',
-		field: 'enabled' | 'mode',
-	): Record<string, unknown> => ({
-		alsoDependsOn: [key('function')],
-		calculateFunc: `(${JSON.stringify(functionTemplates)}[${data('function')}]?.${prefix}.${field} ?? ${data(`${prefix}.${field}`)})`,
-		ignoreOwnChanges: true,
-	});
+	const target = stateId ? `data[${JSON.stringify(stateId)}]` : 'data';
+	const applyFunctionTemplate = `(() => { const template = ${JSON.stringify(functionTemplates)}[${data('function')}]; if (template) { ${target}.warning.enabled = template.warning.enabled; ${target}.warning.mode = template.warning.mode; ${target}.alarm.enabled = template.alarm.enabled; ${target}.alarm.mode = template.alarm.mode; ${target}.staleWarning.enabled = template.staleWarning.enabled; } return ${data('function')}; })()`;
 	const sectionHeader = (text: ioBroker.Translated, backgroundColor: string): Record<string, unknown> => ({
 		type: 'staticText',
 		text,
@@ -256,7 +250,6 @@ function stateForm(
 			label: t('Enabled', 'Aktiviert'),
 			newLine: true,
 			xs: 4,
-			onChange: templateValue(prefix, 'enabled'),
 		},
 		[key(`${prefix}.mode`)]: {
 			type: 'select',
@@ -269,7 +262,6 @@ function stateForm(
 				{ value: 'inside', label: t('inside the forbidden range', 'im verbotenen Bereich liegt') },
 			],
 			hidden: `!${data(`${prefix}.enabled`)}`,
-			onChange: templateValue(prefix, 'mode'),
 		},
 		[key(`${prefix}.min`)]: {
 			type: 'number',
@@ -301,6 +293,7 @@ function stateForm(
 				label: t('Function', 'Funktion'),
 				options: functions,
 				freeSolo: true,
+				onChange: { alsoDependsOn: [], calculateFunc: applyFunctionTemplate },
 				help: functions.length
 					? t(`Existing functions: ${functions.join(', ')}`, `Vorhandene Funktionen: ${functions.join(', ')}`)
 					: undefined,
@@ -315,7 +308,6 @@ function stateForm(
 				label: t('Warn if the state is not updated', 'Warnen, wenn der State nicht aktualisiert wird'),
 				newLine: true,
 				xs: 12,
-				onChange: templateValue('staleWarning', 'enabled'),
 			},
 			[key('staleWarning.minutes')]: {
 				type: 'number',
