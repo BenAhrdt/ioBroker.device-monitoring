@@ -78,7 +78,9 @@ function limitDisplay(limit, unit = "") {
   return `${(_c = limit.min) != null ? _c : "\u2014"}\u2013${(_d = limit.max) != null ? _d : "\u2014"}${suffix}`;
 }
 function timestampDisplay(timestamp) {
-  return new Date(timestamp).toISOString().replace("T", " ").replace(".000Z", " UTC");
+  const date = new Date(timestamp);
+  const pad = (value, length = 2) => String(value).padStart(length, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
 }
 function intervalDisplay(milliseconds) {
   const seconds = Math.max(0, Math.round(milliseconds / 1e3));

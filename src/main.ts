@@ -73,7 +73,9 @@ function limitDisplay(limit: LimitConfiguration, unit = ''): string {
 	return `${limit.min ?? '—'}–${limit.max ?? '—'}${suffix}`;
 }
 function timestampDisplay(timestamp: number): string {
-	return new Date(timestamp).toISOString().replace('T', ' ').replace('.000Z', ' UTC');
+	const date = new Date(timestamp);
+	const pad = (value: number, length = 2): string => String(value).padStart(length, '0');
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
 }
 function intervalDisplay(milliseconds: number): string {
 	const seconds = Math.max(0, Math.round(milliseconds / 1000));
