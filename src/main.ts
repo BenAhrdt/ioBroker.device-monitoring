@@ -42,7 +42,6 @@ const STATUS_ICONS = {
 		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#607d8b"/><path d="M9.5 9a2.7 2.7 0 115 1.4c-.8 1.2-2.5 1.4-2.5 3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.2" fill="white"/></svg>',
 	),
 };
-
 function safeId(value: string, fallback: string): string {
 	return (
 		value
@@ -61,6 +60,37 @@ function uniqueId(base: string, used: Set<string>): string {
 		id = `${base}_${i++}`;
 	}
 	return id;
+}
+function limitDisplay(limit: LimitConfiguration, unit = ''): string {
+	const suffix = unit ? ` ${unit}` : '';
+	if (limit.mode === 'below') {
+		return `< ${limit.min ?? '—'}${suffix}`;
+	}
+	if (limit.mode === 'above') {
+		return `> ${limit.max ?? '—'}${suffix}`;
+	}
+	return `${limit.min ?? '—'}–${limit.max ?? '—'}${suffix}`;
+}
+function timestampDisplay(timestamp: number): string {
+	return new Date(timestamp).toISOString().replace('T', ' ').replace('.000Z', ' UTC');
+}
+function intervalDisplay(milliseconds: number): string {
+	const seconds = Math.max(0, Math.round(milliseconds / 1000));
+	const days = Math.floor(seconds / 86_400);
+	const hours = Math.floor((seconds % 86_400) / 3_600);
+	const minutes = Math.floor((seconds % 3_600) / 60);
+	const restSeconds = seconds % 60;
+	return [days && `${days}d`, hours && `${hours}h`, minutes && `${minutes}m`, `${restSeconds}s`]
+		.filter(Boolean)
+		.join(' ');
+}
+function escapeHtml(value: unknown): string {
+	return String(value)
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
 }
 
 class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, string> {
@@ -111,12 +141,14 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				icon: 'add',
 				description: t('Add monitored state', 'Überwachungs-State hinzufügen'),
 				handler: async (_id: string, context: any) => {
+					const validSourceIds = await this.adapter.getValidSourceIds();
 					const data = await context.showForm(
-						stateForm(this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames()),
+						stateForm(this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames(), device.states),
 						{
 							title: t('Add monitored state', 'Überwachungs-State hinzufügen'),
-							data: defaultStateForm(),
+							data: defaultStateForm(validSourceIds),
 							buttons: ['apply', 'cancel'],
+							applyDisabledRule: addStateDisabledRule(device.states),
 						},
 					);
 					if (!data?.sourceId || !data?.name) {
@@ -133,12 +165,18 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				icon: 'settings',
 				description: t('Edit monitored states', 'Überwachungs-States bearbeiten'),
 				handler: async (_deviceId: string, context: any) => {
+					const validSourceIds = await this.adapter.getValidSourceIds();
+					const formData = {
+						_validSourceIds: validSourceIds,
+						...Object.fromEntries(device.states.map(watched => [watched.id, watched])),
+					};
 					const data = await context.showForm(
 						statesForm(device.states, this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames()),
 						{
 							title: t('Edit monitored states', 'Überwachungs-States bearbeiten'),
-							data: Object.fromEntries(device.states.map(watched => [watched.id, watched])),
+							data: formData,
 							buttons: ['apply', 'cancel'],
+							applyDisabledRule: editStatesDisabledRule(device.states),
 						},
 					);
 					if (!data) {
@@ -179,28 +217,32 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				},
 			},
 		);
+		const customInfoItems = Object.fromEntries(
+			device.states.map(watched => [
+				watched.id,
+				{
+					type: 'state',
+					oid: `devices.${device.id}.${watched.id}.details`,
+					control: 'html',
+					label: '',
+					newLine: true,
+					xs: 12,
+				},
+			]),
+		);
 		return {
 			id: device.id,
 			name: device.name,
 			icon: { stateId: `${this.adapter.namespace}.devices.${device.id}.icon` },
 			backgroundColor: { stateId: `${this.adapter.namespace}.devices.${device.id}.color` },
-			indicators: device.states.map((watched, order) => ({
-				id: `state_${watched.id}`,
-				value: { stateId: `${this.adapter.namespace}.devices.${device.id}.${watched.id}.status` },
-				icon: STATUS_ICONS.unknown,
-				text: { stateId: `${this.adapter.namespace}.devices.${device.id}.${watched.id}.display` },
-				levels: [
-					{ value: 'invalid', color: 'error', icon: STATUS_ICONS.invalid },
-					{ value: 'timeout', color: 'info', icon: STATUS_ICONS.timeout },
-					{ value: 'alarm', color: 'error', icon: STATUS_ICONS.alarm },
-					{ value: 'warning', color: 'warning', icon: STATUS_ICONS.warning },
-					{ value: 'ok', color: 'ok', icon: STATUS_ICONS.ok },
-					{ color: 'inactive', icon: STATUS_ICONS.unknown },
-				],
-				tooltip: watched.function || watched.name,
-				hideIfEmpty: false,
-				order,
-			})),
+			...(Object.keys(customInfoItems).length
+				? {
+						customInfo: {
+							id: device.id,
+							schema: { type: 'panel', style: { marginTop: '-56px' }, items: customInfoItems },
+						},
+					}
+				: {}),
 			actions,
 		};
 	}
@@ -215,10 +257,11 @@ function deviceForm(): any {
 function defaultLimit(mode: LimitMode): LimitConfiguration {
 	return { enabled: false, mode };
 }
-function defaultStateForm(): Partial<WatchedStateConfiguration> {
+function defaultStateForm(validSourceIds: string[]): any {
 	return {
 		name: '',
 		sourceId: '',
+		_validSourceIds: validSourceIds,
 		function: '',
 		warning: defaultLimit('outside'),
 		alarm: defaultLimit('outside'),
@@ -228,12 +271,18 @@ function defaultStateForm(): Partial<WatchedStateConfiguration> {
 function stateForm(
 	functionTemplates: Record<string, FunctionTemplate>,
 	functionNames: string[],
+	states: WatchedStateConfiguration[],
 	stateId?: string,
 ): any {
 	const functions = [...new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
 	const key = (path: string): string => (stateId ? `${stateId}.${path}` : path);
 	const data = (path: string): string => (stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`);
-	const sourceValidator = `(${stateId ? `${data('_delete')} || ` : ''}(async () => { const object = await getObject(${data('sourceId')}); return !!${data('sourceId')} && object?.type === 'state' && object?.common?.type === 'number'; })())`;
+	const existingNames = JSON.stringify(states.map(state => state.name.trim().toLowerCase()));
+	const otherStateIds = JSON.stringify(states.filter(state => state.id !== stateId).map(state => state.id));
+	const nameValidator = stateId
+		? `return (${data('_delete')} || (() => { const name = String(${data('name')} || '').trim().toLowerCase(); return !!name && !${otherStateIds}.some(id => !data[id]?._delete && String(data[id]?.name || '').trim().toLowerCase() === name); })())`
+		: `return (() => { const name = String(${data('name')} || '').trim().toLowerCase(); return !!name && !${existingNames}.includes(name); })()`;
+	const sourceValidator = `return (${stateId ? `${data('_delete')} || ` : ''}(Array.isArray(data._validSourceIds) && data._validSourceIds.includes(String(${data('sourceId')} || '').trim())))`;
 	const target = stateId ? `data[${JSON.stringify(stateId)}]` : 'data';
 	const templates = JSON.stringify(functionTemplates);
 	const applyFunctionTemplate = `(() => { const template = ${templates}[${data('function')}]; if (template) { ${target}.warning = { ...${target}.warning, ...template.warning }; ${target}.alarm = { ...${target}.alarm, ...template.alarm }; ${target}.staleWarning = { ...${target}.staleWarning, ...template.staleWarning }; } return ${data('function')}; })()`;
@@ -291,7 +340,18 @@ function stateForm(
 	return {
 		type: 'panel',
 		items: {
-			[key('name')]: { type: 'text', label: t('Name', 'Name'), newLine: true, xs: 12 },
+			[key('name')]: {
+				type: 'text',
+				label: t('Name', 'Name'),
+				newLine: true,
+				xs: 12,
+				validator: nameValidator,
+				validatorErrorText: t(
+					'Name is required and must be unique within the device',
+					'Der Name ist erforderlich und muss innerhalb des Geräts eindeutig sein',
+				),
+				validatorNoSaveOnError: true,
+			},
 			[key('sourceId')]: {
 				type: 'objectId',
 				label: t('ioBroker state', 'ioBroker-State'),
@@ -300,8 +360,8 @@ function stateForm(
 				customFilter: { type: 'state', common: { type: 'number' } },
 				validator: sourceValidator,
 				validatorErrorText: t(
-					'Please select an existing numeric ioBroker state',
-					'Bitte einen vorhandenen numerischen ioBroker-State auswählen',
+					'Please select an existing ioBroker state',
+					'Bitte einen vorhandenen ioBroker-State auswählen',
 				),
 				validatorNoSaveOnError: true,
 			},
@@ -362,6 +422,14 @@ function stateForm(
 		},
 	};
 }
+function addStateDisabledRule(states: WatchedStateConfiguration[]): string {
+	const existingNames = JSON.stringify(states.map(state => state.name.trim().toLowerCase()));
+	return `!String(data.name || '').trim() || ${existingNames}.includes(String(data.name || '').trim().toLowerCase()) || !Array.isArray(data._validSourceIds) || !data._validSourceIds.includes(String(data.sourceId || '').trim())`;
+}
+function editStatesDisabledRule(states: WatchedStateConfiguration[]): string {
+	const stateIds = JSON.stringify(states.map(state => state.id));
+	return `(() => { const ids = ${stateIds}; return !Array.isArray(data._validSourceIds) || ids.some(id => { const state = data[id]; if (!state || state._delete) return false; const name = String(state.name || '').trim().toLowerCase(); return !name || !data._validSourceIds.includes(String(state.sourceId || '').trim()) || ids.some(otherId => otherId !== id && !data[otherId]?._delete && String(data[otherId]?.name || '').trim().toLowerCase() === name); }); })()`;
+}
 function statesForm(
 	states: WatchedStateConfiguration[],
 	functionTemplates: Record<string, FunctionTemplate>,
@@ -371,7 +439,7 @@ function statesForm(
 		type: 'tabs',
 		items: Object.fromEntries(
 			states.map(watched => {
-				const form = stateForm(functionTemplates, functionNames, watched.id);
+				const form = stateForm(functionTemplates, functionNames, states, watched.id);
 				form.items[`${watched.id}._delete`] = {
 					type: 'checkbox',
 					label: t('Delete this monitored state', 'Diesen Überwachungs-State löschen'),
@@ -390,6 +458,8 @@ class DeviceMonitoring extends utils.Adapter {
 	private subscribed = new Set<string>();
 	private invalidSources = new Set<string>();
 	private sourceUnits = new Map<string, string>();
+	private updateHistoryQueues = new Map<string, Promise<void>>();
+	private displayLanguage: 'de' | 'en' = 'en';
 	private deviceManagement?: DeviceMonitoringManagement;
 	private sortRefreshTimer?: NodeJS.Timeout;
 	private staleCheckTimer?: NodeJS.Timeout;
@@ -410,6 +480,8 @@ class DeviceMonitoring extends utils.Adapter {
 		});
 	}
 	private async onReady(): Promise<void> {
+		const systemConfig = await this.getForeignObjectAsync('system.config');
+		this.displayLanguage = systemConfig?.common?.language === 'de' ? 'de' : 'en';
 		this.deviceManagement = new DeviceMonitoringManagement(this);
 		const legacyDevices = this.normalizeDevices(this.config.devices);
 		this.devices = legacyDevices.length ? legacyDevices : await this.loadDevicesFromObjects();
@@ -419,6 +491,7 @@ class DeviceMonitoring extends utils.Adapter {
 			await this.removeLegacyDeviceConfig();
 		}
 		await this.refreshSubscriptions();
+		await this.initializeUpdateHistory();
 		await this.updateAll();
 		await this.setState('info.connection', true, true);
 		this.sortRefreshTimer = setInterval(() => {
@@ -441,6 +514,7 @@ class DeviceMonitoring extends utils.Adapter {
 		for (const device of this.devices) {
 			for (const watched of device.states) {
 				if (watched.sourceId === id) {
+					await this.recordSourceUpdate(device, watched, state.ts);
 					await this.updateValue(device, watched, state);
 					affectedDevices.add(device.id);
 				}
@@ -471,7 +545,11 @@ class DeviceMonitoring extends utils.Adapter {
 		for (const device of this.devices) {
 			for (const watched of device.states) {
 				if (watched.sourceId === id) {
-					await this.updateValue(device, watched, await this.getForeignStateAsync(id));
+					const state = await this.getForeignStateAsync(id);
+					if (state) {
+						await this.recordSourceUpdate(device, watched, state.ts);
+					}
+					await this.updateValue(device, watched, state);
 					affectedDevices.add(device.id);
 				}
 			}
@@ -489,6 +567,9 @@ class DeviceMonitoring extends utils.Adapter {
 	}
 	public getFunctionTemplates(): Record<string, FunctionTemplate> {
 		return JSON.parse(JSON.stringify(this.functionTemplates));
+	}
+	public localize(en: string, de: string): string {
+		return this.displayLanguage === 'de' ? de : en;
 	}
 	public getFunctionNames(): string[] {
 		return [...new Set(this.devices.flatMap(device => device.states.map(state => state.function)).filter(Boolean))];
@@ -632,6 +713,7 @@ class DeviceMonitoring extends utils.Adapter {
 		await this.rebuildObjects();
 		await this.removeLegacyDeviceConfig();
 		await this.refreshSubscriptions();
+		await this.initializeUpdateHistory();
 		await this.updateAll();
 		await this.deviceManagement?.refreshCards();
 	}
@@ -669,6 +751,12 @@ class DeviceMonitoring extends utils.Adapter {
 				await this.ensureState(`${base}.value`, t('Current value', 'Aktueller Wert'), 'mixed', 'value', unit);
 				await this.ensureState(`${base}.status`, t('Status', 'Status'), 'string', 'text');
 				await this.ensureState(`${base}.display`, t('Display value', 'Anzeigewert'), 'string', 'text');
+				await this.ensureState(
+					`${base}.details`,
+					t('Monitoring details', 'Überwachungsdetails'),
+					'string',
+					'html',
+				);
 				await this.ensureState(`${base}.warning`, t('Warning', 'Warnung'), 'boolean', 'indicator');
 				await this.ensureState(`${base}.alarm`, t('Alarm', 'Alarm'), 'boolean', 'indicator.alarm');
 				await this.ensureState(
@@ -676,6 +764,49 @@ class DeviceMonitoring extends utils.Adapter {
 					t('Update timeout', 'Aktualisierungs-Timeout'),
 					'boolean',
 					'indicator.maintenance',
+				);
+				await this.ensureState(
+					`${base}.lastUpdate`,
+					t('Last update', 'Letzte Aktualisierung'),
+					'number',
+					'value.time',
+				);
+				await this.ensureState(
+					`${base}.previousUpdate`,
+					t('Previous update', 'Vorherige Aktualisierung'),
+					'number',
+					'value.time',
+				);
+				await this.ensureState(
+					`${base}.updateInterval`,
+					t('Update interval', 'Aktualisierungsintervall'),
+					'number',
+					'value.interval',
+					'ms',
+				);
+				await this.ensureState(
+					`${base}.lastUpdateDisplay`,
+					t('Last update display', 'Anzeige der letzten Aktualisierung'),
+					'string',
+					'text',
+				);
+				await this.ensureState(
+					`${base}.previousUpdateDisplay`,
+					t('Previous update display', 'Anzeige der vorherigen Aktualisierung'),
+					'string',
+					'text',
+				);
+				await this.ensureState(
+					`${base}.updateIntervalDisplay`,
+					t('Update interval display', 'Anzeige des Aktualisierungsintervalls'),
+					'string',
+					'text',
+				);
+				await this.ensureState(
+					`${base}.updateHistorySource`,
+					t('Update history source', 'Quelle des Aktualisierungsverlaufs'),
+					'string',
+					'text',
 				);
 			}
 		}
@@ -774,7 +905,11 @@ class DeviceMonitoring extends utils.Adapter {
 		await this.refreshSourceValidity();
 	}
 	private isValidSourceObject(object: ioBroker.Object | null | undefined): object is ioBroker.StateObject {
-		return object?.type === 'state' && object.common.type === 'number';
+		return object?.type === 'state';
+	}
+	public async getValidSourceIds(): Promise<string[]> {
+		const objects = await this.getForeignObjectsAsync('*', 'state');
+		return Object.keys(objects);
 	}
 	private async refreshSourceValidity(): Promise<void> {
 		this.invalidSources.clear();
@@ -790,7 +925,7 @@ class DeviceMonitoring extends utils.Adapter {
 			}),
 		);
 	}
-	private async getSourceUnit(sourceId: string): Promise<string> {
+	public async getSourceUnit(sourceId: string): Promise<string> {
 		if (this.sourceUnits.has(sourceId)) {
 			return this.sourceUnits.get(sourceId) || '';
 		}
@@ -799,10 +934,129 @@ class DeviceMonitoring extends utils.Adapter {
 		this.sourceUnits.set(sourceId, unit);
 		return unit;
 	}
+	private async initializeUpdateHistory(): Promise<void> {
+		for (const device of this.devices) {
+			for (const watched of device.states) {
+				await this.ensureUpdateHistoryPlaceholders(device, watched);
+				const state = await this.getForeignStateAsync(watched.sourceId);
+				if (state) {
+					await this.recordSourceUpdate(device, watched, state.ts);
+				}
+			}
+		}
+	}
+	private async ensureUpdateHistoryPlaceholders(
+		device: DeviceConfiguration,
+		watched: WatchedStateConfiguration,
+	): Promise<void> {
+		const base = `devices.${device.id}.${watched.id}`;
+		const [last, previous, interval] = await Promise.all([
+			this.getStateAsync(`${base}.lastUpdate`),
+			this.getStateAsync(`${base}.previousUpdate`),
+			this.getStateAsync(`${base}.updateInterval`),
+		]);
+		const lastTimestamp = typeof last?.val === 'number' ? last.val : undefined;
+		const previousTimestamp = typeof previous?.val === 'number' ? previous.val : undefined;
+		const updateInterval = typeof interval?.val === 'number' ? interval.val : undefined;
+		await Promise.all([
+			this.setStateChangedAsync(`${base}.lastUpdateDisplay`, {
+				val: this.localize(
+					`Last timestamp: ${lastTimestamp === undefined ? '-' : timestampDisplay(lastTimestamp)}`,
+					`Letzter Timestamp: ${lastTimestamp === undefined ? '-' : timestampDisplay(lastTimestamp)}`,
+				),
+				ack: true,
+			}),
+			this.setStateChangedAsync(`${base}.previousUpdateDisplay`, {
+				val: this.localize(
+					`Previous timestamp: ${previousTimestamp === undefined ? '-' : timestampDisplay(previousTimestamp)}`,
+					`Vorletzter Timestamp: ${previousTimestamp === undefined ? '-' : timestampDisplay(previousTimestamp)}`,
+				),
+				ack: true,
+			}),
+			this.setStateChangedAsync(`${base}.updateIntervalDisplay`, {
+				val: this.localize(
+					`Interval: ${updateInterval === undefined ? '-' : intervalDisplay(updateInterval)}`,
+					`Intervall: ${updateInterval === undefined ? '-' : intervalDisplay(updateInterval)}`,
+				),
+				ack: true,
+			}),
+		]);
+	}
+	private async recordSourceUpdate(
+		device: DeviceConfiguration,
+		watched: WatchedStateConfiguration,
+		timestamp: number,
+	): Promise<void> {
+		const key = `${device.id}.${watched.id}`;
+		const previous = this.updateHistoryQueues.get(key) ?? Promise.resolve();
+		const current = previous
+			.catch(() => undefined)
+			.then(() => this.recordSourceUpdateNow(device, watched, timestamp));
+		this.updateHistoryQueues.set(key, current);
+		try {
+			await current;
+		} finally {
+			if (this.updateHistoryQueues.get(key) === current) {
+				this.updateHistoryQueues.delete(key);
+			}
+		}
+	}
+	private async recordSourceUpdateNow(
+		device: DeviceConfiguration,
+		watched: WatchedStateConfiguration,
+		timestamp: number,
+	): Promise<void> {
+		if (!Number.isFinite(timestamp) || timestamp <= 0) {
+			return;
+		}
+		const base = `devices.${device.id}.${watched.id}`;
+		const [sourceState, lastState] = await Promise.all([
+			this.getStateAsync(`${base}.updateHistorySource`),
+			this.getStateAsync(`${base}.lastUpdate`),
+		]);
+		const sameSource = sourceState?.val === watched.sourceId;
+		const lastTimestamp = sameSource && typeof lastState?.val === 'number' ? lastState.val : undefined;
+		if (lastTimestamp !== undefined && timestamp <= lastTimestamp) {
+			return;
+		}
+		const previousTimestamp = lastTimestamp ?? null;
+		const interval = previousTimestamp === null ? null : timestamp - previousTimestamp;
+		await Promise.all([
+			this.setStateChangedAsync(`${base}.updateHistorySource`, { val: watched.sourceId, ack: true }),
+			this.setStateChangedAsync(`${base}.lastUpdate`, { val: timestamp, ack: true }),
+			this.setStateChangedAsync(`${base}.lastUpdateDisplay`, {
+				val: this.localize(
+					`Last timestamp: ${timestampDisplay(timestamp)}`,
+					`Letzter Timestamp: ${timestampDisplay(timestamp)}`,
+				),
+				ack: true,
+			}),
+			this.setStateChangedAsync(`${base}.previousUpdate`, { val: previousTimestamp, ack: true }),
+			this.setStateChangedAsync(`${base}.previousUpdateDisplay`, {
+				val: this.localize(
+					`Previous timestamp: ${previousTimestamp === null ? '-' : timestampDisplay(previousTimestamp)}`,
+					`Vorletzter Timestamp: ${previousTimestamp === null ? '-' : timestampDisplay(previousTimestamp)}`,
+				),
+				ack: true,
+			}),
+			this.setStateChangedAsync(`${base}.updateInterval`, { val: interval, ack: true }),
+			this.setStateChangedAsync(`${base}.updateIntervalDisplay`, {
+				val: this.localize(
+					`Interval: ${interval === null ? '-' : intervalDisplay(interval)}`,
+					`Intervall: ${interval === null ? '-' : intervalDisplay(interval)}`,
+				),
+				ack: true,
+			}),
+		]);
+	}
 	private async updateAll(): Promise<void> {
 		for (const device of this.devices) {
 			for (const watched of device.states) {
-				await this.updateValue(device, watched, await this.getForeignStateAsync(watched.sourceId));
+				const state = await this.getForeignStateAsync(watched.sourceId);
+				if (state) {
+					await this.recordSourceUpdate(device, watched, state.ts);
+				}
+				await this.updateValue(device, watched, state);
 			}
 			await this.updateDeviceSummary(device);
 		}
@@ -865,6 +1119,51 @@ class DeviceMonitoring extends utils.Adapter {
 			this.setStateChangedAsync(`devices.${device.id}.icon`, { val: STATUS_ICONS[status], ack: true }),
 		]);
 	}
+	private async updateDetailsDisplay(
+		device: DeviceConfiguration,
+		watched: WatchedStateConfiguration,
+		status: WatchStatus,
+		display: string,
+		unit: string,
+	): Promise<void> {
+		const base = `devices.${device.id}.${watched.id}`;
+		const tooltip: string[] = [];
+		if (watched.warning.enabled) {
+			tooltip.push(
+				this.localize(
+					`Warning limit: ${limitDisplay(watched.warning, unit)}`,
+					`Warngrenze: ${limitDisplay(watched.warning, unit)}`,
+				),
+			);
+		}
+		if (watched.alarm.enabled) {
+			tooltip.push(
+				this.localize(
+					`Alarm limit: ${limitDisplay(watched.alarm, unit)}`,
+					`Alarmgrenze: ${limitDisplay(watched.alarm, unit)}`,
+				),
+			);
+		}
+		if (watched.staleWarning.enabled) {
+			tooltip.push(`Timeout: ${watched.staleWarning.minutes} min`);
+		}
+		const [last, interval] = await Promise.all([
+			this.getStateAsync(`${base}.lastUpdate`),
+			this.getStateAsync(`${base}.updateInterval`),
+		]);
+		const lastTimestamp = typeof last?.val === 'number' ? timestampDisplay(last.val) : '-';
+		const updateInterval = typeof interval?.val === 'number' ? intervalDisplay(interval.val) : '-';
+		const intervalLabel = this.localize('Interval:', 'Intervall:');
+		const title = tooltip.length ? ` title="${escapeHtml(tooltip.join('\n'))}"` : '';
+		const details =
+			`<div${title} style="width:268px;max-width:none;box-sizing:border-box;text-align:center;line-height:1.2;margin:4px 0 10px">` +
+			`<img src="${STATUS_ICONS[status]}" style="display:block;width:24px;height:24px;margin:0 auto 3px">` +
+			`<div style="color:${COLORS[status]}">${escapeHtml(display)}</div>` +
+			`<div>LT: ${escapeHtml(lastTimestamp)}</div>` +
+			`<div>${escapeHtml(intervalLabel)} ${escapeHtml(updateInterval)}</div>` +
+			`</div>`;
+		await this.setStateChangedAsync(`${base}.details`, { val: details, ack: true });
+	}
 	private async updateValue(
 		device: DeviceConfiguration,
 		watched: WatchedStateConfiguration,
@@ -875,20 +1174,22 @@ class DeviceMonitoring extends utils.Adapter {
 		const updateTimedOut = isUpdateTimedOut(sourceState, watched.staleWarning);
 		const status = this.getWatchedStatus(watched, sourceState, updateTimedOut);
 		const unit = await this.getSourceUnit(watched.sourceId);
+		const display =
+			status === 'invalid'
+				? `${watched.name}: ⚠ ${watched.sourceId}`
+				: `${watched.name}: ${value === null ? '—' : `${String(value)}${unit ? ` ${unit}` : ''}`}`;
 		await Promise.all([
 			this.setStateChangedAsync(`${base}.value`, { val: value, ack: true }),
 			this.setStateChangedAsync(`${base}.status`, { val: status, ack: true }),
 			this.setStateChangedAsync(`${base}.display`, {
-				val:
-					status === 'invalid'
-						? `${watched.name}: ⚠ ${watched.sourceId}`
-						: `${watched.name}: ${value === null ? '—' : `${String(value)}${unit ? ` ${unit}` : ''}`}`,
+				val: display,
 				ack: true,
 			}),
 			this.setStateChangedAsync(`${base}.warning`, { val: status === 'warning', ack: true }),
 			this.setStateChangedAsync(`${base}.alarm`, { val: status === 'alarm', ack: true }),
 			this.setStateChangedAsync(`${base}.updateTimeout`, { val: updateTimedOut, ack: true }),
 		]);
+		await this.updateDetailsDisplay(device, watched, status, display, unit);
 	}
 }
 

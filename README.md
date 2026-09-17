@@ -107,6 +107,10 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Show active limits, timeout settings, update timestamps and intervals on device cards
+* (BenAhrdt) Accept existing mixed-type states while retaining runtime numeric-value checks
+
 ### 0.0.9 (2026-09-17)
 * (BenAhrdt) Validate selected source states and mark deleted or invalid states on device cards
 
