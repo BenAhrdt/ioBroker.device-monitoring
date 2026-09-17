@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.11",
+    "version": "0.0.12",
     "news": {
+      "0.0.12": {
+        "en": "Fix saving freely entered function names and their templates",
+        "de": "Fix: Speichern von Funktionsnamen und Vorlagen",
+        "ru": "Исправить сохранение произвольно введенных имен функций и их шаблонов",
+        "pt": "Corrige salvar nomes de funções e seus modelos livres",
+        "nl": "Oplossing voor het opslaan van vrij ingevoerde functienamen en bijbehorende sjablonen",
+        "fr": "Corrigé la sauvegarde des noms de fonctions et de leurs modèles",
+        "it": "Risolto il salvataggio dei nomi e dei modelli delle funzioni",
+        "es": "Corregir guardar los nombres de funciones y sus plantillas introducidos",
+        "pl": "Napraw zapisywanie dowolnie wprowadzonych nazw funkcji i ich szablonów",
+        "uk": "Виправлено збереження вільно введених імен функцій та їх шаблонів",
+        "zh-cn": "修复了保存自由输入的函数名称及其模板的问题"
+      },
       "0.0.11": {
         "en": "Add delayed and manual backup and restore of the device configuration\nReset update intervals on adapter start while retaining the current source timestamp\nAlways show the option to save or update a function template",
         "de": "Manuelles Backup und Restore der Gerätekonfiguration hinzufügen\nAktualisierungsintervalle beim Adapterstart unter Beibehaltung des Quellzeitstempels\nFunktionsvorlagen immer speichern oder aktualisieren",
@@ -80,19 +93,6 @@
         "pl": "Dodawanie sugestii autouzupełniania szablonów funkcji\nUlepszanie i kompaktowanie układu dialogowego stanu monitorowanego\nWyjaśnij aktualizowanie istniejących szablonów funkcji",
         "uk": "Додавання пропозицій автозаповнення для шаблонів функцій\nУдосконалити та ущільнити макет діалогового вікна моніторингу стану\nУточнити оновлення існуючих шаблонів функцій",
         "zh-cn": "为函数模板添加自动完成建议\n改进和压缩监控状态对话框布局\n澄清更新现有函数模板"
-      },
-      "0.0.5": {
-        "en": "Fix editing function names in the production Admin UI and enable trusted npm publishing",
-        "de": "Funktionsnamen im Admin-UI korrigieren und Trusted NPM Publishing aktivieren",
-        "ru": "Исправьте имена функций редактирования в производственном пользовательском интерфейсе администратора и включите надежную публикацию npm",
-        "pt": "Corrija nomes de funções de edição na UI Admin de produção e ative o npm confiável",
-        "nl": "Wijzig de namen van bewerkingsfuncties in de gebruikersinterface van de productiebeheerder en schakel vertrouwde npm-publicatie in",
-        "fr": "Corrigez le nom des fonctions d'édition dans l'interface de production et activez la publication NPM",
-        "it": "Modifica i nomi delle funzioni nell'Admin UI di produzione e abilita NPM Publishing",
-        "es": "Corregir los nombres de las funciones en la interfaz de administración de producción y",
-        "pl": "Napraw nazwy funkcji edycji w interfejsie administratora produkcji i włącz zaufane publikowanie npm",
-        "uk": "Виправте редагування назв функцій у виробничому інтерфейсі адміністратора та увімкніть надійну публікацію npm",
-        "zh-cn": "修复生产管理界面中的编辑函数名称并启用可信的 npm 发布"
       }
     },
     "titleLang": {
