@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.12",
+    "version": "0.0.13",
     "news": {
+      "0.0.13": {
+        "en": "Display update timestamps in the adapter host's local system time instead of UTC",
+        "de": "Zeigt Aktualisierungszeitstempel in der lokalen Systemzeit des Adapters an statt UTC",
+        "ru": "Отображать временные метки обновления в локальном системном времени хоста адаптера вместо UTC",
+        "pt": "Exibir timestamps de atualização no sistema local do host em vez de UTC",
+        "nl": "Tijdstempels voor updates weergeven in de lokale systeemtijd van de adapterhost in plaats van UTC",
+        "fr": "Afficher l'horodatage des mises à jour en fonction de l'heure locale de l'hôte au lieu de l'UTC",
+        "it": "Mostra gli orari di aggiornamento nell'ora locale dell'host anziché UTC",
+        "es": "Mostrar las marcas de hora de actualización en el sistema local del host adaptador en lugar de UTC",
+        "pl": "Wyświetlanie znaczników czasu aktualizacji w lokalnym czasie systemowym hosta adaptera zamiast UTC",
+        "uk": "Відображення позначок часу оновлення в локальному системному часі хоста адаптера замість UTC",
+        "zh-cn": "以适配器主机的本地系统时间而不是 UTC 显示更新时间戳"
+      },
       "0.0.12": {
         "en": "Fix saving freely entered function names and their templates",
         "de": "Fix: Speichern von Funktionsnamen und Vorlagen",
@@ -80,19 +93,6 @@
         "pl": "Napraw stosowanie ustawień aktywacji i naruszenia z wybranych szablonów funkcji",
         "uk": "Виправлено застосування налаштувань активації та порушення з вибраних шаблонів функцій",
         "zh-cn": "修复应用所选函数模板中的激活和违规设置的问题"
-      },
-      "0.0.6": {
-        "en": "Add autocomplete suggestions for function templates\nImprove and compact the monitored-state dialog layout\nClarify updating existing function templates",
-        "de": "Füge Autocomplete-Vorschläge für Funktionsvorlagen hinzu\nVerbessern und komprimieren Sie das Monitor-Layout\nUpdate vorhandener Funktionsvorlagen klären",
-        "ru": "Добавьте предложения по автозаполнению для шаблонов функций\nУлучшите и уменьшите формат диалогового окна с отслеживаемыми состояниями\nУточните обновление существующих шаблонов функций",
-        "pt": "Adicione sugestões automáticas de modelos de função\nMelhore e compacte o layout do diálogo monitorado\nEsclareça a atualização de modelos de função",
-        "nl": "Suggesties voor automatisch aanvullen toevoegen voor functiesjablonen\nDe indeling van het dialoogvenster met de bewaakte status verbeteren en comprimeren\nVerduidelijk het bijwerken van bestaande functiesjablonen",
-        "fr": "Suggestion de saisie semi-automatique pour les modèles de fonctions\nAméliorer et compacter la structure des boîtes de dialogue surveillées\nClarifier la mise à jour des modèles de fonctions existants",
-        "it": "Aggiungere proposte di autocompletamento per i modelli\nMigliora e compatta la finestra di dialogo monitorata\nChiarire l'aggiornamento dei modelli di funzione",
-        "es": "Añadir sugerencias de autocompletado para plantillas de funciones\nMejorar y compactar el diseño de los diálogos monitorizados\nAclarar la actualización de las plantillas de funciones",
-        "pl": "Dodawanie sugestii autouzupełniania szablonów funkcji\nUlepszanie i kompaktowanie układu dialogowego stanu monitorowanego\nWyjaśnij aktualizowanie istniejących szablonów funkcji",
-        "uk": "Додавання пропозицій автозаповнення для шаблонів функцій\nУдосконалити та ущільнити макет діалогового вікна моніторингу стану\nУточнити оновлення існуючих шаблонів функцій",
-        "zh-cn": "为函数模板添加自动完成建议\n改进和压缩监控状态对话框布局\n澄清更新现有函数模板"
       }
     },
     "titleLang": {

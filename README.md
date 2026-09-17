@@ -107,7 +107,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.13 (2026-09-17)
 * (BenAhrdt) Display update timestamps in the adapter host's local system time instead of UTC
 
 ### 0.0.12 (2026-09-17)
