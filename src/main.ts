@@ -229,7 +229,12 @@ function stateForm(
 	const key = (path: string): string => (stateId ? `${stateId}.${path}` : path);
 	const data = (path: string): string => (stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`);
 	const target = stateId ? `data[${JSON.stringify(stateId)}]` : 'data';
-	const applyFunctionTemplate = `(() => { const template = ${JSON.stringify(functionTemplates)}[${data('function')}]; if (template) { ${target}.warning.enabled = template.warning.enabled; ${target}.warning.mode = template.warning.mode; ${target}.alarm.enabled = template.alarm.enabled; ${target}.alarm.mode = template.alarm.mode; ${target}.staleWarning.enabled = template.staleWarning.enabled; } return ${data('function')}; })()`;
+	const templates = JSON.stringify(functionTemplates);
+	const applyFunctionTemplate = `(() => { const template = ${templates}[${data('function')}]; if (template) { ${target}.warning = { ...${target}.warning, ...template.warning }; ${target}.alarm = { ...${target}.alarm, ...template.alarm }; ${target}.staleWarning = { ...${target}.staleWarning, ...template.staleWarning }; } return ${data('function')}; })()`;
+	const templateValue = (path: string): Record<string, unknown> => ({
+		calculateFunc: `(${templates}[${data('function')}] ? ${templates}[${data('function')}].${path} : ${data(path)})`,
+		ignoreOwnChanges: true,
+	});
 	const sectionHeader = (text: ioBroker.Translated, backgroundColor: string): Record<string, unknown> => ({
 		type: 'staticText',
 		text,
@@ -294,6 +299,20 @@ function stateForm(
 				options: functions,
 				freeSolo: true,
 				onChange: { alsoDependsOn: [], calculateFunc: applyFunctionTemplate },
+				onChangeDependsOn: [
+					...[
+						'warning.enabled',
+						'warning.mode',
+						'warning.min',
+						'warning.max',
+						'alarm.enabled',
+						'alarm.mode',
+						'alarm.min',
+						'alarm.max',
+						'staleWarning.enabled',
+						'staleWarning.minutes',
+					].map(path => ({ attr: key(path), onChange: templateValue(path) })),
+				],
 				help: functions.length
 					? t(`Existing functions: ${functions.join(', ')}`, `Vorhandene Funktionen: ${functions.join(', ')}`)
 					: undefined,
@@ -652,10 +671,25 @@ class DeviceMonitoring extends utils.Adapter {
 			}
 			const mode = (input: unknown): LimitMode =>
 				['below', 'above', 'outside', 'inside'].includes(String(input)) ? (input as LimitMode) : 'outside';
+			const number = (input: unknown): number | undefined =>
+				typeof input === 'number' && Number.isFinite(input) ? input : undefined;
 			templates[functionName] = {
-				warning: { enabled: template.warning?.enabled === true, mode: mode(template.warning?.mode) },
-				alarm: { enabled: template.alarm?.enabled === true, mode: mode(template.alarm?.mode) },
-				staleWarning: { enabled: template.staleWarning?.enabled === true },
+				warning: {
+					enabled: template.warning?.enabled === true,
+					mode: mode(template.warning?.mode),
+					min: number(template.warning?.min),
+					max: number(template.warning?.max),
+				},
+				alarm: {
+					enabled: template.alarm?.enabled === true,
+					mode: mode(template.alarm?.mode),
+					min: number(template.alarm?.min),
+					max: number(template.alarm?.max),
+				},
+				staleWarning: {
+					enabled: template.staleWarning?.enabled === true,
+					minutes: number(template.staleWarning?.minutes) || 60,
+				},
 			};
 		}
 		return templates;

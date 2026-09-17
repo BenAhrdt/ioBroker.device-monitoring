@@ -48,27 +48,27 @@ export interface DeviceConfiguration {
 	states: WatchedStateConfiguration[];
 }
 
-/** Reusable activation and violation settings associated with a function name. */
+/** Complete reusable monitoring settings associated with a function name. */
 export interface FunctionTemplate {
-	/** Reusable warning activation and mode. */
-	warning: Pick<LimitConfiguration, 'enabled' | 'mode'>;
-	/** Reusable alarm activation and mode. */
-	alarm: Pick<LimitConfiguration, 'enabled' | 'mode'>;
-	/** Reusable update-timeout activation. */
-	staleWarning: Pick<StaleWarningConfiguration, 'enabled'>;
+	/** Reusable warning configuration. */
+	warning: LimitConfiguration;
+	/** Reusable alarm configuration. */
+	alarm: LimitConfiguration;
+	/** Reusable update-timeout configuration. */
+	staleWarning: StaleWarningConfiguration;
 }
 
 /**
  * Extracts reusable settings from a monitored state.
  *
  * @param watched Full monitored-state configuration.
- * @returns Function template without state-specific thresholds and timeout duration.
+ * @returns Complete reusable monitoring configuration.
  */
 export function createFunctionTemplate(watched: WatchedStateConfiguration): FunctionTemplate {
 	return {
-		warning: { enabled: watched.warning.enabled, mode: watched.warning.mode },
-		alarm: { enabled: watched.alarm.enabled, mode: watched.alarm.mode },
-		staleWarning: { enabled: watched.staleWarning.enabled },
+		warning: { ...watched.warning },
+		alarm: { ...watched.alarm },
+		staleWarning: { ...watched.staleWarning },
 	};
 }
 

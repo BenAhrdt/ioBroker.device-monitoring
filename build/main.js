@@ -226,7 +226,12 @@ function stateForm(functionTemplates, functionNames, stateId) {
   const key = (path) => stateId ? `${stateId}.${path}` : path;
   const data = (path) => stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`;
   const target = stateId ? `data[${JSON.stringify(stateId)}]` : "data";
-  const applyFunctionTemplate = `(() => { const template = ${JSON.stringify(functionTemplates)}[${data("function")}]; if (template) { ${target}.warning.enabled = template.warning.enabled; ${target}.warning.mode = template.warning.mode; ${target}.alarm.enabled = template.alarm.enabled; ${target}.alarm.mode = template.alarm.mode; ${target}.staleWarning.enabled = template.staleWarning.enabled; } return ${data("function")}; })()`;
+  const templates = JSON.stringify(functionTemplates);
+  const applyFunctionTemplate = `(() => { const template = ${templates}[${data("function")}]; if (template) { ${target}.warning = { ...${target}.warning, ...template.warning }; ${target}.alarm = { ...${target}.alarm, ...template.alarm }; ${target}.staleWarning = { ...${target}.staleWarning, ...template.staleWarning }; } return ${data("function")}; })()`;
+  const templateValue = (path) => ({
+    calculateFunc: `(${templates}[${data("function")}] ? ${templates}[${data("function")}].${path} : ${data(path)})`,
+    ignoreOwnChanges: true
+  });
   const sectionHeader = (text, backgroundColor) => ({
     type: "staticText",
     text,
@@ -291,6 +296,20 @@ function stateForm(functionTemplates, functionNames, stateId) {
         options: functions,
         freeSolo: true,
         onChange: { alsoDependsOn: [], calculateFunc: applyFunctionTemplate },
+        onChangeDependsOn: [
+          ...[
+            "warning.enabled",
+            "warning.mode",
+            "warning.min",
+            "warning.max",
+            "alarm.enabled",
+            "alarm.mode",
+            "alarm.min",
+            "alarm.max",
+            "staleWarning.enabled",
+            "staleWarning.minutes"
+          ].map((path) => ({ attr: key(path), onChange: templateValue(path) }))
+        ],
         help: functions.length ? t(`Existing functions: ${functions.join(", ")}`, `Vorhandene Funktionen: ${functions.join(", ")}`) : void 0,
         newLine: true,
         xs: 12
@@ -624,7 +643,7 @@ class DeviceMonitoring extends utils.Adapter {
     return this.normalizeDevices((_c = folder == null ? void 0 : folder.native) == null ? void 0 : _c.devices);
   }
   normalizeFunctionTemplates(value) {
-    var _a, _b, _c, _d, _e;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return {};
     }
@@ -635,10 +654,24 @@ class DeviceMonitoring extends utils.Adapter {
         continue;
       }
       const mode = (input) => ["below", "above", "outside", "inside"].includes(String(input)) ? input : "outside";
+      const number = (input) => typeof input === "number" && Number.isFinite(input) ? input : void 0;
       templates[functionName] = {
-        warning: { enabled: ((_a = template.warning) == null ? void 0 : _a.enabled) === true, mode: mode((_b = template.warning) == null ? void 0 : _b.mode) },
-        alarm: { enabled: ((_c = template.alarm) == null ? void 0 : _c.enabled) === true, mode: mode((_d = template.alarm) == null ? void 0 : _d.mode) },
-        staleWarning: { enabled: ((_e = template.staleWarning) == null ? void 0 : _e.enabled) === true }
+        warning: {
+          enabled: ((_a = template.warning) == null ? void 0 : _a.enabled) === true,
+          mode: mode((_b = template.warning) == null ? void 0 : _b.mode),
+          min: number((_c = template.warning) == null ? void 0 : _c.min),
+          max: number((_d = template.warning) == null ? void 0 : _d.max)
+        },
+        alarm: {
+          enabled: ((_e = template.alarm) == null ? void 0 : _e.enabled) === true,
+          mode: mode((_f = template.alarm) == null ? void 0 : _f.mode),
+          min: number((_g = template.alarm) == null ? void 0 : _g.min),
+          max: number((_h = template.alarm) == null ? void 0 : _h.max)
+        },
+        staleWarning: {
+          enabled: ((_i = template.staleWarning) == null ? void 0 : _i.enabled) === true,
+          minutes: number((_j = template.staleWarning) == null ? void 0 : _j.minutes) || 60
+        }
       };
     }
     return templates;

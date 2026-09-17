@@ -107,6 +107,9 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Store and apply all limits and timeout values in function templates
+
 ### 0.0.7 (2026-09-17)
 * (BenAhrdt) Fix applying activation and violation settings from selected function templates
 

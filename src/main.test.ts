@@ -43,18 +43,16 @@ describe('function template', () => {
 		staleWarning: { enabled: false, minutes: 60 },
 	});
 
-	it('stores activation and modes but no individual limits or timeout duration', () => {
+	it('stores the complete monitoring configuration', () => {
 		const configured = state('state', 'temperature', 20);
 		configured.staleWarning = { enabled: true, minutes: 45 };
 		const template = createFunctionTemplate(configured);
 
 		expect(template).to.deep.equal({
-			warning: { enabled: true, mode: 'above' },
-			alarm: { enabled: true, mode: 'above' },
-			staleWarning: { enabled: true },
+			warning: { enabled: true, mode: 'above', min: undefined, max: 20 },
+			alarm: { enabled: true, mode: 'above', min: undefined, max: 30 },
+			staleWarning: { enabled: true, minutes: 45 },
 		});
-		expect(template).not.to.have.nested.property('warning.max');
-		expect(template).not.to.have.nested.property('staleWarning.minutes');
 	});
 });
 

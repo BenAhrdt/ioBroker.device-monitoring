@@ -26,9 +26,9 @@ __export(evaluation_exports, {
 module.exports = __toCommonJS(evaluation_exports);
 function createFunctionTemplate(watched) {
   return {
-    warning: { enabled: watched.warning.enabled, mode: watched.warning.mode },
-    alarm: { enabled: watched.alarm.enabled, mode: watched.alarm.mode },
-    staleWarning: { enabled: watched.staleWarning.enabled }
+    warning: { ...watched.warning },
+    alarm: { ...watched.alarm },
+    staleWarning: { ...watched.staleWarning }
   };
 }
 function evaluateLimit(value, limit) {
