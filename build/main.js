@@ -230,20 +230,32 @@ function stateForm(functionTemplates, functionNames, stateId) {
     calculateFunc: `(${JSON.stringify(functionTemplates)}[${data("function")}]?.${prefix}.${field} ?? ${data(`${prefix}.${field}`)})`,
     ignoreOwnChanges: true
   });
-  const limits = (prefix, label) => ({
-    [key(`${prefix}Header`)]: { type: "header", text: label, size: 3, newLine: true, xs: 12 },
+  const sectionHeader = (text, backgroundColor) => ({
+    type: "staticText",
+    text,
+    newLine: true,
+    xs: 12,
+    style: {
+      backgroundColor,
+      color: "#fff",
+      fontWeight: 700,
+      borderRadius: "4px",
+      padding: "8px"
+    }
+  });
+  const limits = (prefix, label, color) => ({
+    [key(`${prefix}Header`)]: sectionHeader(label, color),
     [key(`${prefix}.enabled`)]: {
       type: "checkbox",
       label: t("Enabled", "Aktiviert"),
       newLine: true,
-      xs: 12,
+      xs: 4,
       onChange: templateValue(prefix, "enabled")
     },
     [key(`${prefix}.mode`)]: {
       type: "select",
       label: t("Violation when value is \u2026", "Verletzung, wenn der Wert \u2026"),
-      newLine: true,
-      xs: 12,
+      xs: 8,
       options: [
         { value: "below", label: t("below the limit", "unter dem Grenzwert liegt") },
         { value: "above", label: t("above the limit", "\xFCber dem Grenzwert liegt") },
@@ -270,13 +282,6 @@ function stateForm(functionTemplates, functionNames, stateId) {
   return {
     type: "panel",
     items: {
-      visual: {
-        type: "staticText",
-        format: "html",
-        text: "<div style='display:flex;justify-content:center;gap:6px;margin:4px 0 16px'><span style='height:10px;width:32%;background:#c62828;border-radius:5px'></span><span style='height:10px;width:32%;background:#d6a500;border-radius:5px'></span><span style='height:10px;width:32%;background:#3f7d45;border-radius:5px'></span></div>",
-        newLine: true,
-        xs: 12
-      },
       [key("name")]: { type: "text", label: t("Name", "Name"), newLine: true, xs: 12 },
       [key("sourceId")]: {
         type: "objectId",
@@ -286,26 +291,17 @@ function stateForm(functionTemplates, functionNames, stateId) {
         customFilter: { type: "state", common: { type: "number" } }
       },
       [key("function")]: {
-        // A freeSolo autocomplete only commits a newly typed value after an
-        // explicit option/Enter interaction in the Admin JSON form. Clicking
-        // Apply directly therefore returned the old (usually empty) value.
-        // A text control commits every edit. Dependent fields apply an
-        // existing template when its exact name is entered.
-        type: "text",
+        type: "autocomplete",
         label: t("Function", "Funktion"),
+        options: functions,
+        freeSolo: true,
         help: functions.length ? t(`Existing functions: ${functions.join(", ")}`, `Vorhandene Funktionen: ${functions.join(", ")}`) : void 0,
         newLine: true,
         xs: 12
       },
-      ...limits("warning", t("Warning limits", "Warngrenzen")),
-      ...limits("alarm", t("Alarm limits", "Alarmgrenzen")),
-      [key("staleWarningHeader")]: {
-        type: "header",
-        text: t("Update timeout", "Aktualisierungs-Timeout"),
-        size: 3,
-        newLine: true,
-        xs: 12
-      },
+      ...limits("warning", t("Warning limits", "Warngrenzen"), "#d6a500"),
+      ...limits("alarm", t("Alarm limits", "Alarmgrenzen"), "#c62828"),
+      [key("staleWarningHeader")]: sectionHeader(t("Update timeout", "Aktualisierungs-Timeout"), "#1976d2"),
       [key("staleWarning.enabled")]: {
         type: "checkbox",
         label: t("Warn if the state is not updated", "Warnen, wenn der State nicht aktualisiert wird"),
@@ -324,7 +320,10 @@ function stateForm(functionTemplates, functionNames, stateId) {
       },
       [key("_saveAsTemplate")]: {
         type: "checkbox",
-        label: t("Save this selection as function template", "Diese Auswahl als Funktionsvorlage speichern"),
+        label: t(
+          "Save or update this selection as function template",
+          "Diese Auswahl als Funktionsvorlage speichern oder aktualisieren"
+        ),
         newLine: true,
         xs: 12,
         hidden: `!${data("function")}`

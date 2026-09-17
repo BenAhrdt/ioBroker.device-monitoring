@@ -107,6 +107,11 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Add autocomplete suggestions for function templates
+* (BenAhrdt) Improve and compact the monitored-state dialog layout
+* (BenAhrdt) Clarify updating existing function templates
+
 ### 0.0.5 (2026-09-16)
 * (BenAhrdt) Fix editing function names in the production Admin UI and enable trusted npm publishing
 
