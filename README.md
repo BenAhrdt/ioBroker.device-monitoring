@@ -107,7 +107,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.15 (2026-09-18)
 * (BenAhrdt) Add a "States suchen & hinzufügen" action to the Device Manager with role, name, state-ID and type filters, per-state target-device selection and editable display names
 * (BenAhrdt) Support number and boolean source states, including decimal numeric limits and selectable boolean warning/alarm values
 * (BenAhrdt) Configure numeric and boolean warning/alarm limits separately when a bulk selection contains both state types

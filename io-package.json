@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.14",
+    "version": "0.0.15",
     "news": {
+      "0.0.15": {
+        "en": "Add a \"States suchen & hinzufügen\" action to the Device Manager with role, name, state-ID and type filters, per-state target-device selection and editable display names\nSupport number and boolean source states, including decimal numeric limits and selectable boolean warning/alarm values\nConfigure numeric and boolean warning/alarm limits separately when a bulk selection contains both state types",
+        "de": "Fügen Sie im Gerätemanager die Aktion „Staaten suchen & hinzufügen“ mit Rollen-, Namen-, State-ID- und Typfiltern, Zielgeräten pro Bundesland und editierbaren Anzeigenamen hinzu\nUnterstützt Zahlen und boolesche Quellzustände, einschließlich Dezimalgrenzen und wählbarer boolescher Warn-/Alarmwerte\nKonfiguriert numerische und boolesche Warngrenzwerte getrennt, wenn beide Statusarten ausgewählt werden",
+        "ru": "Добавьте действие «Поиск и добавление состояний» в диспетчер устройств с фильтрами ролей, имен, идентификаторов состояния и типов, выбором целевого устройства для каждого состояния и редактируемыми отображаемыми именами\nПоддержка числовых и логических исходных состояний, включая десятичные числовые пределы и выбираемые логические значения предупреждений/аварийных сигналов\nНастройте числовые и булевые пределы предупреждений/аварийных сигналов отдельно, если массовый выбор содержит оба типа состояний",
+        "pt": "Adicione a ação “Pesquisar e adicionar estados” ao Device Manager com filtros de função, nome, ID de estado e tipo, seleção por estado e nomes de exibição editáveis\nSuporta números e estados de origem booleanos, incluindo limites decimais e valores booleanos selecionáveis\nConfigure limites numéricos e booleanos separadamente quando uma seleção em massa contém os dois estados",
+        "nl": "Voeg een actie „States suchen & hinzufügen” toe aan de Apparaatbeheerder met filters voor rol, naam, staats-ID en type, selectie van doelapparaat per staat en bewerkbare weergavenamen\nOndersteuningsnummer en booleaanse bronstatussen, inclusief decimale numerieke limieten en selecteerbare booleaanse waarschuwings- en alarmwaarden\nNumerieke en booleaanse waarschuwings-/alarmlimieten afzonderlijk configureren wanneer een bulkselectie beide toestandstypen bevat",
+        "fr": "Ajoutez une action « Rechercher et ajouter des états » au Device Manager avec des filtres de rôle, de nom, d'ID d'État et de type, une sélection de l'appareil cible par État et des noms d'affichage modifiables\nSupporte les états sources numériques et booléens, y compris les limites décimales et les valeurs booléennes sélectionnables\nConfigurez les limites d'alerte/d'alarme numériques et booléennes séparément lorsqu'un lot contient les deux types d'état",
+        "it": "Aggiunga un'azione «Cerca e aggiungi Stati» a Device Manager con filtri per ruolo, nome, ID di stato e tipo, selezione per stato e nomi visualizzati modificabili\nNumero di supporto e stati booleani di origine, inclusi limiti decimali e valori booleani selezionabili\nConfigura i limiti numerici e booleani separatamente quando una selezione collettiva contiene entrambi i tipi di stato",
+        "es": "Añada la acción «Buscar y agregar estados» al administrador de dispositivos con filtros de rol, nombre, ID de estado y tipo, selección de dispositivo de destino por estado y nombres mostrados editables\nAdmite estados de origen numéricos y booleanos, incluidos los límites decimales y los valores booleanos de aviso/alarma\nConfigure los límites de aviso/alarma numéricos y booleanos por separado cuando una selección masiva contenga ambos tipos de estado",
+        "pl": "Dodaj akcję „Wyszukiwanie stanów i poprawek” do Menedżera urządzeń za pomocą filtrów ról, nazwy, identyfikatora stanu i typu, wyboru urządzenia docelowego dla poszczególnych stanów i edytowalnych nazw wyświetlanych\nObsługa liczb i logicznych stanów źródłowych, w tym dziesiętnych limitów liczbowych i wybieranych wartości ostrzegania/alarmu logicznego\nKonfigurowanie numerycznych i logicznych limitów ostrzegania/alarmów oddzielnie, gdy wybór zbiorczy zawiera oba typy stanów",
+        "uk": "Додайте дію «Пошук і додавання станів» до Диспетчера пристроїв із фільтрами ролей, імені, ідентифікатора стану та типу, вибору цільового пристрою за станом та редагованими іменами відображення\nПідтримка чисел та булевих вихідних станів, включаючи десяткові числові обмеження та вибрані значення булевого попередження/тривоги\nНалаштуйте числові та булеві обмеження попередження/нагадування окремо, коли масовий вибір містить обидва типи станів",
+        "zh-cn": "向设备管理器添加 “状态搜索和查看” 操作，其中包含角色、名称、状态 ID 和类型过滤器、每个状态的目标设备选择以及可编辑的显示名称\n支持数字和布尔源状态，包括十进制数字限制和可选的布尔警告/警报值\n当批量选择包含两种状态类型时，分别配置数字和布尔警告/警报限制"
+      },
       "0.0.14": {
         "en": "Keep the last ten update timestamps and show the previous timestamp, latest interval and average interval on device cards\nOmit trailing zero-value units from displayed update intervals\nAdd configurable ioBroker notifications for warnings, alarms, timeouts, invalid sources and recoveries\nGroup monitored runtime values in an expert data channel with typed states and a JSON update history\nPlace the function-template option directly below the function selection\nUse a stable expert HTML state for device-card details so newly added monitored states appear without rebuilding the card schema",
         "de": "Behält die letzten zehn Aktualisierungszeitstempel und zeigt auf Gerätekarten\nLetzte Nullwerte aus den Aktualisierungsintervallen weglassen\nFügt konfigurierbare ioBroker-Meldungen für Warnungen, Timeouts, ungültige Quellen und Recoverys hinzu\nÜberwachte Laufzeitwerte in Expertendaten mit Status und JSON-Aktualisierungshistorie\nPlatzieren Sie die Funktionsvorlage direkt unter der Funktionsauswahl\nBenutze einen stabilen Experten-HTML-Status für Gerätedaten, damit neue Monitorstatus ohne Umbauen des Kartenschemas",
@@ -80,19 +93,6 @@
         "pl": "Sprawdzanie poprawności wybranych stanów źródłowych i zaznaczanie usuniętych lub nieprawidłowych stanów na kartach urządzeń",
         "uk": "Перевірка вибраних станів джерела та позначення видалених або недійсних станів на картках пристроїв",
         "zh-cn": "验证选定的源状态并在设备卡上标记已删除或无效状态"
-      },
-      "0.0.8": {
-        "en": "Store and apply all limits and timeout values in function templates",
-        "de": "Alle Limits und Timeouts in Funktionsvorlagen speichern und anwenden",
-        "ru": "Храните и применяйте все ограничения и значения тайм-аута в шаблонах функций",
-        "pt": "Armazene e aplique todos os limites e timeout em modelos de função",
-        "nl": "Sla alle limieten en time-outwaarden op in functiesjablonen en pas ze toe",
-        "fr": "Stockez et appliquez toutes les limites et délais dans des modèles de fonctions",
-        "it": "Memorizza e applica tutti i limiti e i timeout nei modelli di funzione",
-        "es": "Almacene y aplique todos los límites y tiempos de espera en plantillas de funciones",
-        "pl": "Przechowuj i stosuj wszystkie limity i wartości limitu czasu w szablonach funkcji",
-        "uk": "Зберігайте та застосовуйте всі обмеження та значення тайм-ауту в шаблонів функцій",
-        "zh-cn": "在函数模板中存储和应用所有限制和超时值"
       }
     },
     "titleLang": {
