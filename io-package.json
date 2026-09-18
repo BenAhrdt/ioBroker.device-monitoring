@@ -182,8 +182,70 @@
       }
     ]
   },
+  "notifications": [
+    {
+      "scope": "device-monitoring",
+      "name": {
+        "en": "Device monitoring",
+        "de": "Geräteüberwachung"
+      },
+      "description": {
+        "en": "Status changes detected by the device-monitoring adapter",
+        "de": "Vom Geräteüberwachungsadapter erkannte Statusänderungen"
+      },
+      "categories": [
+        {
+          "category": "deviceWarning",
+          "name": { "en": "Device warning", "de": "Gerätewarnung" },
+          "description": { "en": "A monitored value reached its warning range", "de": "Ein überwachter Wert hat seinen Warnbereich erreicht" },
+          "severity": "notify",
+          "regex": [],
+          "limit": 100
+        },
+        {
+          "category": "deviceAlarm",
+          "name": { "en": "Device alarm", "de": "Gerätealarm" },
+          "description": { "en": "A monitored value reached its alarm range", "de": "Ein überwachter Wert hat seinen Alarmbereich erreicht" },
+          "severity": "alert",
+          "regex": [],
+          "limit": 100
+        },
+        {
+          "category": "deviceTimeout",
+          "name": { "en": "Update timeout", "de": "Aktualisierungs-Timeout" },
+          "description": { "en": "A monitored value was not updated in time", "de": "Ein überwachter Wert wurde nicht rechtzeitig aktualisiert" },
+          "severity": "alert",
+          "regex": [],
+          "limit": 100
+        },
+        {
+          "category": "invalidSource",
+          "name": { "en": "Invalid source", "de": "Ungültige Quelle" },
+          "description": { "en": "A configured source state is invalid or was deleted", "de": "Ein konfigurierter Quell-State ist ungültig oder wurde gelöscht" },
+          "severity": "alert",
+          "regex": [],
+          "limit": 100
+        },
+        {
+          "category": "deviceRecovered",
+          "name": { "en": "Device recovered", "de": "Gerät wieder in Ordnung" },
+          "description": { "en": "A monitored value returned to its normal state", "de": "Ein überwachter Wert ist wieder im Normalzustand" },
+          "severity": "info",
+          "regex": [],
+          "limit": 100
+        }
+      ]
+    }
+  ],
   "native": {
-    "configurationBackupDelayMinutes": 60
+    "configurationBackupDelayMinutes": 60,
+    "enabledNotifications": [
+      "deviceWarning",
+      "deviceAlarm",
+      "deviceTimeout",
+      "invalidSource",
+      "deviceRecovered"
+    ]
   },
   "objects": [],
   "instanceObjects": [

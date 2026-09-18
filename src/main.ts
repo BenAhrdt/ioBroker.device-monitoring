@@ -12,6 +12,9 @@ import {
 	type WatchStatus,
 } from './lib/evaluation';
 import { configurationBackupNeedsUpdate } from './lib/configuration-backup';
+import type { MonitoringData } from './lib/monitoring-data';
+import { notificationCategoryForTransition, type NotificationCategory } from './lib/notifications';
+import { averageInterval, intervalDisplay, parseUpdateHistory, UPDATE_HISTORY_SIZE } from './lib/update-history';
 
 const t = (en: string, de: string): ioBroker.Translated => ({ en, de });
 const COLORS: Record<WatchStatus, string> = {
@@ -43,6 +46,40 @@ const STATUS_ICONS = {
 		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#607d8b"/><path d="M9.5 9a2.7 2.7 0 115 1.4c-.8 1.2-2.5 1.4-2.5 3" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.2" fill="white"/></svg>',
 	),
 };
+const LEGACY_RUNTIME_STATE_IDS = [
+	'value',
+	'status',
+	'display',
+	'warning',
+	'alarm',
+	'updateTimeout',
+	'lastUpdate',
+	'previousUpdate',
+	'updateInterval',
+	'lastUpdateDisplay',
+	'previousUpdateDisplay',
+	'updateIntervalDisplay',
+	'averageUpdateInterval',
+	'averageUpdateIntervalDisplay',
+	'updateHistory',
+	'updateHistorySource',
+] as const;
+const OBSOLETE_DIRECT_STATE_IDS = [
+	'display',
+	'lastUpdate',
+	'previousUpdate',
+	'updateInterval',
+	'lastUpdateDisplay',
+	'previousUpdateDisplay',
+	'updateIntervalDisplay',
+	'averageUpdateInterval',
+	'averageUpdateIntervalDisplay',
+	'updateHistory',
+	'updateHistorySource',
+	'details',
+] as const;
+const OBSOLETE_DATA_STATE_IDS = ['value', 'status', 'warning', 'alarm', 'updateTimeout'] as const;
+const DEVICE_CARD_DETAILS_ID = '__card_details';
 function safeId(value: string, fallback: string): string {
 	return (
 		value
@@ -76,16 +113,6 @@ function timestampDisplay(timestamp: number): string {
 	const date = new Date(timestamp);
 	const pad = (value: number, length = 2): string => String(value).padStart(length, '0');
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}.${pad(date.getMilliseconds(), 3)}`;
-}
-function intervalDisplay(milliseconds: number): string {
-	const seconds = Math.max(0, Math.round(milliseconds / 1000));
-	const days = Math.floor(seconds / 86_400);
-	const hours = Math.floor((seconds % 86_400) / 3_600);
-	const minutes = Math.floor((seconds % 3_600) / 60);
-	const restSeconds = seconds % 60;
-	return [days && `${days}d`, hours && `${hours}h`, minutes && `${minutes}m`, `${restSeconds}s`]
-		.filter(Boolean)
-		.join(' ');
 }
 function escapeHtml(value: unknown): string {
 	return String(value)
@@ -158,7 +185,12 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 						return { refresh: 'none' };
 					}
 					await this.adapter.addWatchedState(device.id, data);
-					return { refresh: 'devices' };
+					const update = this.updatedDeviceInfo(device.id);
+					// An infoUpdate is important here: it makes newly added customInfo
+					// items visible immediately in Device Manager implementations that
+					// only reconcile existing card items on an action response.
+					await this.sendCommandToGui({ command: 'infoUpdate', deviceId: device.id, info: update });
+					return { update };
 				},
 			},
 		];
@@ -186,7 +218,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 						return { refresh: 'none' };
 					}
 					await this.adapter.replaceWatchedStates(device.id, data);
-					return { refresh: 'devices' };
+					return { update: this.updatedDeviceInfo(device.id) };
 				},
 			});
 		}
@@ -220,34 +252,34 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				},
 			},
 		);
-		const customInfoItems = Object.fromEntries(
-			device.states.map(watched => [
-				watched.id,
-				{
-					type: 'state',
-					oid: `devices.${device.id}.${watched.id}.details`,
-					control: 'html',
-					label: '',
-					newLine: true,
-					xs: 12,
-				},
-			]),
-		);
 		return {
 			id: device.id,
 			name: device.name,
 			icon: { stateId: `${this.adapter.namespace}.devices.${device.id}.icon` },
 			backgroundColor: { stateId: `${this.adapter.namespace}.devices.${device.id}.color` },
-			...(Object.keys(customInfoItems).length
-				? {
-						customInfo: {
-							id: device.id,
-							schema: { type: 'panel', style: { marginTop: '-56px' }, items: customInfoItems },
+			customInfo: {
+				id: device.id,
+				schema: {
+					type: 'panel',
+					style: { marginTop: '-56px' },
+					items: {
+						_cardDetails: {
+							type: 'state',
+							oid: `devices.${device.id}.${DEVICE_CARD_DETAILS_ID}.details`,
+							control: 'html',
+							label: '',
+							newLine: true,
+							xs: 12,
 						},
-					}
-				: {}),
+					},
+				},
+			},
 			actions,
 		};
+	}
+	private updatedDeviceInfo(deviceId: string): any {
+		const device = this.adapter.getDeviceConfiguration(deviceId);
+		return device ? this.deviceInfo(device) : { id: deviceId, name: deviceId };
 	}
 }
 
@@ -391,6 +423,15 @@ function stateForm(
 				newLine: true,
 				xs: 12,
 			},
+			[key('_saveAsTemplate')]: {
+				type: 'checkbox',
+				label: t(
+					'Save or update this selection as function template',
+					'Diese Auswahl als Funktionsvorlage speichern oder aktualisieren',
+				),
+				newLine: true,
+				xs: 12,
+			},
 			...limits('warning', t('Warning limits', 'Warngrenzen'), '#d6a500'),
 			...limits('alarm', t('Alarm limits', 'Alarmgrenzen'), '#c62828'),
 			[key('staleWarningHeader')]: sectionHeader(t('Update timeout', 'Aktualisierungs-Timeout'), '#1976d2'),
@@ -408,15 +449,6 @@ function stateForm(
 				newLine: true,
 				xs: 12,
 				hidden: `!${data('staleWarning.enabled')}`,
-			},
-			[key('_saveAsTemplate')]: {
-				type: 'checkbox',
-				label: t(
-					'Save or update this selection as function template',
-					'Diese Auswahl als Funktionsvorlage speichern oder aktualisieren',
-				),
-				newLine: true,
-				xs: 12,
 			},
 		},
 	};
@@ -458,6 +490,12 @@ class DeviceMonitoring extends utils.Adapter {
 	private invalidSources = new Set<string>();
 	private sourceUnits = new Map<string, string>();
 	private updateHistoryQueues = new Map<string, Promise<void>>();
+	private notificationStatuses = new Map<string, WatchStatus>();
+	private notificationLastSent = new Map<string, number>();
+	private cardDetails = new Map<string, string>();
+	private cardDetailsQueues = new Map<string, Promise<void>>();
+	private legacyRuntimeStatesRemoved = false;
+	private resetUpdateHistories = new Set<string>();
 	private displayLanguage: 'de' | 'en' = 'en';
 	private deviceManagement?: DeviceMonitoringManagement;
 	private sortRefreshTimer?: NodeJS.Timeout;
@@ -499,7 +537,6 @@ class DeviceMonitoring extends utils.Adapter {
 			await this.removeLegacyDeviceConfig();
 		}
 		await this.refreshSubscriptions();
-		await this.initializeUpdateHistory(true);
 		await this.updateAll();
 		await this.setState('info.connection', true, true);
 		this.sortRefreshTimer = setInterval(() => {
@@ -551,7 +588,6 @@ class DeviceMonitoring extends utils.Adapter {
 		for (const device of this.devices) {
 			for (const watched of device.states) {
 				if (watched.sourceId === id) {
-					await this.recordSourceUpdate(device, watched, state.ts);
 					await this.updateValue(device, watched, state);
 					affectedDevices.add(device.id);
 				}
@@ -583,9 +619,6 @@ class DeviceMonitoring extends utils.Adapter {
 			for (const watched of device.states) {
 				if (watched.sourceId === id) {
 					const state = await this.getForeignStateAsync(id);
-					if (state) {
-						await this.recordSourceUpdate(device, watched, state.ts);
-					}
 					await this.updateValue(device, watched, state);
 					affectedDevices.add(device.id);
 				}
@@ -610,6 +643,9 @@ class DeviceMonitoring extends utils.Adapter {
 	}
 	public getFunctionNames(): string[] {
 		return [...new Set(this.devices.flatMap(device => device.states.map(state => state.function)).filter(Boolean))];
+	}
+	public getDeviceConfiguration(deviceId: string): DeviceConfiguration | undefined {
+		return this.devices.find(device => device.id === deviceId);
 	}
 	public async getDevicesWithStatus(): Promise<
 		{
@@ -643,12 +679,14 @@ class DeviceMonitoring extends utils.Adapter {
 		if (!device) {
 			return;
 		}
-		const id = uniqueId(safeId(String(data.name), 'state'), new Set(device.states.map(s => s.id)));
+		const usedIds = new Set([DEVICE_CARD_DETAILS_ID, ...device.states.map(s => s.id)]);
+		const id = uniqueId(safeId(String(data.name), 'state'), usedIds);
 		this.saveFunctionTemplate(data);
 		await this.saveDevices(
 			this.devices.map(d =>
 				d.id === deviceId ? { ...d, states: [...d.states, this.normalizeState(data, id)] } : d,
 			),
+			false,
 		);
 	}
 	public async updateWatchedState(deviceId: string, stateId: string, data: any): Promise<void> {
@@ -677,7 +715,10 @@ class DeviceMonitoring extends utils.Adapter {
 		const states = device.states
 			.filter(watched => !data[watched.id]?._delete)
 			.map(watched => this.normalizeState(data[watched.id] || watched, watched.id));
-		await this.saveDevices(this.devices.map(entry => (entry.id === deviceId ? { ...entry, states } : entry)));
+		await this.saveDevices(
+			this.devices.map(entry => (entry.id === deviceId ? { ...entry, states } : entry)),
+			false,
+		);
 	}
 	public async removeWatchedState(deviceId: string, stateId: string): Promise<void> {
 		await this.delObjectAsync(`devices.${deviceId}.${stateId}`, { recursive: true });
@@ -745,14 +786,23 @@ class DeviceMonitoring extends utils.Adapter {
 				};
 			});
 	}
-	private async saveDevices(devices: DeviceConfiguration[]): Promise<void> {
+	private async saveDevices(devices: DeviceConfiguration[], refreshCards = true): Promise<void> {
 		this.devices = devices;
+		const activeCardDetails = new Set(
+			devices.flatMap(device => device.states.map(watched => `${device.id}.${watched.id}`)),
+		);
+		for (const key of this.cardDetails.keys()) {
+			if (!activeCardDetails.has(key)) {
+				this.cardDetails.delete(key);
+			}
+		}
 		await this.rebuildObjects();
 		await this.removeLegacyDeviceConfig();
 		await this.refreshSubscriptions();
-		await this.initializeUpdateHistory();
 		await this.updateAll();
-		await this.deviceManagement?.refreshCards();
+		if (refreshCards) {
+			await this.deviceManagement?.refreshCards();
+		}
 		this.scheduleConfigurationBackup();
 	}
 	private scheduleConfigurationBackup(): void {
@@ -812,7 +862,6 @@ class DeviceMonitoring extends utils.Adapter {
 		if (rebuild) {
 			await this.rebuildObjects();
 			await this.refreshSubscriptions();
-			await this.initializeUpdateHistory();
 			await this.updateAll();
 			await this.deviceManagement?.refreshCards();
 			this.scheduleConfigurationBackup();
@@ -834,6 +883,7 @@ class DeviceMonitoring extends utils.Adapter {
 			expected.add(device.id);
 			expected.add(`${device.id}.color`);
 			expected.add(`${device.id}.icon`);
+			expected.add(`${device.id}.${DEVICE_CARD_DETAILS_ID}`);
 			await this.setObjectAsync(`devices.${device.id}`, {
 				type: 'device',
 				common: { name: device.name },
@@ -841,24 +891,38 @@ class DeviceMonitoring extends utils.Adapter {
 			});
 			await this.ensureState(`devices.${device.id}.color`, t('Card color', 'Kachelfarbe'), 'string', 'text');
 			await this.ensureState(`devices.${device.id}.icon`, t('Card icon', 'Kachelsymbol'), 'string', 'text');
+			await this.setObjectAsync(`devices.${device.id}.${DEVICE_CARD_DETAILS_ID}`, {
+				type: 'channel',
+				common: { name: t('Device Manager data', 'Device-Manager-Daten'), expert: true },
+				native: {},
+			});
+			await this.ensureState(
+				`devices.${device.id}.${DEVICE_CARD_DETAILS_ID}.details`,
+				t('Device card details', 'Kacheldetails'),
+				'string',
+				'html',
+				undefined,
+				true,
+			);
 			for (const watched of device.states) {
 				expected.add(`${device.id}.${watched.id}`);
 				const base = `devices.${device.id}.${watched.id}`;
-				const unit = await this.getSourceUnit(watched.sourceId);
+				const existingChannel = await this.getObjectAsync(base);
+				if (
+					existingChannel?.type === 'channel' &&
+					typeof existingChannel.native?.sourceId === 'string' &&
+					existingChannel.native.sourceId !== watched.sourceId
+				) {
+					this.resetUpdateHistories.add(base);
+				}
 				await this.setObjectAsync(base, {
 					type: 'channel',
 					common: { name: watched.name },
 					native: { sourceId: watched.sourceId, function: watched.function },
 				});
+				const unit = await this.getSourceUnit(watched.sourceId);
 				await this.ensureState(`${base}.value`, t('Current value', 'Aktueller Wert'), 'mixed', 'value', unit);
 				await this.ensureState(`${base}.status`, t('Status', 'Status'), 'string', 'text');
-				await this.ensureState(`${base}.display`, t('Display value', 'Anzeigewert'), 'string', 'text');
-				await this.ensureState(
-					`${base}.details`,
-					t('Monitoring details', 'Überwachungsdetails'),
-					'string',
-					'html',
-				);
 				await this.ensureState(`${base}.warning`, t('Warning', 'Warnung'), 'boolean', 'indicator');
 				await this.ensureState(`${base}.alarm`, t('Alarm', 'Alarm'), 'boolean', 'indicator.alarm');
 				await this.ensureState(
@@ -867,48 +931,59 @@ class DeviceMonitoring extends utils.Adapter {
 					'boolean',
 					'indicator.maintenance',
 				);
+				await this.ensureState(`${base}.sourceId`, t('Source state', 'Quell-State'), 'string', 'text');
+				await this.setObjectAsync(`${base}.data`, {
+					type: 'channel',
+					common: { name: t('Monitoring data', 'Überwachungsdaten'), expert: true },
+					native: {},
+				});
 				await this.ensureState(
-					`${base}.lastUpdate`,
+					`${base}.data.lastUpdate`,
 					t('Last update', 'Letzte Aktualisierung'),
 					'number',
 					'value.time',
+					undefined,
+					true,
 				);
 				await this.ensureState(
-					`${base}.previousUpdate`,
+					`${base}.data.previousUpdate`,
 					t('Previous update', 'Vorherige Aktualisierung'),
 					'number',
 					'value.time',
+					undefined,
+					true,
 				);
 				await this.ensureState(
-					`${base}.updateInterval`,
+					`${base}.data.updateInterval`,
 					t('Update interval', 'Aktualisierungsintervall'),
 					'number',
 					'value.interval',
 					'ms',
+					true,
 				);
 				await this.ensureState(
-					`${base}.lastUpdateDisplay`,
-					t('Last update display', 'Anzeige der letzten Aktualisierung'),
-					'string',
-					'text',
+					`${base}.data.averageUpdateInterval`,
+					t('Average update interval', 'Durchschnittliches Aktualisierungsintervall'),
+					'number',
+					'value.interval',
+					'ms',
+					true,
 				);
 				await this.ensureState(
-					`${base}.previousUpdateDisplay`,
-					t('Previous update display', 'Anzeige der vorherigen Aktualisierung'),
+					`${base}.data.updateHistory`,
+					t('Last update timestamps', 'Letzte Aktualisierungszeitstempel'),
 					'string',
-					'text',
+					'json',
+					undefined,
+					true,
 				);
 				await this.ensureState(
-					`${base}.updateIntervalDisplay`,
-					t('Update interval display', 'Anzeige des Aktualisierungsintervalls'),
+					`${base}.data.details`,
+					t('Monitoring details', 'Überwachungsdetails'),
 					'string',
-					'text',
-				);
-				await this.ensureState(
-					`${base}.updateHistorySource`,
-					t('Update history source', 'Quelle des Aktualisierungsverlaufs'),
-					'string',
-					'text',
+					'html',
+					undefined,
+					true,
 				);
 			}
 		}
@@ -987,10 +1062,19 @@ class DeviceMonitoring extends utils.Adapter {
 		type: ioBroker.CommonType,
 		role: string,
 		unit?: string,
+		expert = false,
 	): Promise<void> {
 		await this.setObjectAsync(id, {
 			type: 'state',
-			common: { name, type, role, read: true, write: false, ...(unit ? { unit } : {}) },
+			common: {
+				name,
+				type,
+				role,
+				read: true,
+				write: false,
+				...(unit ? { unit } : {}),
+				...(expert ? { expert: true } : {}),
+			},
 			native: {},
 		});
 	}
@@ -1036,165 +1120,125 @@ class DeviceMonitoring extends utils.Adapter {
 		this.sourceUnits.set(sourceId, unit);
 		return unit;
 	}
-	private async initializeUpdateHistory(resetAfterAdapterStart = false): Promise<void> {
+	private async readMonitoringData(base: string, sourceId: string): Promise<Partial<MonitoringData>> {
+		const [
+			currentValue,
+			bundledValue,
+			status,
+			bundledStatus,
+			warning,
+			bundledWarning,
+			alarm,
+			bundledAlarm,
+			updateTimeout,
+			bundledUpdateTimeout,
+			source,
+			lastUpdate,
+			previousUpdate,
+			updateInterval,
+			average,
+			history,
+		] = await Promise.all([
+			this.getStateAsync(`${base}.value`),
+			this.getStateAsync(`${base}.data.value`),
+			this.getStateAsync(`${base}.status`),
+			this.getStateAsync(`${base}.data.status`),
+			this.getStateAsync(`${base}.warning`),
+			this.getStateAsync(`${base}.data.warning`),
+			this.getStateAsync(`${base}.alarm`),
+			this.getStateAsync(`${base}.data.alarm`),
+			this.getStateAsync(`${base}.updateTimeout`),
+			this.getStateAsync(`${base}.data.updateTimeout`),
+			this.getStateAsync(`${base}.sourceId`),
+			this.getStateAsync(`${base}.data.lastUpdate`),
+			this.getStateAsync(`${base}.data.previousUpdate`),
+			this.getStateAsync(`${base}.data.updateInterval`),
+			this.getStateAsync(`${base}.data.averageUpdateInterval`),
+			this.getStateAsync(`${base}.data.updateHistory`),
+		]);
+		if (status || bundledStatus) {
+			return {
+				sourceId: typeof source?.val === 'string' ? source.val : sourceId,
+				value: currentValue?.val ?? bundledValue?.val,
+				status:
+					typeof (status ?? bundledStatus)?.val === 'string'
+						? ((status ?? bundledStatus)?.val as WatchStatus)
+						: undefined,
+				warning:
+					typeof (warning ?? bundledWarning)?.val === 'boolean'
+						? Boolean((warning ?? bundledWarning)?.val)
+						: undefined,
+				alarm:
+					typeof (alarm ?? bundledAlarm)?.val === 'boolean'
+						? Boolean((alarm ?? bundledAlarm)?.val)
+						: undefined,
+				updateTimeout:
+					typeof (updateTimeout ?? bundledUpdateTimeout)?.val === 'boolean'
+						? Boolean((updateTimeout ?? bundledUpdateTimeout)?.val)
+						: undefined,
+				lastUpdate: typeof lastUpdate?.val === 'number' ? lastUpdate.val : undefined,
+				previousUpdate: typeof previousUpdate?.val === 'number' ? previousUpdate.val : undefined,
+				updateInterval: typeof updateInterval?.val === 'number' ? updateInterval.val : undefined,
+				averageUpdateInterval: typeof average?.val === 'number' ? average.val : undefined,
+				updateHistory: parseUpdateHistory(history?.val),
+			};
+		}
+		const legacy = await Promise.all(LEGACY_RUNTIME_STATE_IDS.map(id => this.getStateAsync(`${base}.${id}`)));
+		const value = (id: (typeof LEGACY_RUNTIME_STATE_IDS)[number]): ioBroker.StateValue | undefined =>
+			legacy[LEGACY_RUNTIME_STATE_IDS.indexOf(id)]?.val;
+		return {
+			sourceId:
+				typeof value('updateHistorySource') === 'string' ? String(value('updateHistorySource')) : undefined,
+			value: value('value'),
+			status: typeof value('status') === 'string' ? (value('status') as WatchStatus) : undefined,
+			warning: typeof value('warning') === 'boolean' ? Boolean(value('warning')) : undefined,
+			alarm: typeof value('alarm') === 'boolean' ? Boolean(value('alarm')) : undefined,
+			updateTimeout: typeof value('updateTimeout') === 'boolean' ? Boolean(value('updateTimeout')) : undefined,
+			lastUpdate: typeof value('lastUpdate') === 'number' ? Number(value('lastUpdate')) : undefined,
+			previousUpdate: typeof value('previousUpdate') === 'number' ? Number(value('previousUpdate')) : undefined,
+			updateInterval: typeof value('updateInterval') === 'number' ? Number(value('updateInterval')) : undefined,
+			averageUpdateInterval:
+				typeof value('averageUpdateInterval') === 'number' ? Number(value('averageUpdateInterval')) : undefined,
+			updateHistory: parseUpdateHistory(value('updateHistory')),
+		};
+	}
+	private async removeLegacyRuntimeStates(): Promise<void> {
+		if (this.legacyRuntimeStatesRemoved) {
+			return;
+		}
+		const objects = await this.getAdapterObjectsAsync();
 		for (const device of this.devices) {
 			for (const watched of device.states) {
-				await this.ensureUpdateHistoryPlaceholders(device, watched);
-				const state = await this.getForeignStateAsync(watched.sourceId);
-				if (resetAfterAdapterStart) {
-					await this.resetUpdateHistory(device, watched, state?.ts);
-				} else if (state) {
-					await this.recordSourceUpdate(device, watched, state.ts);
+				const base = `devices.${device.id}.${watched.id}`;
+				for (const id of OBSOLETE_DIRECT_STATE_IDS) {
+					const relativeId = `${base}.${id}`;
+					const fullId = `${this.namespace}.${relativeId}`;
+					if (objects[fullId] || objects[relativeId]) {
+						await this.delObjectAsync(relativeId);
+					}
+				}
+				for (const id of OBSOLETE_DATA_STATE_IDS) {
+					const relativeId = `${base}.data.${id}`;
+					const fullId = `${this.namespace}.${relativeId}`;
+					if (objects[fullId] || objects[relativeId]) {
+						await this.delObjectAsync(relativeId);
+					}
 				}
 			}
 		}
-	}
-	private async resetUpdateHistory(
-		device: DeviceConfiguration,
-		watched: WatchedStateConfiguration,
-		timestamp: number | undefined,
-	): Promise<void> {
-		const base = `devices.${device.id}.${watched.id}`;
-		const lastTimestamp =
-			typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0 ? timestamp : null;
-		await Promise.all([
-			this.setStateChangedAsync(`${base}.updateHistorySource`, { val: watched.sourceId, ack: true }),
-			this.setStateChangedAsync(`${base}.lastUpdate`, { val: lastTimestamp, ack: true }),
-			this.setStateChangedAsync(`${base}.lastUpdateDisplay`, {
-				val: this.localize(
-					`Last timestamp: ${lastTimestamp === null ? '-' : timestampDisplay(lastTimestamp)}`,
-					`Letzter Timestamp: ${lastTimestamp === null ? '-' : timestampDisplay(lastTimestamp)}`,
-				),
-				ack: true,
-			}),
-			this.setStateChangedAsync(`${base}.previousUpdate`, { val: null, ack: true }),
-			this.setStateChangedAsync(`${base}.previousUpdateDisplay`, {
-				val: this.localize('Previous timestamp: -', 'Vorletzter Timestamp: -'),
-				ack: true,
-			}),
-			this.setStateChangedAsync(`${base}.updateInterval`, { val: null, ack: true }),
-			this.setStateChangedAsync(`${base}.updateIntervalDisplay`, {
-				val: this.localize('Interval: -', 'Intervall: -'),
-				ack: true,
-			}),
-		]);
-	}
-	private async ensureUpdateHistoryPlaceholders(
-		device: DeviceConfiguration,
-		watched: WatchedStateConfiguration,
-	): Promise<void> {
-		const base = `devices.${device.id}.${watched.id}`;
-		const [last, previous, interval] = await Promise.all([
-			this.getStateAsync(`${base}.lastUpdate`),
-			this.getStateAsync(`${base}.previousUpdate`),
-			this.getStateAsync(`${base}.updateInterval`),
-		]);
-		const lastTimestamp = typeof last?.val === 'number' ? last.val : undefined;
-		const previousTimestamp = typeof previous?.val === 'number' ? previous.val : undefined;
-		const updateInterval = typeof interval?.val === 'number' ? interval.val : undefined;
-		await Promise.all([
-			this.setStateChangedAsync(`${base}.lastUpdateDisplay`, {
-				val: this.localize(
-					`Last timestamp: ${lastTimestamp === undefined ? '-' : timestampDisplay(lastTimestamp)}`,
-					`Letzter Timestamp: ${lastTimestamp === undefined ? '-' : timestampDisplay(lastTimestamp)}`,
-				),
-				ack: true,
-			}),
-			this.setStateChangedAsync(`${base}.previousUpdateDisplay`, {
-				val: this.localize(
-					`Previous timestamp: ${previousTimestamp === undefined ? '-' : timestampDisplay(previousTimestamp)}`,
-					`Vorletzter Timestamp: ${previousTimestamp === undefined ? '-' : timestampDisplay(previousTimestamp)}`,
-				),
-				ack: true,
-			}),
-			this.setStateChangedAsync(`${base}.updateIntervalDisplay`, {
-				val: this.localize(
-					`Interval: ${updateInterval === undefined ? '-' : intervalDisplay(updateInterval)}`,
-					`Intervall: ${updateInterval === undefined ? '-' : intervalDisplay(updateInterval)}`,
-				),
-				ack: true,
-			}),
-		]);
-	}
-	private async recordSourceUpdate(
-		device: DeviceConfiguration,
-		watched: WatchedStateConfiguration,
-		timestamp: number,
-	): Promise<void> {
-		const key = `${device.id}.${watched.id}`;
-		const previous = this.updateHistoryQueues.get(key) ?? Promise.resolve();
-		const current = previous
-			.catch(() => undefined)
-			.then(() => this.recordSourceUpdateNow(device, watched, timestamp));
-		this.updateHistoryQueues.set(key, current);
-		try {
-			await current;
-		} finally {
-			if (this.updateHistoryQueues.get(key) === current) {
-				this.updateHistoryQueues.delete(key);
-			}
-		}
-	}
-	private async recordSourceUpdateNow(
-		device: DeviceConfiguration,
-		watched: WatchedStateConfiguration,
-		timestamp: number,
-	): Promise<void> {
-		if (!Number.isFinite(timestamp) || timestamp <= 0) {
-			return;
-		}
-		const base = `devices.${device.id}.${watched.id}`;
-		const [sourceState, lastState] = await Promise.all([
-			this.getStateAsync(`${base}.updateHistorySource`),
-			this.getStateAsync(`${base}.lastUpdate`),
-		]);
-		const sameSource = sourceState?.val === watched.sourceId;
-		const lastTimestamp = sameSource && typeof lastState?.val === 'number' ? lastState.val : undefined;
-		if (lastTimestamp !== undefined && timestamp <= lastTimestamp) {
-			return;
-		}
-		const previousTimestamp = lastTimestamp ?? null;
-		const interval = previousTimestamp === null ? null : timestamp - previousTimestamp;
-		await Promise.all([
-			this.setStateChangedAsync(`${base}.updateHistorySource`, { val: watched.sourceId, ack: true }),
-			this.setStateChangedAsync(`${base}.lastUpdate`, { val: timestamp, ack: true }),
-			this.setStateChangedAsync(`${base}.lastUpdateDisplay`, {
-				val: this.localize(
-					`Last timestamp: ${timestampDisplay(timestamp)}`,
-					`Letzter Timestamp: ${timestampDisplay(timestamp)}`,
-				),
-				ack: true,
-			}),
-			this.setStateChangedAsync(`${base}.previousUpdate`, { val: previousTimestamp, ack: true }),
-			this.setStateChangedAsync(`${base}.previousUpdateDisplay`, {
-				val: this.localize(
-					`Previous timestamp: ${previousTimestamp === null ? '-' : timestampDisplay(previousTimestamp)}`,
-					`Vorletzter Timestamp: ${previousTimestamp === null ? '-' : timestampDisplay(previousTimestamp)}`,
-				),
-				ack: true,
-			}),
-			this.setStateChangedAsync(`${base}.updateInterval`, { val: interval, ack: true }),
-			this.setStateChangedAsync(`${base}.updateIntervalDisplay`, {
-				val: this.localize(
-					`Interval: ${interval === null ? '-' : intervalDisplay(interval)}`,
-					`Intervall: ${interval === null ? '-' : intervalDisplay(interval)}`,
-				),
-				ack: true,
-			}),
-		]);
+		this.legacyRuntimeStatesRemoved = true;
 	}
 	private async updateAll(): Promise<void> {
 		for (const device of this.devices) {
 			for (const watched of device.states) {
 				const state = await this.getForeignStateAsync(watched.sourceId);
-				if (state) {
-					await this.recordSourceUpdate(device, watched, state.ts);
-				}
 				await this.updateValue(device, watched, state);
 			}
 			await this.updateDeviceSummary(device);
+			await this.updateDeviceCardDetails(device);
 		}
 		await this.updateDeviceInfo();
+		await this.removeLegacyRuntimeStates();
 	}
 	private async updateDeviceInfo(): Promise<void> {
 		const devices = await Promise.all(
@@ -1253,12 +1297,36 @@ class DeviceMonitoring extends utils.Adapter {
 			this.setStateChangedAsync(`devices.${device.id}.icon`, { val: STATUS_ICONS[status], ack: true }),
 		]);
 	}
+	private async updateDeviceCardDetails(device: DeviceConfiguration): Promise<void> {
+		const previous = this.cardDetailsQueues.get(device.id) ?? Promise.resolve();
+		const current = previous
+			.catch(() => undefined)
+			.then(async () => {
+				const details = device.states
+					.map(watched => this.cardDetails.get(`${device.id}.${watched.id}`) || '')
+					.filter(Boolean)
+					.join('');
+				await this.setStateChangedAsync(`devices.${device.id}.${DEVICE_CARD_DETAILS_ID}.details`, {
+					val: details,
+					ack: true,
+				});
+			});
+		this.cardDetailsQueues.set(device.id, current);
+		try {
+			await current;
+		} finally {
+			if (this.cardDetailsQueues.get(device.id) === current) {
+				this.cardDetailsQueues.delete(device.id);
+			}
+		}
+	}
 	private async updateDetailsDisplay(
 		device: DeviceConfiguration,
 		watched: WatchedStateConfiguration,
 		status: WatchStatus,
 		display: string,
 		unit: string,
+		data: MonitoringData,
 	): Promise<void> {
 		const base = `devices.${device.id}.${watched.id}`;
 		const tooltip: string[] = [];
@@ -1281,29 +1349,72 @@ class DeviceMonitoring extends utils.Adapter {
 		if (watched.staleWarning.enabled) {
 			tooltip.push(`Timeout: ${watched.staleWarning.minutes} min`);
 		}
-		const [last, interval] = await Promise.all([
-			this.getStateAsync(`${base}.lastUpdate`),
-			this.getStateAsync(`${base}.updateInterval`),
-		]);
-		const lastTimestamp = typeof last?.val === 'number' ? timestampDisplay(last.val) : '-';
-		const updateInterval = typeof interval?.val === 'number' ? intervalDisplay(interval.val) : '-';
+		const lastTimestamp = data.lastUpdate === null ? '-' : timestampDisplay(data.lastUpdate);
+		const previousTimestamp = data.previousUpdate === null ? '-' : timestampDisplay(data.previousUpdate);
+		const updateInterval = data.updateInterval === null ? '-' : intervalDisplay(data.updateInterval);
+		const averageUpdateInterval =
+			data.averageUpdateInterval === null ? '-' : intervalDisplay(data.averageUpdateInterval);
 		const intervalLabel = this.localize('Interval:', 'Intervall:');
+		const averageLabel = this.localize('Average:', 'Durchschnitt:');
 		const title = tooltip.length ? ` title="${escapeHtml(tooltip.join('\n'))}"` : '';
 		const details =
 			`<div${title} style="width:268px;max-width:none;box-sizing:border-box;text-align:center;line-height:1.2;margin:4px 0 10px">` +
 			`<img src="${STATUS_ICONS[status]}" style="display:block;width:24px;height:24px;margin:0 auto 3px">` +
 			`<div style="color:${COLORS[status]}">${escapeHtml(display)}</div>` +
-			`<div>LT: ${escapeHtml(lastTimestamp)}</div>` +
+			`<div>${escapeHtml(this.localize('Previous:', 'Vorletzter:'))} ${escapeHtml(previousTimestamp)}</div>` +
+			`<div>${escapeHtml(this.localize('Last:', 'Letzter:'))} ${escapeHtml(lastTimestamp)}</div>` +
 			`<div>${escapeHtml(intervalLabel)} ${escapeHtml(updateInterval)}</div>` +
+			`<div>${escapeHtml(averageLabel)} ${escapeHtml(averageUpdateInterval)}</div>` +
 			`</div>`;
-		await this.setStateChangedAsync(`${base}.details`, { val: details, ack: true });
+		await this.setStateChangedAsync(`${base}.data.details`, { val: details, ack: true });
+		this.cardDetails.set(`${device.id}.${watched.id}`, details);
+		await this.updateDeviceCardDetails(device);
 	}
 	private async updateValue(
 		device: DeviceConfiguration,
 		watched: WatchedStateConfiguration,
 		sourceState: ioBroker.State | null | undefined,
 	): Promise<void> {
+		const key = `${device.id}.${watched.id}`;
+		const previous = this.updateHistoryQueues.get(key) ?? Promise.resolve();
+		const current = previous.catch(() => undefined).then(() => this.updateValueNow(device, watched, sourceState));
+		this.updateHistoryQueues.set(key, current);
+		try {
+			await current;
+		} finally {
+			if (this.updateHistoryQueues.get(key) === current) {
+				this.updateHistoryQueues.delete(key);
+			}
+		}
+	}
+	private async updateValueNow(
+		device: DeviceConfiguration,
+		watched: WatchedStateConfiguration,
+		sourceState: ioBroker.State | null | undefined,
+	): Promise<void> {
 		const base = `devices.${device.id}.${watched.id}`;
+		const previousData = await this.readMonitoringData(base, watched.sourceId);
+		const sameSource = !this.resetUpdateHistories.has(base) && previousData.sourceId === watched.sourceId;
+		let updateHistory = sameSource ? parseUpdateHistory(previousData.updateHistory) : [];
+		if (sameSource && !updateHistory.length) {
+			updateHistory = [previousData.previousUpdate, previousData.lastUpdate]
+				.filter((entry): entry is number => typeof entry === 'number' && Number.isFinite(entry) && entry > 0)
+				.sort((a, b) => a - b);
+		}
+		const timestamp = sourceState?.ts;
+		const lastTimestamp = updateHistory.at(-1);
+		if (
+			typeof timestamp === 'number' &&
+			Number.isFinite(timestamp) &&
+			timestamp > 0 &&
+			(lastTimestamp === undefined || timestamp > lastTimestamp)
+		) {
+			updateHistory = [...updateHistory, timestamp].slice(-UPDATE_HISTORY_SIZE);
+		}
+		const lastUpdate = updateHistory.at(-1) ?? null;
+		const previousUpdate = updateHistory.at(-2) ?? null;
+		const updateInterval = lastUpdate === null || previousUpdate === null ? null : lastUpdate - previousUpdate;
+		const averageUpdateInterval = averageInterval(updateHistory);
 		const value = sourceState?.val ?? null;
 		const updateTimedOut = isUpdateTimedOut(sourceState, watched.staleWarning);
 		const status = this.getWatchedStatus(watched, sourceState, updateTimedOut);
@@ -1312,18 +1423,95 @@ class DeviceMonitoring extends utils.Adapter {
 			status === 'invalid'
 				? `${watched.name}: ⚠ ${watched.sourceId}`
 				: `${watched.name}: ${value === null ? '—' : `${String(value)}${unit ? ` ${unit}` : ''}`}`;
+		const data: MonitoringData = {
+			sourceId: watched.sourceId,
+			value,
+			unit,
+			status,
+			warning: status === 'warning',
+			alarm: status === 'alarm',
+			updateTimeout: updateTimedOut,
+			lastUpdate,
+			previousUpdate,
+			updateInterval,
+			averageUpdateInterval,
+			updateHistory,
+		};
 		await Promise.all([
-			this.setStateChangedAsync(`${base}.value`, { val: value, ack: true }),
-			this.setStateChangedAsync(`${base}.status`, { val: status, ack: true }),
-			this.setStateChangedAsync(`${base}.display`, {
-				val: display,
+			this.setStateChangedAsync(`${base}.value`, { val: data.value, ack: true }),
+			this.setStateChangedAsync(`${base}.status`, { val: data.status, ack: true }),
+			this.setStateChangedAsync(`${base}.warning`, { val: data.warning, ack: true }),
+			this.setStateChangedAsync(`${base}.alarm`, { val: data.alarm, ack: true }),
+			this.setStateChangedAsync(`${base}.updateTimeout`, { val: data.updateTimeout, ack: true }),
+			this.setStateChangedAsync(`${base}.sourceId`, { val: data.sourceId, ack: true }),
+			this.setStateChangedAsync(`${base}.data.lastUpdate`, { val: data.lastUpdate, ack: true }),
+			this.setStateChangedAsync(`${base}.data.previousUpdate`, { val: data.previousUpdate, ack: true }),
+			this.setStateChangedAsync(`${base}.data.updateInterval`, { val: data.updateInterval, ack: true }),
+			this.setStateChangedAsync(`${base}.data.averageUpdateInterval`, {
+				val: data.averageUpdateInterval,
 				ack: true,
 			}),
-			this.setStateChangedAsync(`${base}.warning`, { val: status === 'warning', ack: true }),
-			this.setStateChangedAsync(`${base}.alarm`, { val: status === 'alarm', ack: true }),
-			this.setStateChangedAsync(`${base}.updateTimeout`, { val: updateTimedOut, ack: true }),
+			this.setStateChangedAsync(`${base}.data.updateHistory`, {
+				val: JSON.stringify(data.updateHistory),
+				ack: true,
+			}),
 		]);
-		await this.updateDetailsDisplay(device, watched, status, display, unit);
+		this.resetUpdateHistories.delete(base);
+		await this.notifyStatusTransition(device, watched, status, display);
+		await this.updateDetailsDisplay(device, watched, status, display, unit, data);
+	}
+	private async notifyStatusTransition(
+		device: DeviceConfiguration,
+		watched: WatchedStateConfiguration,
+		status: WatchStatus,
+		display: string,
+	): Promise<void> {
+		const key = `${device.id}.${watched.id}`;
+		const previous = this.notificationStatuses.get(key);
+		this.notificationStatuses.set(key, status);
+		if (!previous) {
+			return;
+		}
+		const category = notificationCategoryForTransition(previous, status);
+		if (!category || !this.isNotificationEnabled(category)) {
+			return;
+		}
+		if (category === 'deviceTimeout' && !watched.staleWarning.enabled) {
+			return;
+		}
+		const location = `${device.name} / ${watched.name}`;
+		const message: Record<NotificationCategory, string> = {
+			deviceWarning: this.localize(`Warning for ${location}: ${display}`, `Warnung bei ${location}: ${display}`),
+			deviceAlarm: this.localize(`Alarm for ${location}: ${display}`, `Alarm bei ${location}: ${display}`),
+			deviceTimeout: this.localize(
+				`Update timeout for ${location} (${watched.sourceId})`,
+				`Aktualisierungs-Timeout bei ${location} (${watched.sourceId})`,
+			),
+			invalidSource: this.localize(
+				`Invalid or deleted source for ${location}: ${watched.sourceId}`,
+				`Ungültige oder gelöschte Quelle bei ${location}: ${watched.sourceId}`,
+			),
+			deviceRecovered: this.localize(
+				`${location} is OK again: ${display}`,
+				`${location} ist wieder in Ordnung: ${display}`,
+			),
+		};
+		const notificationKey = `${key}|${category}|${message[category]}`;
+		const now = Date.now();
+		const lastSent = this.notificationLastSent.get(notificationKey);
+		if (lastSent !== undefined && now - lastSent < 10_000) {
+			return;
+		}
+		this.notificationLastSent.set(notificationKey, now);
+		try {
+			await this.registerNotification('device-monitoring', category, message[category]);
+		} catch (error) {
+			this.log.warn(`Could not register notification ${category}: ${String(error)}`);
+		}
+	}
+	private isNotificationEnabled(category: NotificationCategory): boolean {
+		const configured = this.config.enabledNotifications as readonly string[] | undefined;
+		return !Array.isArray(configured) || configured.includes(category);
 	}
 }
 

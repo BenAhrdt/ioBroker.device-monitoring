@@ -107,6 +107,14 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Keep the last ten update timestamps and show the previous timestamp, latest interval and average interval on device cards
+* (BenAhrdt) Omit trailing zero-value units from displayed update intervals
+* (BenAhrdt) Add configurable ioBroker notifications for warnings, alarms, timeouts, invalid sources and recoveries
+* (BenAhrdt) Group monitored runtime values in an expert data channel with typed states and a JSON update history
+* (BenAhrdt) Place the function-template option directly below the function selection
+* (BenAhrdt) Use a stable expert HTML state for device-card details so newly added monitored states appear without rebuilding the card schema
+
 ### 0.0.13 (2026-09-17)
 * (BenAhrdt) Display update timestamps in the adapter host's local system time instead of UTC
 

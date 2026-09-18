@@ -22,6 +22,29 @@
 			"sm": 8,
 			"md": 6
 		},
+		"notificationHeader": {
+			"type": "header",
+			"text": "Notifications",
+			"size": 2,
+			"newLine": true,
+			"xs": 12
+		},
+		"enabledNotifications": {
+			"type": "select",
+			"label": "Enabled notifications",
+			"help": "Select which status changes should create ioBroker notifications.",
+			"multiple": true,
+			"options": [
+				{ "label": "Device warning", "value": "deviceWarning" },
+				{ "label": "Device alarm", "value": "deviceAlarm" },
+				{ "label": "Update timeout", "value": "deviceTimeout" },
+				{ "label": "Invalid or deleted source", "value": "invalidSource" },
+				{ "label": "Device recovered", "value": "deviceRecovered" }
+			],
+			"default": ["deviceWarning", "deviceAlarm", "deviceTimeout", "invalidSource", "deviceRecovered"],
+			"newLine": true,
+			"xs": 12
+		},
 		"backupHeader": {
 			"type": "header",
 			"text": "Device configuration backup",

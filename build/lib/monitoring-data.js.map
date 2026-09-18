@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/lib/monitoring-data.ts"],
+  "sourcesContent": ["import type { WatchStatus } from './evaluation';\n\n/** Runtime snapshot stored for one monitored source. */\nexport interface MonitoringData {\n\t/** Configured source state ID. */\n\tsourceId: string;\n\t/** Current source value. */\n\tvalue: ioBroker.StateValue;\n\t/** Unit copied from the source object. */\n\tunit: string;\n\t/** Current evaluated monitoring status. */\n\tstatus: WatchStatus;\n\t/** Whether the warning status is active. */\n\twarning: boolean;\n\t/** Whether the alarm status is active. */\n\talarm: boolean;\n\t/** Whether the configured update timeout is active. */\n\tupdateTimeout: boolean;\n\t/** Most recent source timestamp. */\n\tlastUpdate: number | null;\n\t/** Source timestamp preceding the most recent one. */\n\tpreviousUpdate: number | null;\n\t/** Interval between the two most recent updates. */\n\tupdateInterval: number | null;\n\t/** Average interval represented by the timestamp history. */\n\taverageUpdateInterval: number | null;\n\t/** Up to ten most recent unique source timestamps. */\n\tupdateHistory: number[];\n}\n"],
+  "mappings": ";;;;;;;;;;;;;;AAAA;AAAA;",
+  "names": []
+}
