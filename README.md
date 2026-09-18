@@ -107,7 +107,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.14 (2026-09-18)
 * (BenAhrdt) Keep the last ten update timestamps and show the previous timestamp, latest interval and average interval on device cards
 * (BenAhrdt) Omit trailing zero-value units from displayed update intervals
 * (BenAhrdt) Add configurable ioBroker notifications for warnings, alarms, timeouts, invalid sources and recoveries

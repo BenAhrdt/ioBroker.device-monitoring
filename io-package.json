@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.13",
+    "version": "0.0.14",
     "news": {
+      "0.0.14": {
+        "en": "Keep the last ten update timestamps and show the previous timestamp, latest interval and average interval on device cards\nOmit trailing zero-value units from displayed update intervals\nAdd configurable ioBroker notifications for warnings, alarms, timeouts, invalid sources and recoveries\nGroup monitored runtime values in an expert data channel with typed states and a JSON update history\nPlace the function-template option directly below the function selection\nUse a stable expert HTML state for device-card details so newly added monitored states appear without rebuilding the card schema",
+        "de": "Behält die letzten zehn Aktualisierungszeitstempel und zeigt auf Gerätekarten\nLetzte Nullwerte aus den Aktualisierungsintervallen weglassen\nFügt konfigurierbare ioBroker-Meldungen für Warnungen, Timeouts, ungültige Quellen und Recoverys hinzu\nÜberwachte Laufzeitwerte in Expertendaten mit Status und JSON-Aktualisierungshistorie\nPlatzieren Sie die Funktionsvorlage direkt unter der Funktionsauswahl\nBenutze einen stabilen Experten-HTML-Status für Gerätedaten, damit neue Monitorstatus ohne Umbauen des Kartenschemas",
+        "ru": "Сохраните последние десять временных меток обновления и покажите предыдущую метку времени, последний интервал и средний интервал на картах устройств\nНе указывайте конечные единицы с нулевым значением из отображаемых интервалов обновления\nДобавьте настраиваемые уведомления IOBroker о предупреждениях, аварийных сигналах, тайм-аутах, недействительных источниках и восстановлениях\nГруппа отслеживала значения времени выполнения в экспертном канале данных с типизированными состояниями и историей обновлений JSON\nПоместите опцию шаблона функции прямо под выбранной функцией\nИспользуйте стабильное состояние экспертного HTML для сведений о карте устройства, чтобы вновь добавленные отслеживаемые состояния отображались без перестройки схемы карты",
+        "pt": "Mantenha as últimas dez atualizações e mostre a data anterior, a última e a média nas placas do dispositivo\nOmitir unidades finais de zero dos intervalos de atualização exibidos\nAdicione notificações configuráveis do IOBroker para alertas, tempos limite, fontes inválidas e recuperações\nAgrupe valores de tempo de execução em um canal de dados especializado com dados e JSON\nColoque a opção de modelo de função logo abaixo da seleção\nUse um estado HTML especializado estável para que os novos estados monitorados apareçam sem reconstruir o esquema",
+        "nl": "Bewaar de laatste tien updatetijdstempels en toon de vorige tijdstempel, laatste interval en gemiddelde interval op de toestelkaarten\nEenheden met een waarde van nul achterwege laten in de weergegeven update-intervallen\nConfigureerbare IOBroker-meldingen toevoegen voor waarschuwingen, alarmen, time-outs, ongeldige bronnen en terugvorderingen\nRuntime-waarden in groepsverband in een deskundig datakanaal met getypte statussen en een JSON-updategeschiedenis\nPlaats de optie voor een functiesjabloon direct onder de functieselectie\nGebruik een stabiele HTML-status van experts voor apparaatkaartgegevens, zodat nieuw toegevoegde bewaakte statussen verschijnen zonder het kaartschema opnieuw op te bouwen",
+        "fr": "Conservez les dix dernières mises à jour et affichez l'heure précédente, la dernière et la moyenne sur les cartes de l'appareil\nOmettre les unités à zéro dans les intervalles de mise à jour affichés\nAjoutez des notifications IOBroker configurables pour les alertes, les timeouts, les sources non valides et les restaurations\nValeurs d'exécution surveillées en groupe sur un canal expert avec états saisis et historique des mises à jour JSON\nPlacer l'option de modèle de fonction juste en dessous de la sélection de fonction\nUtilisez un état HTML expert stable pour les détails des cartes, afin que les nouveaux états surveillés apparaissent sans reconstruire le schéma",
+        "it": "Conservi gli ultimi dieci aggiornamenti e mostri l'ora precedente, l'ultimo e l'intervallo medio sulle schede\nOmetta le unità a valore zero dagli intervalli di aggiornamento\nAggiungi notifiche IOBroker configurabili per avvisi, allarmi, timeout, fonti non valide e recuperi\nRaggruppa i valori di runtime in un canale dati esperto con stati digitati e JSON\nInserire l'opzione modello di funzione sotto la selezione della funzione\nUsa uno stato HTML stabile per i dati della scheda, in modo che appaiano i nuovi stati monitorati senza ricostruire lo schema",
+        "es": "Guarde las diez últimas marcas de tiempo actualizadas y muestre la fecha anterior, el último intervalo y la media en las tarjetas del dispositivo\nOmitir las últimas unidades de valor cero de los intervalos de actualización\nAñada notificaciones configurables de ioBroker para avisos, alarmas, tiempos de espera, fuentes no válidas y recuperaciones\nSupervisó en grupo los valores de ejecución en un canal de datos experto con estados escritos y JSON Update History\nColoque la opción de plantilla de funciones justo debajo de la selección de funciones\nUtilice un estado HTML experto estable para los detalles de la tarjeta para que los estados monitorizados recién añadidos aparezcan sin reconstruir el esquema",
+        "pl": "Zachowaj dziesięć ostatnich sygnatur czasowych aktualizacji i pokaż poprzedni znacznik czasu, ostatni interwał i średni interwał na kartach urządzeń\nPomiń końcowe jednostki wartości zerowej z wyświetlonych przedziałów aktualizacji\nDodaj konfigurowalne powiadomienia ioBroker dotyczące ostrzeżeń, alarmów, limitu czasu, nieprawidłowych źródeł i odzyskiwania\nGrupuj monitorowane wartości środowiska wykonawczego w eksperckim kanale danych z wpisanymi stanami i historią aktualizacji JSON\nUmieść opcję szablonu funkcji bezpośrednio pod zaznaczeniem funkcji\nUżyj stabilnego stanu HTML eksperta dla szczegółów karty urządzenia, aby nowo dodane monitorowane stany pojawiały się bez przebudowy schematu karty",
+        "uk": "Зберігайте останні десять міток часу оновлення та показуйте попередню мітку часу, останній інтервал та середній інтервал на картках пристроїв\nОпустити кінцеві одиниці нульового значення з відображених інтервалів оновлення\nДодайте настроювані сповіщення IObroker для попереджень, тривог, тайм-аутів, недійсних джерел та відновлення\nГрупові контрольовані значення виконання в експертному каналі даних із введеними станами та історією оновлень JSON\nРозмістіть параметр функції-шаблон безпосередньо під вибором функції\nВикористовуйте стабільний експертний стан HTML для деталей картки пристрою, щоб нещодавно додані контрольовані стани з'являлися без відновлення схеми картки",
+        "zh-cn": "保留最近十次更新时间戳，并在设备卡上显示先前的时间戳、最新间隔和平均间隔\n从显示的更新间隔中省略尾随的零值单位\n为警告、警报、超时、无效来源和恢复添加可配置的 IOBroker 通知\n使用键入的状态和 JSON 更新历史记录将受监控的运行时值分组到专家数据通道中\n将函数模板选项放在函数选择的正下方\n使用稳定的专家 HTML 状态来获取设备卡的详细信息，这样无需重建卡架构即可显示新添加的监控状态"
+      },
       "0.0.13": {
         "en": "Display update timestamps in the adapter host's local system time instead of UTC",
         "de": "Zeigt Aktualisierungszeitstempel in der lokalen Systemzeit des Adapters an statt UTC",
@@ -80,19 +93,6 @@
         "pl": "Przechowuj i stosuj wszystkie limity i wartości limitu czasu w szablonach funkcji",
         "uk": "Зберігайте та застосовуйте всі обмеження та значення тайм-ауту в шаблонів функцій",
         "zh-cn": "在函数模板中存储和应用所有限制和超时值"
-      },
-      "0.0.7": {
-        "en": "Fix applying activation and violation settings from selected function templates",
-        "de": "Aktivierungs- und Verstoßeinstellungen ausgewählter Funktionsvorlagen behoben",
-        "ru": "Исправить применение настроек активации и нарушений из выбранных шаблонов функций",
-        "pt": "Corrige a aplicação de ativações e violações em modelos de função selecionados",
-        "nl": "Oplossing voor het toepassen van activerings- en overtredingsinstellingen op geselecteerde functiesjablonen",
-        "fr": "Correction des paramètres d'activation et de violation de certains modèles de fonctions",
-        "it": "Correggere le impostazioni di attivazione e violazione dai modelli di funzione",
-        "es": "Corregir la aplicación de ajustes de activación e infracción de plantillas de funciones",
-        "pl": "Napraw stosowanie ustawień aktywacji i naruszenia z wybranych szablonów funkcji",
-        "uk": "Виправлено застосування налаштувань активації та порушення з вибраних шаблонів функцій",
-        "zh-cn": "修复应用所选函数模板中的激活和违规设置的问题"
       }
     },
     "titleLang": {
@@ -196,40 +196,70 @@
       "categories": [
         {
           "category": "deviceWarning",
-          "name": { "en": "Device warning", "de": "Gerätewarnung" },
-          "description": { "en": "A monitored value reached its warning range", "de": "Ein überwachter Wert hat seinen Warnbereich erreicht" },
+          "name": {
+            "en": "Device warning",
+            "de": "Gerätewarnung"
+          },
+          "description": {
+            "en": "A monitored value reached its warning range",
+            "de": "Ein überwachter Wert hat seinen Warnbereich erreicht"
+          },
           "severity": "notify",
           "regex": [],
           "limit": 100
         },
         {
           "category": "deviceAlarm",
-          "name": { "en": "Device alarm", "de": "Gerätealarm" },
-          "description": { "en": "A monitored value reached its alarm range", "de": "Ein überwachter Wert hat seinen Alarmbereich erreicht" },
+          "name": {
+            "en": "Device alarm",
+            "de": "Gerätealarm"
+          },
+          "description": {
+            "en": "A monitored value reached its alarm range",
+            "de": "Ein überwachter Wert hat seinen Alarmbereich erreicht"
+          },
           "severity": "alert",
           "regex": [],
           "limit": 100
         },
         {
           "category": "deviceTimeout",
-          "name": { "en": "Update timeout", "de": "Aktualisierungs-Timeout" },
-          "description": { "en": "A monitored value was not updated in time", "de": "Ein überwachter Wert wurde nicht rechtzeitig aktualisiert" },
+          "name": {
+            "en": "Update timeout",
+            "de": "Aktualisierungs-Timeout"
+          },
+          "description": {
+            "en": "A monitored value was not updated in time",
+            "de": "Ein überwachter Wert wurde nicht rechtzeitig aktualisiert"
+          },
           "severity": "alert",
           "regex": [],
           "limit": 100
         },
         {
           "category": "invalidSource",
-          "name": { "en": "Invalid source", "de": "Ungültige Quelle" },
-          "description": { "en": "A configured source state is invalid or was deleted", "de": "Ein konfigurierter Quell-State ist ungültig oder wurde gelöscht" },
+          "name": {
+            "en": "Invalid source",
+            "de": "Ungültige Quelle"
+          },
+          "description": {
+            "en": "A configured source state is invalid or was deleted",
+            "de": "Ein konfigurierter Quell-State ist ungültig oder wurde gelöscht"
+          },
           "severity": "alert",
           "regex": [],
           "limit": 100
         },
         {
           "category": "deviceRecovered",
-          "name": { "en": "Device recovered", "de": "Gerät wieder in Ordnung" },
-          "description": { "en": "A monitored value returned to its normal state", "de": "Ein überwachter Wert ist wieder im Normalzustand" },
+          "name": {
+            "en": "Device recovered",
+            "de": "Gerät wieder in Ordnung"
+          },
+          "description": {
+            "en": "A monitored value returned to its normal state",
+            "de": "Ein überwachter Wert ist wieder im Normalzustand"
+          },
           "severity": "info",
           "regex": [],
           "limit": 100
