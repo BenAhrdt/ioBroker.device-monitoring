@@ -26,6 +26,18 @@ describe('threshold evaluation', () => {
 		expect(evaluateLimit(25, limit('outside', 10, 20))).to.equal(true);
 		expect(evaluateLimit(15, limit('inside', 10, 20))).to.equal(true);
 	});
+	it('supports decimal limits and boolean trigger values', () => {
+		expect(evaluateLimit(10.5, limit('above', undefined, 10.25))).to.equal(true);
+		expect(evaluateLimit(true, { enabled: true, mode: 'outside', booleanValue: true })).to.equal(true);
+		expect(evaluateLimit(false, { enabled: true, mode: 'outside', booleanValue: true })).to.equal(false);
+		expect(
+			getWatchStatus(
+				false,
+				{ enabled: true, mode: 'outside', booleanValue: false },
+				{ enabled: false, mode: 'outside' },
+			),
+		).to.equal('warning');
+	});
 	it('gives alarms priority and reports missing values', () => {
 		expect(getWatchStatus(90, limit('above', undefined, 70), limit('above', undefined, 80))).to.equal('alarm');
 		expect(getWatchStatus(null, limit('below', 5), limit('above', undefined, 80))).to.equal('unknown');

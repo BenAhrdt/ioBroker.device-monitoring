@@ -32,7 +32,13 @@ function createFunctionTemplate(watched) {
   };
 }
 function evaluateLimit(value, limit) {
-  if (!limit.enabled || typeof value !== "number" || !Number.isFinite(value)) {
+  if (!limit.enabled) {
+    return false;
+  }
+  if (typeof value === "boolean") {
+    return limit.booleanValue !== void 0 && value === limit.booleanValue;
+  }
+  if (typeof value !== "number" || !Number.isFinite(value)) {
     return false;
   }
   if (limit.mode === "below") {
@@ -50,7 +56,7 @@ function getWatchStatus(value, warning, alarm, stale = false) {
   if (stale) {
     return "timeout";
   }
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if ((typeof value !== "number" || !Number.isFinite(value)) && typeof value !== "boolean") {
     return "unknown";
   }
   if (evaluateLimit(value, alarm)) {

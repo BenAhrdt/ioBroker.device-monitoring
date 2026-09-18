@@ -102,8 +102,11 @@ function uniqueId(base, used) {
   }
   return id;
 }
-function limitDisplay(limit, unit = "") {
+function limitDisplay(limit, unit = "", booleanSource = false) {
   var _a, _b, _c, _d;
+  if (booleanSource && limit.booleanValue !== void 0) {
+    return `= ${limit.booleanValue ? "true" : "false"}`;
+  }
   const suffix = unit ? ` ${unit}` : "";
   if (limit.mode === "below") {
     return `< ${(_a = limit.min) != null ? _a : "\u2014"}${suffix}`;
@@ -121,6 +124,33 @@ function timestampDisplay(timestamp) {
 function escapeHtml(value) {
   return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
+const supportedSourceType = (value) => {
+  if (value === "number") {
+    return "number";
+  }
+  if (value === "boolean" || value === "bool") {
+    return "boolean";
+  }
+  return void 0;
+};
+const translatedObjectName = (value, fallback) => {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim();
+  }
+  if (value && typeof value === "object") {
+    const translations = value;
+    for (const language of ["de", "en", "ru"]) {
+      if (typeof translations[language] === "string" && translations[language].trim()) {
+        return translations[language].trim();
+      }
+    }
+    const first = Object.values(translations).find((item) => typeof item === "string" && item.trim());
+    if (typeof first === "string") {
+      return first.trim();
+    }
+  }
+  return fallback;
+};
 class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
   constructor(adapter) {
     super(adapter, true);
@@ -151,6 +181,156 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
             await this.adapter.addDevice(String(data.name));
             return { refresh: true };
           }
+        },
+        {
+          id: "addStatesByFilter",
+          icon: "search",
+          title: t("Search and add states", "States suchen & hinzuf\xFCgen"),
+          variant: "contained",
+          style: { backgroundColor: "#455a64", color: "#fff", marginLeft: "8px" },
+          handler: async (context) => {
+            var _a;
+            const candidates = await this.adapter.getStateCandidates();
+            const filter = await context.showForm(stateSearchForm(candidates), {
+              title: t("Search states", "States suchen"),
+              data: { role: "", roleCustom: "", name: "", id: "", type: "", includeExisting: false },
+              buttons: ["apply", "cancel"]
+            });
+            if (!filter) {
+              return { refresh: false };
+            }
+            const matching = filterStateCandidates(candidates, filter);
+            if (!matching.length) {
+              await context.showMessage(
+                t(
+                  "No states match the selected filters.",
+                  "Keine States entsprechen den gesetzten Filtern."
+                )
+              );
+              return { refresh: false };
+            }
+            const devices = this.adapter.getDeviceOptions();
+            const defaultData = defaultBulkStateForm(matching, devices);
+            const selectionToken = this.adapter.createBulkSelectionSession(defaultData);
+            let data;
+            try {
+              data = await context.showForm(
+                bulkStateForm(
+                  matching,
+                  devices,
+                  this.adapter.getFunctionTemplates(),
+                  this.adapter.getFunctionNames(),
+                  selectionToken
+                ),
+                {
+                  title: t("Select states to add", "States zum Hinzuf\xFCgen ausw\xE4hlen"),
+                  data: defaultData,
+                  buttons: ["apply", "cancel"],
+                  applyDisabledRule: bulkStateDisabledRule(this.adapter.getDeviceConfigurations())
+                }
+              );
+            } finally {
+              this.adapter.removeBulkSelectionSession(selectionToken);
+            }
+            if (!data) {
+              return { refresh: false };
+            }
+            const rows = Array.isArray(data.states) ? data.states : [];
+            const targetText = (value) => {
+              var _a2;
+              if (typeof value === "string") {
+                return value.trim();
+              }
+              if (value && typeof value === "object") {
+                const option = value;
+                const optionValue = (_a2 = option.value) != null ? _a2 : option.label;
+                return typeof optionValue === "string" ? optionValue.trim() : "";
+              }
+              return "";
+            };
+            const selectedTypes = rows.filter((row) => (row == null ? void 0 : row.selected) === true).map((row) => String(row.type || ""));
+            const mixedSelection = selectedTypes.includes("number") && selectedTypes.includes("boolean");
+            const selected = rows.filter((row) => (row == null ? void 0 : row.selected) === true).map((row, index) => ({
+              row,
+              candidate: matching.find((candidate) => candidate.id === String(row.sourceId || "").trim()) || matching[index]
+            })).filter(({ candidate }) => !!candidate).map(({ row, candidate }) => {
+              const typeSettings = candidate.type === "boolean" ? {
+                warning: mixedSelection ? data.booleanWarning || data.warning : data.warning,
+                alarm: mixedSelection ? data.booleanAlarm || data.alarm : data.alarm
+              } : {
+                warning: mixedSelection ? data.numberWarning || data.warning : data.warning,
+                alarm: mixedSelection ? data.numberAlarm || data.alarm : data.alarm
+              };
+              return {
+                ...data,
+                ...typeSettings,
+                name: String(row.name || candidate.name).trim(),
+                sourceId: candidate.id,
+                sourceType: candidate.type,
+                targetDevice: row.targetDevice
+              };
+            });
+            if (!selected.length) {
+              await context.showMessage(
+                t("Select at least one state.", "Bitte mindestens einen State ausw\xE4hlen.")
+              );
+              return { refresh: false };
+            }
+            const selectedWithoutTarget = selected.filter((entry) => !targetText(entry.targetDevice));
+            if (selectedWithoutTarget.length) {
+              await context.showMessage(
+                t(
+                  "Choose a target device for every selected state.",
+                  "Bitte f\xFCr jeden ausgew\xE4hlten State ein Zielger\xE4t ausw\xE4hlen oder eingeben."
+                )
+              );
+              return { refresh: false };
+            }
+            const targetGroups = /* @__PURE__ */ new Map();
+            for (const entry of selected) {
+              const target = targetText(entry.targetDevice);
+              const existing = devices.find((device) => device.id === target) || devices.find((device) => device.name.trim().toLowerCase() === target.toLowerCase());
+              const key = existing ? `id:${existing.id}` : `new:${target.toLowerCase()}`;
+              const group = targetGroups.get(key) || { target, targetId: existing == null ? void 0 : existing.id, entries: [] };
+              group.entries.push(entry);
+              targetGroups.set(key, group);
+            }
+            for (const group of targetGroups.values()) {
+              const names = group.entries.map((entry) => String(entry.name).trim().toLocaleLowerCase());
+              const existingNames = new Set(
+                (group.targetId ? ((_a = this.adapter.getDeviceConfiguration(group.targetId)) == null ? void 0 : _a.states) || [] : []).map((state) => state.name.trim().toLocaleLowerCase())
+              );
+              if (names.some((name) => !name) || names.some((name, index) => names.indexOf(name) !== index) || names.some((name) => existingNames.has(name))) {
+                await context.showMessage(
+                  t(
+                    "Display names must be unique within each target device.",
+                    "Die Anzeigenamen m\xFCssen innerhalb jedes Zielger\xE4ts eindeutig sein."
+                  )
+                );
+                return { refresh: false };
+              }
+            }
+            for (const group of targetGroups.values()) {
+              if (!group.targetId) {
+                group.targetId = await this.adapter.addDevice(group.target);
+              }
+              await this.adapter.addWatchedStates(group.targetId, group.entries);
+            }
+            const targetIds = [...targetGroups.values()].map((group) => group.targetId).filter((targetId2) => !!targetId2);
+            const hasNewDevice = [...targetGroups.values()].some(
+              (group) => !devices.some((device) => device.id === group.targetId)
+            );
+            if (hasNewDevice || targetIds.length !== 1) {
+              return { refresh: "devices" };
+            }
+            const targetId = targetIds[0];
+            if (!targetId) {
+              throw new Error("The target device could not be resolved");
+            }
+            const update = this.updatedDeviceInfo(targetId);
+            await this.sendCommandToGui({ command: "infoUpdate", deviceId: targetId, info: update });
+            return { update };
+          }
         }
       ]
     };
@@ -169,12 +349,18 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
         icon: "add",
         description: t("Add monitored state", "\xDCberwachungs-State hinzuf\xFCgen"),
         handler: async (_id, context) => {
-          const validSourceIds = await this.adapter.getValidSourceIds();
+          const sourceTypes = await this.adapter.getValidSourceTypes();
+          const validSourceIds = Object.keys(sourceTypes);
           const data = await context.showForm(
-            stateForm(this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames(), device.states),
+            stateForm(
+              this.adapter.getFunctionTemplates(),
+              this.adapter.getFunctionNames(),
+              device.states,
+              void 0
+            ),
             {
               title: t("Add monitored state", "\xDCberwachungs-State hinzuf\xFCgen"),
-              data: defaultStateForm(validSourceIds),
+              data: defaultStateForm(validSourceIds, sourceTypes),
               buttons: ["apply", "cancel"],
               applyDisabledRule: addStateDisabledRule(device.states)
             }
@@ -195,10 +381,27 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
         icon: "settings",
         description: t("Edit monitored states", "\xDCberwachungs-States bearbeiten"),
         handler: async (_deviceId, context) => {
-          const validSourceIds = await this.adapter.getValidSourceIds();
+          const sourceTypes = await this.adapter.getValidSourceTypes();
+          const validSourceIds = Object.keys(sourceTypes);
           const formData = {
             _validSourceIds: validSourceIds,
-            ...Object.fromEntries(device.states.map((watched) => [watched.id, watched]))
+            _sourceTypes: sourceTypes,
+            ...Object.fromEntries(
+              device.states.map((watched) => [
+                watched.id,
+                {
+                  ...watched,
+                  warning: {
+                    ...watched.warning,
+                    booleanValue: watched.warning.booleanValue === false ? "false" : "true"
+                  },
+                  alarm: {
+                    ...watched.alarm,
+                    booleanValue: watched.alarm.booleanValue === false ? "false" : "true"
+                  }
+                }
+              ])
+            )
           };
           const data = await context.showForm(
             statesForm(device.states, this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames()),
@@ -284,30 +487,294 @@ function deviceForm() {
   };
 }
 function defaultLimit(mode) {
-  return { enabled: false, mode };
+  return { enabled: false, mode, booleanValue: true };
 }
-function defaultStateForm(validSourceIds) {
+function defaultFormLimit(mode) {
+  return { ...defaultLimit(mode), booleanValue: "true" };
+}
+function defaultStateForm(validSourceIds, sourceTypes) {
   return {
     name: "",
     sourceId: "",
     _validSourceIds: validSourceIds,
+    _sourceTypes: sourceTypes,
     function: "",
-    warning: defaultLimit("outside"),
-    alarm: defaultLimit("outside"),
+    warning: defaultFormLimit("outside"),
+    alarm: defaultFormLimit("outside"),
     staleWarning: { enabled: false, minutes: 60 }
   };
 }
-function stateForm(functionTemplates, functionNames, states, stateId) {
+function stateSearchForm(candidates) {
+  const roles = [...new Set(candidates.map((candidate) => candidate.role).filter(Boolean))].sort();
+  const types = [
+    .../* @__PURE__ */ new Set(["number", "boolean", ...candidates.map((candidate) => candidate.type).filter(Boolean)])
+  ].sort();
+  return {
+    type: "panel",
+    items: {
+      role: {
+        type: "select",
+        label: t("Existing role", "Vorhandene Rolle"),
+        options: [
+          { value: "", label: "Alle Rollen / All roles" },
+          ...roles.map((value) => ({ value, label: value }))
+        ],
+        noTranslation: true,
+        newLine: true,
+        xs: 12,
+        help: t(
+          "Select a role from the list or use the custom field below.",
+          "Rolle aus der Liste w\xE4hlen oder das freie Feld darunter verwenden."
+        )
+      },
+      roleCustom: {
+        type: "text",
+        label: t("Custom role or role search text", "Eigene Rolle oder Rollen-Suchtext"),
+        newLine: true,
+        xs: 12,
+        help: t("Example: value.battery", "Beispiel: value.battery"),
+        placeholder: "value.battery"
+      },
+      name: {
+        type: "text",
+        label: t("Name contains", "Name enth\xE4lt"),
+        xs: 12
+      },
+      id: {
+        type: "text",
+        label: t("State ID contains", "State-ID enth\xE4lt"),
+        xs: 12
+      },
+      type: {
+        type: "select",
+        label: t("Data type", "Datentyp"),
+        options: [
+          { value: "", label: t("All types", "Alle Datentypen") },
+          ...types.map((value) => ({ value, label: value === "boolean" ? "boolean / bool" : value }))
+        ],
+        noTranslation: true,
+        xs: 12
+      },
+      includeExisting: {
+        type: "checkbox",
+        label: t("Include already monitored states", "Bereits \xFCberwachte States einschlie\xDFen"),
+        newLine: true,
+        xs: 12
+      }
+    }
+  };
+}
+function filterStateCandidates(candidates, filter) {
+  const textValue = (value) => {
+    if (typeof value === "string") {
+      return value;
+    }
+    if (value && typeof value === "object") {
+      const option = value;
+      return typeof option.value === "string" ? option.value : typeof option.label === "string" ? option.label : "";
+    }
+    return "";
+  };
+  const includes = (value, search) => {
+    const normalizedSearch = textValue(search).trim().toLocaleLowerCase();
+    return !normalizedSearch || value.toLocaleLowerCase().includes(normalizedSearch);
+  };
+  const selectedRole = textValue(filter.roleCustom).trim() || textValue(filter.role).trim();
+  const selectedType = textValue(filter.type).trim();
+  return candidates.filter(
+    (candidate) => includes(candidate.role, selectedRole) && includes(candidate.name, filter.name) && includes(candidate.id, filter.id) && (!selectedType || candidate.type === selectedType) && (filter.includeExisting === true || !candidate.alreadyAdded)
+  );
+}
+function defaultBulkStateForm(candidates, devices) {
+  return {
+    states: candidates.map((candidate) => {
+      var _a;
+      return {
+        selected: !candidate.alreadyAdded,
+        name: candidate.name,
+        sourceId: candidate.id,
+        role: candidate.role || "\u2014",
+        type: candidate.type || "\u2014",
+        targetDevice: ((_a = devices[0]) == null ? void 0 : _a.id) || ""
+      };
+    }),
+    function: "",
+    _saveAsTemplate: false,
+    warning: defaultFormLimit("outside"),
+    alarm: defaultFormLimit("outside"),
+    numberWarning: defaultFormLimit("outside"),
+    numberAlarm: defaultFormLimit("outside"),
+    booleanWarning: defaultFormLimit("outside"),
+    booleanAlarm: defaultFormLimit("outside"),
+    staleWarning: { enabled: false, minutes: 60 }
+  };
+}
+function bulkStateForm(candidates, devices, functionTemplates, functionNames, selectionToken) {
+  const hasSelectedNumber = "Array.isArray(data.states) && data.states.some(row => row && row.selected === true && String(row.type || '') === 'number')";
+  const hasSelectedBoolean = "Array.isArray(data.states) && data.states.some(row => row && row.selected === true && String(row.type || '') === 'boolean')";
+  const mixedSource = `(${hasSelectedNumber}) && (${hasSelectedBoolean})`;
+  const numberOnlySource = `(${hasSelectedNumber}) && !(${hasSelectedBoolean})`;
+  const booleanOnlySource = `(${hasSelectedBoolean}) && !(${hasSelectedNumber})`;
+  const selectionHiddenDependsOn = [{ attr: "states" }];
+  const settings = stateForm(
+    functionTemplates,
+    functionNames,
+    [],
+    void 0,
+    "number",
+    booleanOnlySource,
+    numberOnlySource,
+    mixedSource,
+    selectionHiddenDependsOn
+  ).items;
+  delete settings.name;
+  delete settings.sourceId;
+  settings.function.hidden = mixedSource;
+  settings.function.hiddenDependsOn = selectionHiddenDependsOn;
+  settings._saveAsTemplate.hidden = mixedSource;
+  settings._saveAsTemplate.hiddenDependsOn = selectionHiddenDependsOn;
+  const mixedSettings = {
+    mixedSettingsHeader: {
+      type: "staticText",
+      text: t(
+        "Different state types selected: configure numeric and boolean states separately.",
+        "Unterschiedliche State-Typen ausgew\xE4hlt: Zahlen- und Boolean-States getrennt konfigurieren."
+      ),
+      newLine: true,
+      xs: 12,
+      hidden: `!(${mixedSource})`,
+      hiddenDependsOn: selectionHiddenDependsOn,
+      style: { fontWeight: 700, marginTop: "8px" }
+    },
+    ...bulkTypeLimitFields("number", "warning", mixedSource, selectionHiddenDependsOn),
+    ...bulkTypeLimitFields("number", "alarm", mixedSource, selectionHiddenDependsOn),
+    ...bulkTypeLimitFields("boolean", "warning", mixedSource, selectionHiddenDependsOn),
+    ...bulkTypeLimitFields("boolean", "alarm", mixedSource, selectionHiddenDependsOn)
+  };
+  const orderedSettings = {};
+  for (const [name, item] of Object.entries(settings)) {
+    if (name === "staleWarningHeader") {
+      Object.assign(orderedSettings, mixedSettings);
+    }
+    orderedSettings[name] = item;
+  }
+  for (const name of Object.keys(settings)) {
+    delete settings[name];
+  }
+  Object.assign(settings, orderedSettings);
+  const selectionJsonData = (action) => `{"token":${JSON.stringify(selectionToken)},"action":${JSON.stringify(action)},"form":\${JSON.stringify(data)}}`;
+  return {
+    type: "panel",
+    items: {
+      selectAll: {
+        type: "sendto",
+        label: t("Select all", "Alle ausw\xE4hlen"),
+        xs: 6,
+        newLine: true,
+        command: "bulkStateSelection",
+        jsonData: selectionJsonData("all"),
+        variant: "contained",
+        useNative: true
+      },
+      clearSelection: {
+        type: "sendto",
+        label: t("Clear selection", "Auswahl aufheben"),
+        xs: 6,
+        command: "bulkStateSelection",
+        jsonData: selectionJsonData("none"),
+        variant: "outlined",
+        icon: "delete",
+        useNative: true
+      },
+      statesHeader: {
+        type: "staticText",
+        text: t(
+          `Select states, target devices and display names (${candidates.length} matches)`,
+          `States, Zielger\xE4te und Anzeigenamen anpassen (${candidates.length} Treffer)`
+        ),
+        newLine: true,
+        xs: 12,
+        style: { fontWeight: 700, marginTop: "8px" }
+      },
+      states: {
+        type: "table",
+        items: [
+          { type: "checkbox", attr: "selected", title: t("Add", "Hinzuf\xFCgen"), width: "8%" },
+          {
+            type: "text",
+            attr: "name",
+            title: t("Display name", "Anzeigename"),
+            width: "20%"
+          },
+          {
+            type: "text",
+            attr: "sourceId",
+            title: "State-ID",
+            disabled: true,
+            width: "30%"
+          },
+          {
+            type: "autocomplete",
+            attr: "targetDevice",
+            title: t("Target device", "Zielger\xE4t"),
+            options: devices.map((device) => ({ value: device.id, label: device.name })),
+            freeSolo: true,
+            noTranslation: true,
+            width: "24%"
+          },
+          {
+            type: "text",
+            attr: "role",
+            title: t("Role", "Rolle"),
+            disabled: true,
+            width: "12%"
+          },
+          {
+            type: "text",
+            attr: "type",
+            title: t("Type", "Typ"),
+            disabled: true,
+            width: "6%"
+          }
+        ],
+        noDelete: true,
+        compact: true,
+        useCardFor: ["xs", "sm"],
+        newLine: true,
+        xs: 12
+      },
+      ...settings
+    }
+  };
+}
+function bulkStateDisabledRule(devices) {
+  const existingNames = Object.fromEntries(
+    devices.map((device) => [device.id, device.states.map((state) => state.name.trim().toLocaleLowerCase())])
+  );
+  const targetAliases = Object.fromEntries(
+    devices.flatMap((device) => [
+      [device.id.toLocaleLowerCase(), device.id],
+      [device.name.trim().toLocaleLowerCase(), device.id]
+    ])
+  );
+  return `(() => { const rows = Array.isArray(data.states) ? data.states.filter(row => row && row.selected) : []; const existingNames = ${JSON.stringify(existingNames)}; const targetAliases = ${JSON.stringify(targetAliases)}; const text = value => typeof value === 'string' ? value.trim() : (value && typeof value === 'object' ? String(value.value || value.label || '').trim() : ''); const groups = {}; for (const row of rows) { const target = text(row.targetDevice).toLocaleLowerCase(); const name = String(row.name || '').trim().toLocaleLowerCase(); if (!target || !name) return true; const key = targetAliases[target] || 'new:' + target; groups[key] ||= { names: [], existing: existingNames[key] || [] }; groups[key].names.push(name); } return !rows.length || Object.values(groups).some(group => group.names.some((name, index) => group.names.indexOf(name) !== index) || group.names.some(name => group.existing.includes(name))); })()`;
+}
+function stateForm(functionTemplates, functionNames, states, stateId, sourceTypeExpression, booleanSourceExpression, numericSourceExpression, mixedSourceExpression, hiddenDependsOn) {
   const functions = [.../* @__PURE__ */ new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
   const key = (path) => stateId ? `${stateId}.${path}` : path;
   const data = (path) => stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`;
+  const selectedSourceType = sourceTypeExpression || `data._sourceTypes[String(${data("sourceId")} || '').trim()] || 'number'`;
+  const mixedSource = mixedSourceExpression || `(${selectedSourceType}) === 'mixed'`;
+  const booleanSource = booleanSourceExpression || `(${selectedSourceType}) === 'boolean'`;
+  const numericSource = numericSourceExpression || `(${selectedSourceType}) !== 'boolean'`;
+  const visibilityDependencies = hiddenDependsOn ? { hiddenDependsOn } : {};
   const existingNames = JSON.stringify(states.map((state) => state.name.trim().toLowerCase()));
   const otherStateIds = JSON.stringify(states.filter((state) => state.id !== stateId).map((state) => state.id));
   const nameValidator = stateId ? `return (${data("_delete")} || (() => { const name = String(${data("name")} || '').trim().toLowerCase(); return !!name && !${otherStateIds}.some(id => !data[id]?._delete && String(data[id]?.name || '').trim().toLowerCase() === name); })())` : `return (() => { const name = String(${data("name")} || '').trim().toLowerCase(); return !!name && !${existingNames}.includes(name); })()`;
   const sourceValidator = `return (${stateId ? `${data("_delete")} || ` : ""}(Array.isArray(data._validSourceIds) && data._validSourceIds.includes(String(${data("sourceId")} || '').trim())))`;
   const templates = JSON.stringify(functionTemplates);
   const templateValue = (path) => ({
-    calculateFunc: `(${templates}[${data("function")}] ? ${templates}[${data("function")}].${path} : ${data(path)})`,
+    calculateFunc: path.endsWith("booleanValue") ? `(${templates}[${data("function")}] ? ((${templates}[${data("function")}].${path} === false || ${templates}[${data("function")}].${path} === 'false') ? 'false' : 'true') : ${data(path)})` : `(${templates}[${data("function")}] ? ${templates}[${data("function")}].${path} : ${data(path)})`,
     ignoreOwnChanges: true
   });
   const sectionHeader = (text, backgroundColor) => ({
@@ -324,12 +791,14 @@ function stateForm(functionTemplates, functionNames, states, stateId) {
     }
   });
   const limits = (prefix, label, color) => ({
-    [key(`${prefix}Header`)]: sectionHeader(label, color),
+    [key(`${prefix}Header`)]: { ...sectionHeader(label, color), hidden: mixedSource, ...visibilityDependencies },
     [key(`${prefix}.enabled`)]: {
       type: "checkbox",
       label: t("Enabled", "Aktiviert"),
       newLine: true,
-      xs: 4
+      xs: 4,
+      hidden: mixedSource,
+      ...visibilityDependencies
     },
     [key(`${prefix}.mode`)]: {
       type: "select",
@@ -341,20 +810,37 @@ function stateForm(functionTemplates, functionNames, states, stateId) {
         { value: "outside", label: t("outside the allowed range", "au\xDFerhalb des erlaubten Bereichs liegt") },
         { value: "inside", label: t("inside the forbidden range", "im verbotenen Bereich liegt") }
       ],
-      hidden: `!${data(`${prefix}.enabled`)}`
+      hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource})`,
+      ...visibilityDependencies
+    },
+    [key(`${prefix}.booleanValue`)]: {
+      type: "select",
+      label: t("Violation when value is \u2026", "Verletzung, wenn der Wert \u2026"),
+      options: [
+        { value: "true", label: "true" },
+        { value: "false", label: "false" }
+      ],
+      newLine: true,
+      xs: 8,
+      hidden: `${data(`${prefix}.enabled`)} !== true || !(${booleanSource}) || (${mixedSource})`,
+      ...visibilityDependencies
     },
     [key(`${prefix}.min`)]: {
       type: "number",
       label: t("Lower limit", "Untergrenze"),
+      step: 0.01,
       newLine: true,
       xs: 6,
-      hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'above'`
+      hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'above'`,
+      ...visibilityDependencies
     },
     [key(`${prefix}.max`)]: {
       type: "number",
       label: t("Upper limit", "Obergrenze"),
+      step: 0.01,
       xs: 6,
-      hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'below'`
+      hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below'`,
+      ...visibilityDependencies
     }
   });
   return {
@@ -377,11 +863,11 @@ function stateForm(functionTemplates, functionNames, states, stateId) {
         label: t("ioBroker state", "ioBroker-State"),
         newLine: true,
         xs: 12,
-        customFilter: { type: "state", common: { type: "number" } },
+        customFilter: { type: "state", common: { type: ["number", "boolean"] } },
         validator: sourceValidator,
         validatorErrorText: t(
-          "Please select an existing ioBroker state",
-          "Bitte einen vorhandenen ioBroker-State ausw\xE4hlen"
+          "Please select an existing number or boolean ioBroker state",
+          "Bitte einen vorhandenen ioBroker-State vom Typ Zahl oder Boolean ausw\xE4hlen"
         ),
         validatorNoSaveOnError: true
       },
@@ -394,10 +880,12 @@ function stateForm(functionTemplates, functionNames, states, stateId) {
           ...[
             "warning.enabled",
             "warning.mode",
+            "warning.booleanValue",
             "warning.min",
             "warning.max",
             "alarm.enabled",
             "alarm.mode",
+            "alarm.booleanValue",
             "alarm.min",
             "alarm.max",
             "staleWarning.enabled",
@@ -433,7 +921,7 @@ function stateForm(functionTemplates, functionNames, states, stateId) {
         step: 1,
         newLine: true,
         xs: 12,
-        hidden: `!${data("staleWarning.enabled")}`
+        hidden: `${data("staleWarning.enabled")} !== true`
       }
     }
   };
@@ -441,6 +929,83 @@ function stateForm(functionTemplates, functionNames, states, stateId) {
 function addStateDisabledRule(states) {
   const existingNames = JSON.stringify(states.map((state) => state.name.trim().toLowerCase()));
   return `!String(data.name || '').trim() || ${existingNames}.includes(String(data.name || '').trim().toLowerCase()) || !Array.isArray(data._validSourceIds) || !data._validSourceIds.includes(String(data.sourceId || '').trim())`;
+}
+function bulkTypeLimitFields(type, prefix, visible, hiddenDependsOn) {
+  const visibilityDependencies = hiddenDependsOn ? { hiddenDependsOn } : {};
+  const root = `${type}${prefix[0].toUpperCase()}${prefix.slice(1)}`;
+  const color = prefix === "warning" ? "#d6a500" : "#c62828";
+  const header = type === "number" ? prefix === "warning" ? t("Numeric warning limits", "Numerische Warngrenzen") : t("Numeric alarm limits", "Numerische Alarmgrenzen") : prefix === "warning" ? t("Boolean warning settings", "Boolesche Warneinstellungen") : t("Boolean alarm settings", "Boolesche Alarmeinstellungen");
+  const fields = {
+    [`${root}Header`]: {
+      type: "staticText",
+      text: header,
+      newLine: true,
+      xs: 12,
+      hidden: `!(${visible})`,
+      ...visibilityDependencies,
+      style: {
+        backgroundColor: color,
+        color: "#fff",
+        fontWeight: 700,
+        borderRadius: "4px",
+        padding: "8px"
+      }
+    },
+    [`${root}.enabled`]: {
+      type: "checkbox",
+      label: t("Enabled", "Aktiviert"),
+      newLine: true,
+      xs: 4,
+      hidden: `!(${visible})`,
+      ...visibilityDependencies
+    }
+  };
+  if (type === "number") {
+    fields[`${root}.mode`] = {
+      type: "select",
+      label: t("Violation when value is \u2026", "Verletzung, wenn der Wert \u2026"),
+      xs: 8,
+      options: [
+        { value: "below", label: t("below the limit", "unter dem Grenzwert liegt") },
+        { value: "above", label: t("above the limit", "\xFCber dem Grenzwert liegt") },
+        { value: "outside", label: t("outside the allowed range", "au\xDFerhalb des erlaubten Bereichs liegt") },
+        { value: "inside", label: t("inside the forbidden range", "innerhalb des verbotenen Bereichs liegt") }
+      ],
+      hidden: `!(${visible}) || data.${root}.enabled !== true`,
+      ...visibilityDependencies
+    };
+    fields[`${root}.min`] = {
+      type: "number",
+      label: t("Lower limit", "Untergrenze"),
+      step: 0.01,
+      newLine: true,
+      xs: 6,
+      hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'above'`,
+      ...visibilityDependencies
+    };
+    fields[`${root}.max`] = {
+      type: "number",
+      label: t("Upper limit", "Obergrenze"),
+      step: 0.01,
+      xs: 6,
+      hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'below'`,
+      ...visibilityDependencies
+    };
+  } else {
+    fields[`${root}.booleanValue`] = {
+      type: "select",
+      label: t("Violation when value is \u2026", "Verletzung, wenn der Wert \u2026"),
+      options: [
+        { value: "true", label: "true" },
+        { value: "false", label: "false" }
+      ],
+      newLine: true,
+      xs: 8,
+      hidden: `!(${visible}) || data.${root}.enabled !== true`,
+      ...visibilityDependencies
+    };
+  }
+  return fields;
 }
 function editStatesDisabledRule(states) {
   const stateIds = JSON.stringify(states.map((state) => state.id));
@@ -482,6 +1047,7 @@ class DeviceMonitoring extends utils.Adapter {
   sortRefreshTimer;
   staleCheckTimer;
   configurationBackupTimer;
+  bulkSelectionSessions = /* @__PURE__ */ new Map();
   constructor(options = {}) {
     super({ ...options, name: "device-monitoring" });
     this.on("ready", this.onReady.bind(this));
@@ -532,6 +1098,18 @@ class DeviceMonitoring extends utils.Adapter {
   }
   async onMessage(message) {
     var _a;
+    if (message.command === "bulkStateSelection") {
+      try {
+        const request = typeof message.message === "string" ? JSON.parse(message.message) : message.message || {};
+        const token = typeof request.token === "string" ? request.token : "";
+        const action = request.action === "none" ? "none" : "all";
+        const result = this.applyBulkSelection(token, action, request.form);
+        this.sendTo(message.from, message.command, result, message.callback);
+      } catch (error) {
+        this.sendTo(message.from, message.command, { error: String(error) }, message.callback);
+      }
+      return;
+    }
     if (message.command === "backupDeviceConfiguration") {
       try {
         const updated = await this.backupDeviceConfiguration();
@@ -629,6 +1207,63 @@ class DeviceMonitoring extends utils.Adapter {
   getFunctionNames() {
     return [...new Set(this.devices.flatMap((device) => device.states.map((state) => state.function)).filter(Boolean))];
   }
+  getDeviceConfigurations() {
+    return this.devices.map((device) => ({
+      ...device,
+      states: device.states.map((state) => ({
+        ...state,
+        warning: { ...state.warning },
+        alarm: { ...state.alarm },
+        staleWarning: { ...state.staleWarning }
+      }))
+    }));
+  }
+  getDeviceOptions() {
+    return this.devices.map((device) => ({ id: device.id, name: device.name }));
+  }
+  createBulkSelectionSession(data) {
+    const token = `bulk_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    this.bulkSelectionSessions.set(token, JSON.parse(JSON.stringify(data)));
+    setTimeout(() => this.bulkSelectionSessions.delete(token), 10 * 60 * 1e3);
+    return token;
+  }
+  removeBulkSelectionSession(token) {
+    this.bulkSelectionSessions.delete(token);
+  }
+  applyBulkSelection(token, action, form) {
+    const session = this.bulkSelectionSessions.get(token);
+    if (!session) {
+      throw new Error("The bulk selection session has expired");
+    }
+    const current = form && typeof form === "object" ? JSON.parse(JSON.stringify(form)) : session;
+    current.states = Array.isArray(current.states) ? current.states.map((row) => ({ ...row, selected: action === "all" })) : [];
+    this.bulkSelectionSessions.set(token, current);
+    return { native: current };
+  }
+  async getStateCandidates() {
+    const objects = await this.getForeignObjectsAsync("*", "state");
+    const monitoredSources = new Set(this.devices.flatMap((device) => device.states.map((state) => state.sourceId)));
+    const usedNames = /* @__PURE__ */ new Map();
+    return Object.entries(objects).filter(([, object]) => {
+      var _a;
+      return !!supportedSourceType((_a = object.common) == null ? void 0 : _a.type);
+    }).map(([id, object]) => {
+      var _a, _b, _c;
+      const fallback = id.split(".").pop() || id;
+      const baseName = translatedObjectName((_a = object.common) == null ? void 0 : _a.name, fallback);
+      const key = baseName.toLocaleLowerCase();
+      const occurrence = (usedNames.get(key) || 0) + 1;
+      usedNames.set(key, occurrence);
+      const name = occurrence === 1 ? baseName : `${baseName} (${occurrence})`;
+      return {
+        id,
+        name,
+        type: supportedSourceType((_b = object.common) == null ? void 0 : _b.type) || "",
+        role: String(((_c = object.common) == null ? void 0 : _c.role) || ""),
+        alreadyAdded: monitoredSources.has(id)
+      };
+    }).sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+  }
   getDeviceConfiguration(deviceId) {
     return this.devices.find((device) => device.id === deviceId);
   }
@@ -646,6 +1281,7 @@ class DeviceMonitoring extends utils.Adapter {
       id = `device_${String(this.nextDeviceNumber++).padStart(3, "0")}`;
     } while (used.has(id));
     await this.saveDevices([...this.devices, { id, name: name.trim(), states: [] }]);
+    return id;
   }
   async renameDevice(id, name) {
     await this.saveDevices(this.devices.map((d) => d.id === id ? { ...d, name: name.trim() } : d));
@@ -665,6 +1301,25 @@ class DeviceMonitoring extends utils.Adapter {
     await this.saveDevices(
       this.devices.map(
         (d) => d.id === deviceId ? { ...d, states: [...d.states, this.normalizeState(data, id)] } : d
+      ),
+      false
+    );
+  }
+  async addWatchedStates(deviceId, entries) {
+    const device = this.devices.find((d) => d.id === deviceId);
+    if (!device || !entries.length) {
+      return;
+    }
+    const usedIds = /* @__PURE__ */ new Set([DEVICE_CARD_DETAILS_ID, ...device.states.map((state) => state.id)]);
+    const states = entries.map((entry) => {
+      const id = uniqueId(safeId(String(entry.name), "state"), usedIds);
+      usedIds.add(id);
+      this.saveFunctionTemplate(entry);
+      return this.normalizeState(entry, id);
+    });
+    await this.saveDevices(
+      this.devices.map(
+        (current) => current.id === deviceId ? { ...current, states: [...current.states, ...states] } : current
       ),
       false
     );
@@ -710,6 +1365,7 @@ class DeviceMonitoring extends utils.Adapter {
     const limit = (input, fallback) => ({
       enabled: (input == null ? void 0 : input.enabled) === true,
       mode: ["below", "above", "outside", "inside"].includes(input == null ? void 0 : input.mode) ? input.mode : fallback,
+      booleanValue: (input == null ? void 0 : input.booleanValue) === false || (input == null ? void 0 : input.booleanValue) === "false" ? false : true,
       min: typeof (input == null ? void 0 : input.min) === "number" ? input.min : void 0,
       max: typeof (input == null ? void 0 : input.max) === "number" ? input.max : void 0
     });
@@ -984,7 +1640,7 @@ class DeviceMonitoring extends utils.Adapter {
     return this.normalizeDevices((_c = folder == null ? void 0 : folder.native) == null ? void 0 : _c.devices);
   }
   normalizeFunctionTemplates(value) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return {};
     }
@@ -1000,18 +1656,20 @@ class DeviceMonitoring extends utils.Adapter {
         warning: {
           enabled: ((_a = template.warning) == null ? void 0 : _a.enabled) === true,
           mode: mode((_b = template.warning) == null ? void 0 : _b.mode),
-          min: number((_c = template.warning) == null ? void 0 : _c.min),
-          max: number((_d = template.warning) == null ? void 0 : _d.max)
+          booleanValue: ((_c = template.warning) == null ? void 0 : _c.booleanValue) === false || ((_d = template.warning) == null ? void 0 : _d.booleanValue) === "false" ? false : true,
+          min: number((_e = template.warning) == null ? void 0 : _e.min),
+          max: number((_f = template.warning) == null ? void 0 : _f.max)
         },
         alarm: {
-          enabled: ((_e = template.alarm) == null ? void 0 : _e.enabled) === true,
-          mode: mode((_f = template.alarm) == null ? void 0 : _f.mode),
-          min: number((_g = template.alarm) == null ? void 0 : _g.min),
-          max: number((_h = template.alarm) == null ? void 0 : _h.max)
+          enabled: ((_g = template.alarm) == null ? void 0 : _g.enabled) === true,
+          mode: mode((_h = template.alarm) == null ? void 0 : _h.mode),
+          booleanValue: ((_i = template.alarm) == null ? void 0 : _i.booleanValue) === false || ((_j = template.alarm) == null ? void 0 : _j.booleanValue) === "false" ? false : true,
+          min: number((_k = template.alarm) == null ? void 0 : _k.min),
+          max: number((_l = template.alarm) == null ? void 0 : _l.max)
         },
         staleWarning: {
-          enabled: ((_i = template.staleWarning) == null ? void 0 : _i.enabled) === true,
-          minutes: number((_j = template.staleWarning) == null ? void 0 : _j.minutes) || 60
+          enabled: ((_m = template.staleWarning) == null ? void 0 : _m.enabled) === true,
+          minutes: number((_n = template.staleWarning) == null ? void 0 : _n.minutes) || 60
         }
       };
     }
@@ -1054,11 +1712,20 @@ class DeviceMonitoring extends utils.Adapter {
     await this.refreshSourceValidity();
   }
   isValidSourceObject(object) {
-    return (object == null ? void 0 : object.type) === "state";
+    var _a;
+    return (object == null ? void 0 : object.type) === "state" && !!supportedSourceType((_a = object.common) == null ? void 0 : _a.type);
+  }
+  async getValidSourceTypes() {
+    const objects = await this.getForeignObjectsAsync("*", "state");
+    return Object.fromEntries(
+      Object.entries(objects).map(([id, object]) => {
+        var _a;
+        return [id, supportedSourceType((_a = object.common) == null ? void 0 : _a.type)];
+      }).filter((entry) => !!entry[1])
+    );
   }
   async getValidSourceIds() {
-    const objects = await this.getForeignObjectsAsync("*", "state");
-    return Object.keys(objects);
+    return Object.keys(await this.getValidSourceTypes());
   }
   async refreshSourceValidity() {
     this.invalidSources.clear();
@@ -1079,7 +1746,7 @@ class DeviceMonitoring extends utils.Adapter {
       return this.sourceUnits.get(sourceId) || "";
     }
     const object = await this.getForeignObjectAsync(sourceId);
-    const unit = (object == null ? void 0 : object.type) === "state" && typeof object.common.unit === "string" ? object.common.unit : "";
+    const unit = this.isValidSourceObject(object) && typeof object.common.unit === "string" ? object.common.unit : "";
     this.sourceUnits.set(sourceId, unit);
     return unit;
   }
@@ -1269,16 +1936,16 @@ class DeviceMonitoring extends utils.Adapter {
     if (watched.warning.enabled) {
       tooltip.push(
         this.localize(
-          `Warning limit: ${limitDisplay(watched.warning, unit)}`,
-          `Warngrenze: ${limitDisplay(watched.warning, unit)}`
+          `Warning limit: ${limitDisplay(watched.warning, unit, typeof data.value === "boolean")}`,
+          `Warngrenze: ${limitDisplay(watched.warning, unit, typeof data.value === "boolean")}`
         )
       );
     }
     if (watched.alarm.enabled) {
       tooltip.push(
         this.localize(
-          `Alarm limit: ${limitDisplay(watched.alarm, unit)}`,
-          `Alarmgrenze: ${limitDisplay(watched.alarm, unit)}`
+          `Alarm limit: ${limitDisplay(watched.alarm, unit, typeof data.value === "boolean")}`,
+          `Alarmgrenze: ${limitDisplay(watched.alarm, unit, typeof data.value === "boolean")}`
         )
       );
     }

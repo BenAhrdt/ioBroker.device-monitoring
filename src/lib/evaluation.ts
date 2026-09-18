@@ -1,11 +1,13 @@
 export type LimitMode = 'below' | 'above' | 'outside' | 'inside';
 
-/** Configuration of a numeric warning or alarm limit. */
+/** Configuration of a numeric or boolean warning/alarm limit. */
 export interface LimitConfiguration {
 	/** Whether this limit is evaluated. */
 	enabled: boolean;
 	/** Determines how the configured boundary values are interpreted. */
 	mode: LimitMode;
+	/** Boolean value which activates the limit for boolean source states. */
+	booleanValue?: boolean;
 	/** Optional lower boundary. */
 	min?: number;
 	/** Optional upper boundary. */
@@ -82,7 +84,13 @@ export type WatchStatus = 'ok' | 'warning' | 'alarm' | 'timeout' | 'invalid' | '
  * @returns Whether the enabled limit is violated.
  */
 export function evaluateLimit(value: ioBroker.StateValue, limit: LimitConfiguration): boolean {
-	if (!limit.enabled || typeof value !== 'number' || !Number.isFinite(value)) {
+	if (!limit.enabled) {
+		return false;
+	}
+	if (typeof value === 'boolean') {
+		return limit.booleanValue !== undefined && value === limit.booleanValue;
+	}
+	if (typeof value !== 'number' || !Number.isFinite(value)) {
 		return false;
 	}
 	if (limit.mode === 'below') {
@@ -115,7 +123,7 @@ export function getWatchStatus(
 	if (stale) {
 		return 'timeout';
 	}
-	if (typeof value !== 'number' || !Number.isFinite(value)) {
+	if ((typeof value !== 'number' || !Number.isFinite(value)) && typeof value !== 'boolean') {
 		return 'unknown';
 	}
 	if (evaluateLimit(value, alarm)) {

@@ -99,7 +99,10 @@ function uniqueId(base: string, used: Set<string>): string {
 	}
 	return id;
 }
-function limitDisplay(limit: LimitConfiguration, unit = ''): string {
+function limitDisplay(limit: LimitConfiguration, unit = '', booleanSource = false): string {
+	if (booleanSource && limit.booleanValue !== undefined) {
+		return `= ${limit.booleanValue ? 'true' : 'false'}`;
+	}
 	const suffix = unit ? ` ${unit}` : '';
 	if (limit.mode === 'below') {
 		return `< ${limit.min ?? '—'}${suffix}`;
@@ -122,6 +125,45 @@ function escapeHtml(value: unknown): string {
 		.replace(/"/g, '&quot;')
 		.replace(/'/g, '&#39;');
 }
+
+interface StateCandidate {
+	id: string;
+	name: string;
+	type: string;
+	role: string;
+	alreadyAdded: boolean;
+}
+
+type SupportedSourceType = 'number' | 'boolean';
+
+const supportedSourceType = (value: unknown): SupportedSourceType | undefined => {
+	if (value === 'number') {
+		return 'number';
+	}
+	if (value === 'boolean' || value === 'bool') {
+		return 'boolean';
+	}
+	return undefined;
+};
+
+const translatedObjectName = (value: unknown, fallback: string): string => {
+	if (typeof value === 'string' && value.trim()) {
+		return value.trim();
+	}
+	if (value && typeof value === 'object') {
+		const translations = value as Record<string, unknown>;
+		for (const language of ['de', 'en', 'ru']) {
+			if (typeof translations[language] === 'string' && translations[language].trim()) {
+				return translations[language].trim();
+			}
+		}
+		const first = Object.values(translations).find(item => typeof item === 'string' && item.trim());
+		if (typeof first === 'string') {
+			return first.trim();
+		}
+	}
+	return fallback;
+};
 
 class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, string> {
 	public constructor(adapter: DeviceMonitoring) {
@@ -154,6 +196,187 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 						return { refresh: true };
 					},
 				},
+				{
+					id: 'addStatesByFilter',
+					icon: 'search',
+					title: t('Search and add states', 'States suchen & hinzufügen'),
+					variant: 'contained',
+					style: { backgroundColor: '#455a64', color: '#fff', marginLeft: '8px' },
+					handler: async (context: any) => {
+						const candidates = await this.adapter.getStateCandidates();
+						const filter = await context.showForm(stateSearchForm(candidates), {
+							title: t('Search states', 'States suchen'),
+							data: { role: '', roleCustom: '', name: '', id: '', type: '', includeExisting: false },
+							buttons: ['apply', 'cancel'],
+						});
+						if (!filter) {
+							return { refresh: false };
+						}
+						const matching = filterStateCandidates(candidates, filter);
+						if (!matching.length) {
+							await context.showMessage(
+								t(
+									'No states match the selected filters.',
+									'Keine States entsprechen den gesetzten Filtern.',
+								),
+							);
+							return { refresh: false };
+						}
+
+						const devices = this.adapter.getDeviceOptions();
+						const defaultData = defaultBulkStateForm(matching, devices);
+						const selectionToken = this.adapter.createBulkSelectionSession(defaultData);
+						let data: any;
+						try {
+							data = await context.showForm(
+								bulkStateForm(
+									matching,
+									devices,
+									this.adapter.getFunctionTemplates(),
+									this.adapter.getFunctionNames(),
+									selectionToken,
+								),
+								{
+									title: t('Select states to add', 'States zum Hinzufügen auswählen'),
+									data: defaultData,
+									buttons: ['apply', 'cancel'],
+									applyDisabledRule: bulkStateDisabledRule(this.adapter.getDeviceConfigurations()),
+								},
+							);
+						} finally {
+							this.adapter.removeBulkSelectionSession(selectionToken);
+						}
+						if (!data) {
+							return { refresh: false };
+						}
+
+						const rows = Array.isArray(data.states) ? data.states : [];
+						const targetText = (value: unknown): string => {
+							if (typeof value === 'string') {
+								return value.trim();
+							}
+							if (value && typeof value === 'object') {
+								const option = value as Record<string, unknown>;
+								const optionValue = option.value ?? option.label;
+								return typeof optionValue === 'string' ? optionValue.trim() : '';
+							}
+							return '';
+						};
+						const selectedTypes = rows
+							.filter((row: any) => row?.selected === true)
+							.map((row: any) => String(row.type || ''));
+						const mixedSelection = selectedTypes.includes('number') && selectedTypes.includes('boolean');
+						const selected = rows
+							.filter((row: any) => row?.selected === true)
+							.map((row: any, index: number) => ({
+								row,
+								candidate:
+									matching.find(candidate => candidate.id === String(row.sourceId || '').trim()) ||
+									matching[index],
+							}))
+							.filter(({ candidate }: { candidate: StateCandidate | undefined }) => !!candidate)
+							.map(({ row, candidate }: { row: any; candidate: StateCandidate }) => {
+								const typeSettings =
+									candidate.type === 'boolean'
+										? {
+												warning: mixedSelection
+													? data.booleanWarning || data.warning
+													: data.warning,
+												alarm: mixedSelection ? data.booleanAlarm || data.alarm : data.alarm,
+											}
+										: {
+												warning: mixedSelection
+													? data.numberWarning || data.warning
+													: data.warning,
+												alarm: mixedSelection ? data.numberAlarm || data.alarm : data.alarm,
+											};
+								return {
+									...data,
+									...typeSettings,
+									name: String(row.name || candidate.name).trim(),
+									sourceId: candidate.id,
+									sourceType: candidate.type,
+									targetDevice: row.targetDevice,
+								};
+							});
+						if (!selected.length) {
+							await context.showMessage(
+								t('Select at least one state.', 'Bitte mindestens einen State auswählen.'),
+							);
+							return { refresh: false };
+						}
+
+						const selectedWithoutTarget = selected.filter((entry: any) => !targetText(entry.targetDevice));
+						if (selectedWithoutTarget.length) {
+							await context.showMessage(
+								t(
+									'Choose a target device for every selected state.',
+									'Bitte für jeden ausgewählten State ein Zielgerät auswählen oder eingeben.',
+								),
+							);
+							return { refresh: false };
+						}
+
+						const targetGroups = new Map<string, { target: string; targetId?: string; entries: any[] }>();
+						for (const entry of selected) {
+							const target = targetText(entry.targetDevice);
+							const existing =
+								devices.find(device => device.id === target) ||
+								devices.find(device => device.name.trim().toLowerCase() === target.toLowerCase());
+							const key = existing ? `id:${existing.id}` : `new:${target.toLowerCase()}`;
+							const group = targetGroups.get(key) || { target, targetId: existing?.id, entries: [] };
+							group.entries.push(entry);
+							targetGroups.set(key, group);
+						}
+
+						for (const group of targetGroups.values()) {
+							const names = group.entries.map(entry => String(entry.name).trim().toLocaleLowerCase());
+							const existingNames = new Set(
+								(group.targetId
+									? this.adapter.getDeviceConfiguration(group.targetId)?.states || []
+									: []
+								).map(state => state.name.trim().toLocaleLowerCase()),
+							);
+							if (
+								names.some(name => !name) ||
+								names.some((name, index) => names.indexOf(name) !== index) ||
+								names.some(name => existingNames.has(name))
+							) {
+								await context.showMessage(
+									t(
+										'Display names must be unique within each target device.',
+										'Die Anzeigenamen müssen innerhalb jedes Zielgeräts eindeutig sein.',
+									),
+								);
+								return { refresh: false };
+							}
+						}
+
+						for (const group of targetGroups.values()) {
+							if (!group.targetId) {
+								group.targetId = await this.adapter.addDevice(group.target);
+							}
+							await this.adapter.addWatchedStates(group.targetId, group.entries);
+						}
+
+						const targetIds = [...targetGroups.values()]
+							.map(group => group.targetId)
+							.filter((targetId): targetId is string => !!targetId);
+						const hasNewDevice = [...targetGroups.values()].some(
+							group => !devices.some(device => device.id === group.targetId),
+						);
+						if (hasNewDevice || targetIds.length !== 1) {
+							return { refresh: 'devices' };
+						}
+						const targetId = targetIds[0];
+						if (!targetId) {
+							throw new Error('The target device could not be resolved');
+						}
+						const update = this.updatedDeviceInfo(targetId);
+						await this.sendCommandToGui({ command: 'infoUpdate', deviceId: targetId, info: update });
+						return { update };
+					},
+				},
 			],
 		};
 	}
@@ -171,12 +394,18 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				icon: 'add',
 				description: t('Add monitored state', 'Überwachungs-State hinzufügen'),
 				handler: async (_id: string, context: any) => {
-					const validSourceIds = await this.adapter.getValidSourceIds();
+					const sourceTypes = await this.adapter.getValidSourceTypes();
+					const validSourceIds = Object.keys(sourceTypes);
 					const data = await context.showForm(
-						stateForm(this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames(), device.states),
+						stateForm(
+							this.adapter.getFunctionTemplates(),
+							this.adapter.getFunctionNames(),
+							device.states,
+							undefined,
+						),
 						{
 							title: t('Add monitored state', 'Überwachungs-State hinzufügen'),
-							data: defaultStateForm(validSourceIds),
+							data: defaultStateForm(validSourceIds, sourceTypes),
 							buttons: ['apply', 'cancel'],
 							applyDisabledRule: addStateDisabledRule(device.states),
 						},
@@ -200,10 +429,27 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				icon: 'settings',
 				description: t('Edit monitored states', 'Überwachungs-States bearbeiten'),
 				handler: async (_deviceId: string, context: any) => {
-					const validSourceIds = await this.adapter.getValidSourceIds();
+					const sourceTypes = await this.adapter.getValidSourceTypes();
+					const validSourceIds = Object.keys(sourceTypes);
 					const formData = {
 						_validSourceIds: validSourceIds,
-						...Object.fromEntries(device.states.map(watched => [watched.id, watched])),
+						_sourceTypes: sourceTypes,
+						...Object.fromEntries(
+							device.states.map(watched => [
+								watched.id,
+								{
+									...watched,
+									warning: {
+										...watched.warning,
+										booleanValue: watched.warning.booleanValue === false ? 'false' : 'true',
+									},
+									alarm: {
+										...watched.alarm,
+										booleanValue: watched.alarm.booleanValue === false ? 'false' : 'true',
+									},
+								},
+							]),
+						),
 					};
 					const data = await context.showForm(
 						statesForm(device.states, this.adapter.getFunctionTemplates(), this.adapter.getFunctionNames()),
@@ -290,28 +536,313 @@ function deviceForm(): any {
 	};
 }
 function defaultLimit(mode: LimitMode): LimitConfiguration {
-	return { enabled: false, mode };
+	return { enabled: false, mode, booleanValue: true };
 }
-function defaultStateForm(validSourceIds: string[]): any {
+function defaultFormLimit(mode: LimitMode): any {
+	return { ...defaultLimit(mode), booleanValue: 'true' };
+}
+function defaultStateForm(validSourceIds: string[], sourceTypes: Record<string, string>): any {
 	return {
 		name: '',
 		sourceId: '',
 		_validSourceIds: validSourceIds,
+		_sourceTypes: sourceTypes,
 		function: '',
-		warning: defaultLimit('outside'),
-		alarm: defaultLimit('outside'),
+		warning: defaultFormLimit('outside'),
+		alarm: defaultFormLimit('outside'),
 		staleWarning: { enabled: false, minutes: 60 },
 	};
+}
+function stateSearchForm(candidates: StateCandidate[]): any {
+	const roles = [...new Set(candidates.map(candidate => candidate.role).filter(Boolean))].sort();
+	const types = [
+		...new Set(['number', 'boolean', ...candidates.map(candidate => candidate.type).filter(Boolean)]),
+	].sort();
+	return {
+		type: 'panel',
+		items: {
+			role: {
+				type: 'select',
+				label: t('Existing role', 'Vorhandene Rolle'),
+				options: [
+					{ value: '', label: 'Alle Rollen / All roles' },
+					...roles.map(value => ({ value, label: value })),
+				],
+				noTranslation: true,
+				newLine: true,
+				xs: 12,
+				help: t(
+					'Select a role from the list or use the custom field below.',
+					'Rolle aus der Liste wählen oder das freie Feld darunter verwenden.',
+				),
+			},
+			roleCustom: {
+				type: 'text',
+				label: t('Custom role or role search text', 'Eigene Rolle oder Rollen-Suchtext'),
+				newLine: true,
+				xs: 12,
+				help: t('Example: value.battery', 'Beispiel: value.battery'),
+				placeholder: 'value.battery',
+			},
+			name: {
+				type: 'text',
+				label: t('Name contains', 'Name enthält'),
+				xs: 12,
+			},
+			id: {
+				type: 'text',
+				label: t('State ID contains', 'State-ID enthält'),
+				xs: 12,
+			},
+			type: {
+				type: 'select',
+				label: t('Data type', 'Datentyp'),
+				options: [
+					{ value: '', label: t('All types', 'Alle Datentypen') },
+					...types.map(value => ({ value, label: value === 'boolean' ? 'boolean / bool' : value })),
+				],
+				noTranslation: true,
+				xs: 12,
+			},
+			includeExisting: {
+				type: 'checkbox',
+				label: t('Include already monitored states', 'Bereits überwachte States einschließen'),
+				newLine: true,
+				xs: 12,
+			},
+		},
+	};
+}
+function filterStateCandidates(candidates: StateCandidate[], filter: any): StateCandidate[] {
+	const textValue = (value: unknown): string => {
+		if (typeof value === 'string') {
+			return value;
+		}
+		if (value && typeof value === 'object') {
+			const option = value as Record<string, unknown>;
+			return typeof option.value === 'string'
+				? option.value
+				: typeof option.label === 'string'
+					? option.label
+					: '';
+		}
+		return '';
+	};
+	const includes = (value: string, search: unknown): boolean => {
+		const normalizedSearch = textValue(search).trim().toLocaleLowerCase();
+		return !normalizedSearch || value.toLocaleLowerCase().includes(normalizedSearch);
+	};
+	const selectedRole = textValue(filter.roleCustom).trim() || textValue(filter.role).trim();
+	const selectedType = textValue(filter.type).trim();
+	return candidates.filter(
+		candidate =>
+			includes(candidate.role, selectedRole) &&
+			includes(candidate.name, filter.name) &&
+			includes(candidate.id, filter.id) &&
+			(!selectedType || candidate.type === selectedType) &&
+			(filter.includeExisting === true || !candidate.alreadyAdded),
+	);
+}
+function defaultBulkStateForm(candidates: StateCandidate[], devices: { id: string; name: string }[]): any {
+	return {
+		states: candidates.map(candidate => ({
+			selected: !candidate.alreadyAdded,
+			name: candidate.name,
+			sourceId: candidate.id,
+			role: candidate.role || '—',
+			type: candidate.type || '—',
+			targetDevice: devices[0]?.id || '',
+		})),
+		function: '',
+		_saveAsTemplate: false,
+		warning: defaultFormLimit('outside'),
+		alarm: defaultFormLimit('outside'),
+		numberWarning: defaultFormLimit('outside'),
+		numberAlarm: defaultFormLimit('outside'),
+		booleanWarning: defaultFormLimit('outside'),
+		booleanAlarm: defaultFormLimit('outside'),
+		staleWarning: { enabled: false, minutes: 60 },
+	};
+}
+function bulkStateForm(
+	candidates: StateCandidate[],
+	devices: { id: string; name: string }[],
+	functionTemplates: Record<string, FunctionTemplate>,
+	functionNames: string[],
+	selectionToken: string,
+): any {
+	const hasSelectedNumber =
+		"Array.isArray(data.states) && data.states.some(row => row && row.selected === true && String(row.type || '') === 'number')";
+	const hasSelectedBoolean =
+		"Array.isArray(data.states) && data.states.some(row => row && row.selected === true && String(row.type || '') === 'boolean')";
+	const mixedSource = `(${hasSelectedNumber}) && (${hasSelectedBoolean})`;
+	const numberOnlySource = `(${hasSelectedNumber}) && !(${hasSelectedBoolean})`;
+	const booleanOnlySource = `(${hasSelectedBoolean}) && !(${hasSelectedNumber})`;
+	const selectionHiddenDependsOn = [{ attr: 'states' }];
+	const settings = stateForm(
+		functionTemplates,
+		functionNames,
+		[],
+		undefined,
+		'number',
+		booleanOnlySource,
+		numberOnlySource,
+		mixedSource,
+		selectionHiddenDependsOn,
+	).items;
+	delete settings.name;
+	delete settings.sourceId;
+	settings.function.hidden = mixedSource;
+	settings.function.hiddenDependsOn = selectionHiddenDependsOn;
+	settings._saveAsTemplate.hidden = mixedSource;
+	settings._saveAsTemplate.hiddenDependsOn = selectionHiddenDependsOn;
+	const mixedSettings = {
+		mixedSettingsHeader: {
+			type: 'staticText',
+			text: t(
+				'Different state types selected: configure numeric and boolean states separately.',
+				'Unterschiedliche State-Typen ausgewählt: Zahlen- und Boolean-States getrennt konfigurieren.',
+			),
+			newLine: true,
+			xs: 12,
+			hidden: `!(${mixedSource})`,
+			hiddenDependsOn: selectionHiddenDependsOn,
+			style: { fontWeight: 700, marginTop: '8px' },
+		},
+		...bulkTypeLimitFields('number', 'warning', mixedSource, selectionHiddenDependsOn),
+		...bulkTypeLimitFields('number', 'alarm', mixedSource, selectionHiddenDependsOn),
+		...bulkTypeLimitFields('boolean', 'warning', mixedSource, selectionHiddenDependsOn),
+		...bulkTypeLimitFields('boolean', 'alarm', mixedSource, selectionHiddenDependsOn),
+	};
+	const orderedSettings: Record<string, any> = {};
+	for (const [name, item] of Object.entries(settings)) {
+		if (name === 'staleWarningHeader') {
+			Object.assign(orderedSettings, mixedSettings);
+		}
+		orderedSettings[name] = item;
+	}
+	for (const name of Object.keys(settings)) {
+		delete settings[name];
+	}
+	Object.assign(settings, orderedSettings);
+	const selectionJsonData = (action: 'all' | 'none'): string =>
+		`{"token":${JSON.stringify(selectionToken)},"action":${JSON.stringify(action)},"form":\${JSON.stringify(data)}}`;
+	return {
+		type: 'panel',
+		items: {
+			selectAll: {
+				type: 'sendto',
+				label: t('Select all', 'Alle auswählen'),
+				xs: 6,
+				newLine: true,
+				command: 'bulkStateSelection',
+				jsonData: selectionJsonData('all'),
+				variant: 'contained',
+				useNative: true,
+			},
+			clearSelection: {
+				type: 'sendto',
+				label: t('Clear selection', 'Auswahl aufheben'),
+				xs: 6,
+				command: 'bulkStateSelection',
+				jsonData: selectionJsonData('none'),
+				variant: 'outlined',
+				icon: 'delete',
+				useNative: true,
+			},
+			statesHeader: {
+				type: 'staticText',
+				text: t(
+					`Select states, target devices and display names (${candidates.length} matches)`,
+					`States, Zielgeräte und Anzeigenamen anpassen (${candidates.length} Treffer)`,
+				),
+				newLine: true,
+				xs: 12,
+				style: { fontWeight: 700, marginTop: '8px' },
+			},
+			states: {
+				type: 'table',
+				items: [
+					{ type: 'checkbox', attr: 'selected', title: t('Add', 'Hinzufügen'), width: '8%' },
+					{
+						type: 'text',
+						attr: 'name',
+						title: t('Display name', 'Anzeigename'),
+						width: '20%',
+					},
+					{
+						type: 'text',
+						attr: 'sourceId',
+						title: 'State-ID',
+						disabled: true,
+						width: '30%',
+					},
+					{
+						type: 'autocomplete',
+						attr: 'targetDevice',
+						title: t('Target device', 'Zielgerät'),
+						options: devices.map(device => ({ value: device.id, label: device.name })),
+						freeSolo: true,
+						noTranslation: true,
+						width: '24%',
+					},
+					{
+						type: 'text',
+						attr: 'role',
+						title: t('Role', 'Rolle'),
+						disabled: true,
+						width: '12%',
+					},
+					{
+						type: 'text',
+						attr: 'type',
+						title: t('Type', 'Typ'),
+						disabled: true,
+						width: '6%',
+					},
+				],
+				noDelete: true,
+				compact: true,
+				useCardFor: ['xs', 'sm'],
+				newLine: true,
+				xs: 12,
+			},
+			...settings,
+		},
+	};
+}
+function bulkStateDisabledRule(devices: DeviceConfiguration[]): string {
+	const existingNames = Object.fromEntries(
+		devices.map(device => [device.id, device.states.map(state => state.name.trim().toLocaleLowerCase())]),
+	);
+	const targetAliases = Object.fromEntries(
+		devices.flatMap(device => [
+			[device.id.toLocaleLowerCase(), device.id],
+			[device.name.trim().toLocaleLowerCase(), device.id],
+		]),
+	);
+	return `(() => { const rows = Array.isArray(data.states) ? data.states.filter(row => row && row.selected) : []; const existingNames = ${JSON.stringify(existingNames)}; const targetAliases = ${JSON.stringify(targetAliases)}; const text = value => typeof value === 'string' ? value.trim() : (value && typeof value === 'object' ? String(value.value || value.label || '').trim() : ''); const groups = {}; for (const row of rows) { const target = text(row.targetDevice).toLocaleLowerCase(); const name = String(row.name || '').trim().toLocaleLowerCase(); if (!target || !name) return true; const key = targetAliases[target] || 'new:' + target; groups[key] ||= { names: [], existing: existingNames[key] || [] }; groups[key].names.push(name); } return !rows.length || Object.values(groups).some(group => group.names.some((name, index) => group.names.indexOf(name) !== index) || group.names.some(name => group.existing.includes(name))); })()`;
 }
 function stateForm(
 	functionTemplates: Record<string, FunctionTemplate>,
 	functionNames: string[],
 	states: WatchedStateConfiguration[],
 	stateId?: string,
+	sourceTypeExpression?: string,
+	booleanSourceExpression?: string,
+	numericSourceExpression?: string,
+	mixedSourceExpression?: string,
+	hiddenDependsOn?: Array<{ attr?: string }>,
 ): any {
 	const functions = [...new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
 	const key = (path: string): string => (stateId ? `${stateId}.${path}` : path);
 	const data = (path: string): string => (stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`);
+	const selectedSourceType =
+		sourceTypeExpression || `data._sourceTypes[String(${data('sourceId')} || '').trim()] || 'number'`;
+	const mixedSource = mixedSourceExpression || `(${selectedSourceType}) === 'mixed'`;
+	const booleanSource = booleanSourceExpression || `(${selectedSourceType}) === 'boolean'`;
+	const numericSource = numericSourceExpression || `(${selectedSourceType}) !== 'boolean'`;
+	const visibilityDependencies = hiddenDependsOn ? { hiddenDependsOn } : {};
 	const existingNames = JSON.stringify(states.map(state => state.name.trim().toLowerCase()));
 	const otherStateIds = JSON.stringify(states.filter(state => state.id !== stateId).map(state => state.id));
 	const nameValidator = stateId
@@ -320,7 +851,9 @@ function stateForm(
 	const sourceValidator = `return (${stateId ? `${data('_delete')} || ` : ''}(Array.isArray(data._validSourceIds) && data._validSourceIds.includes(String(${data('sourceId')} || '').trim())))`;
 	const templates = JSON.stringify(functionTemplates);
 	const templateValue = (path: string): Record<string, unknown> => ({
-		calculateFunc: `(${templates}[${data('function')}] ? ${templates}[${data('function')}].${path} : ${data(path)})`,
+		calculateFunc: path.endsWith('booleanValue')
+			? `(${templates}[${data('function')}] ? ((${templates}[${data('function')}].${path} === false || ${templates}[${data('function')}].${path} === 'false') ? 'false' : 'true') : ${data(path)})`
+			: `(${templates}[${data('function')}] ? ${templates}[${data('function')}].${path} : ${data(path)})`,
 		ignoreOwnChanges: true,
 	});
 	const sectionHeader = (text: ioBroker.Translated, backgroundColor: string): Record<string, unknown> => ({
@@ -337,12 +870,14 @@ function stateForm(
 		},
 	});
 	const limits = (prefix: 'warning' | 'alarm', label: ioBroker.Translated, color: string): Record<string, any> => ({
-		[key(`${prefix}Header`)]: sectionHeader(label, color),
+		[key(`${prefix}Header`)]: { ...sectionHeader(label, color), hidden: mixedSource, ...visibilityDependencies },
 		[key(`${prefix}.enabled`)]: {
 			type: 'checkbox',
 			label: t('Enabled', 'Aktiviert'),
 			newLine: true,
 			xs: 4,
+			hidden: mixedSource,
+			...visibilityDependencies,
 		},
 		[key(`${prefix}.mode`)]: {
 			type: 'select',
@@ -354,20 +889,37 @@ function stateForm(
 				{ value: 'outside', label: t('outside the allowed range', 'außerhalb des erlaubten Bereichs liegt') },
 				{ value: 'inside', label: t('inside the forbidden range', 'im verbotenen Bereich liegt') },
 			],
-			hidden: `!${data(`${prefix}.enabled`)}`,
+			hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource})`,
+			...visibilityDependencies,
+		},
+		[key(`${prefix}.booleanValue`)]: {
+			type: 'select',
+			label: t('Violation when value is …', 'Verletzung, wenn der Wert …'),
+			options: [
+				{ value: 'true', label: 'true' },
+				{ value: 'false', label: 'false' },
+			],
+			newLine: true,
+			xs: 8,
+			hidden: `${data(`${prefix}.enabled`)} !== true || !(${booleanSource}) || (${mixedSource})`,
+			...visibilityDependencies,
 		},
 		[key(`${prefix}.min`)]: {
 			type: 'number',
 			label: t('Lower limit', 'Untergrenze'),
+			step: 0.01,
 			newLine: true,
 			xs: 6,
-			hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'above'`,
+			hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'above'`,
+			...visibilityDependencies,
 		},
 		[key(`${prefix}.max`)]: {
 			type: 'number',
 			label: t('Upper limit', 'Obergrenze'),
+			step: 0.01,
 			xs: 6,
-			hidden: `!${data(`${prefix}.enabled`)} || ${data(`${prefix}.mode`)} === 'below'`,
+			hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below'`,
+			...visibilityDependencies,
 		},
 	});
 	return {
@@ -390,11 +942,11 @@ function stateForm(
 				label: t('ioBroker state', 'ioBroker-State'),
 				newLine: true,
 				xs: 12,
-				customFilter: { type: 'state', common: { type: 'number' } },
+				customFilter: { type: 'state', common: { type: ['number', 'boolean'] } },
 				validator: sourceValidator,
 				validatorErrorText: t(
-					'Please select an existing ioBroker state',
-					'Bitte einen vorhandenen ioBroker-State auswählen',
+					'Please select an existing number or boolean ioBroker state',
+					'Bitte einen vorhandenen ioBroker-State vom Typ Zahl oder Boolean auswählen',
 				),
 				validatorNoSaveOnError: true,
 			},
@@ -407,10 +959,12 @@ function stateForm(
 					...[
 						'warning.enabled',
 						'warning.mode',
+						'warning.booleanValue',
 						'warning.min',
 						'warning.max',
 						'alarm.enabled',
 						'alarm.mode',
+						'alarm.booleanValue',
 						'alarm.min',
 						'alarm.max',
 						'staleWarning.enabled',
@@ -448,7 +1002,7 @@ function stateForm(
 				step: 1,
 				newLine: true,
 				xs: 12,
-				hidden: `!${data('staleWarning.enabled')}`,
+				hidden: `${data('staleWarning.enabled')} !== true`,
 			},
 		},
 	};
@@ -456,6 +1010,95 @@ function stateForm(
 function addStateDisabledRule(states: WatchedStateConfiguration[]): string {
 	const existingNames = JSON.stringify(states.map(state => state.name.trim().toLowerCase()));
 	return `!String(data.name || '').trim() || ${existingNames}.includes(String(data.name || '').trim().toLowerCase()) || !Array.isArray(data._validSourceIds) || !data._validSourceIds.includes(String(data.sourceId || '').trim())`;
+}
+function bulkTypeLimitFields(
+	type: 'number' | 'boolean',
+	prefix: 'warning' | 'alarm',
+	visible: string,
+	hiddenDependsOn?: Array<{ attr?: string }>,
+): Record<string, any> {
+	const visibilityDependencies = hiddenDependsOn ? { hiddenDependsOn } : {};
+	const root = `${type}${prefix[0].toUpperCase()}${prefix.slice(1)}`;
+	const color = prefix === 'warning' ? '#d6a500' : '#c62828';
+	const header =
+		type === 'number'
+			? prefix === 'warning'
+				? t('Numeric warning limits', 'Numerische Warngrenzen')
+				: t('Numeric alarm limits', 'Numerische Alarmgrenzen')
+			: prefix === 'warning'
+				? t('Boolean warning settings', 'Boolesche Warneinstellungen')
+				: t('Boolean alarm settings', 'Boolesche Alarmeinstellungen');
+	const fields: Record<string, any> = {
+		[`${root}Header`]: {
+			type: 'staticText',
+			text: header,
+			newLine: true,
+			xs: 12,
+			hidden: `!(${visible})`,
+			...visibilityDependencies,
+			style: {
+				backgroundColor: color,
+				color: '#fff',
+				fontWeight: 700,
+				borderRadius: '4px',
+				padding: '8px',
+			},
+		},
+		[`${root}.enabled`]: {
+			type: 'checkbox',
+			label: t('Enabled', 'Aktiviert'),
+			newLine: true,
+			xs: 4,
+			hidden: `!(${visible})`,
+			...visibilityDependencies,
+		},
+	};
+	if (type === 'number') {
+		fields[`${root}.mode`] = {
+			type: 'select',
+			label: t('Violation when value is …', 'Verletzung, wenn der Wert …'),
+			xs: 8,
+			options: [
+				{ value: 'below', label: t('below the limit', 'unter dem Grenzwert liegt') },
+				{ value: 'above', label: t('above the limit', 'über dem Grenzwert liegt') },
+				{ value: 'outside', label: t('outside the allowed range', 'außerhalb des erlaubten Bereichs liegt') },
+				{ value: 'inside', label: t('inside the forbidden range', 'innerhalb des verbotenen Bereichs liegt') },
+			],
+			hidden: `!(${visible}) || data.${root}.enabled !== true`,
+			...visibilityDependencies,
+		};
+		fields[`${root}.min`] = {
+			type: 'number',
+			label: t('Lower limit', 'Untergrenze'),
+			step: 0.01,
+			newLine: true,
+			xs: 6,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'above'`,
+			...visibilityDependencies,
+		};
+		fields[`${root}.max`] = {
+			type: 'number',
+			label: t('Upper limit', 'Obergrenze'),
+			step: 0.01,
+			xs: 6,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'below'`,
+			...visibilityDependencies,
+		};
+	} else {
+		fields[`${root}.booleanValue`] = {
+			type: 'select',
+			label: t('Violation when value is …', 'Verletzung, wenn der Wert …'),
+			options: [
+				{ value: 'true', label: 'true' },
+				{ value: 'false', label: 'false' },
+			],
+			newLine: true,
+			xs: 8,
+			hidden: `!(${visible}) || data.${root}.enabled !== true`,
+			...visibilityDependencies,
+		};
+	}
+	return fields;
 }
 function editStatesDisabledRule(states: WatchedStateConfiguration[]): string {
 	const stateIds = JSON.stringify(states.map(state => state.id));
@@ -501,6 +1144,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private sortRefreshTimer?: NodeJS.Timeout;
 	private staleCheckTimer?: NodeJS.Timeout;
 	private configurationBackupTimer?: NodeJS.Timeout;
+	private bulkSelectionSessions = new Map<string, any>();
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({ ...options, name: 'device-monitoring' });
 		this.on('ready', this.onReady.bind(this));
@@ -548,6 +1192,21 @@ class DeviceMonitoring extends utils.Adapter {
 		this.scheduleConfigurationBackup();
 	}
 	private async onMessage(message: ioBroker.Message): Promise<void> {
+		if (message.command === 'bulkStateSelection') {
+			try {
+				const request =
+					typeof message.message === 'string'
+						? (JSON.parse(message.message) as Record<string, unknown>)
+						: ((message.message || {}) as Record<string, unknown>);
+				const token = typeof request.token === 'string' ? request.token : '';
+				const action = request.action === 'none' ? 'none' : 'all';
+				const result = this.applyBulkSelection(token, action, request.form);
+				this.sendTo(message.from, message.command, result, message.callback);
+			} catch (error) {
+				this.sendTo(message.from, message.command, { error: String(error) }, message.callback);
+			}
+			return;
+		}
 		if (message.command === 'backupDeviceConfiguration') {
 			try {
 				const updated = await this.backupDeviceConfiguration();
@@ -644,6 +1303,64 @@ class DeviceMonitoring extends utils.Adapter {
 	public getFunctionNames(): string[] {
 		return [...new Set(this.devices.flatMap(device => device.states.map(state => state.function)).filter(Boolean))];
 	}
+	public getDeviceConfigurations(): DeviceConfiguration[] {
+		return this.devices.map(device => ({
+			...device,
+			states: device.states.map(state => ({
+				...state,
+				warning: { ...state.warning },
+				alarm: { ...state.alarm },
+				staleWarning: { ...state.staleWarning },
+			})),
+		}));
+	}
+	public getDeviceOptions(): { id: string; name: string }[] {
+		return this.devices.map(device => ({ id: device.id, name: device.name }));
+	}
+	public createBulkSelectionSession(data: any): string {
+		const token = `bulk_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+		this.bulkSelectionSessions.set(token, JSON.parse(JSON.stringify(data)));
+		setTimeout(() => this.bulkSelectionSessions.delete(token), 10 * 60 * 1000);
+		return token;
+	}
+	public removeBulkSelectionSession(token: string): void {
+		this.bulkSelectionSessions.delete(token);
+	}
+	private applyBulkSelection(token: string, action: 'all' | 'none', form: unknown): { native: any } {
+		const session = this.bulkSelectionSessions.get(token);
+		if (!session) {
+			throw new Error('The bulk selection session has expired');
+		}
+		const current = form && typeof form === 'object' ? JSON.parse(JSON.stringify(form)) : session;
+		current.states = Array.isArray(current.states)
+			? current.states.map((row: any) => ({ ...row, selected: action === 'all' }))
+			: [];
+		this.bulkSelectionSessions.set(token, current);
+		return { native: current };
+	}
+	public async getStateCandidates(): Promise<StateCandidate[]> {
+		const objects = await this.getForeignObjectsAsync('*', 'state');
+		const monitoredSources = new Set(this.devices.flatMap(device => device.states.map(state => state.sourceId)));
+		const usedNames = new Map<string, number>();
+		return Object.entries(objects)
+			.filter(([, object]) => !!supportedSourceType(object.common?.type))
+			.map(([id, object]) => {
+				const fallback = id.split('.').pop() || id;
+				const baseName = translatedObjectName(object.common?.name, fallback);
+				const key = baseName.toLocaleLowerCase();
+				const occurrence = (usedNames.get(key) || 0) + 1;
+				usedNames.set(key, occurrence);
+				const name = occurrence === 1 ? baseName : `${baseName} (${occurrence})`;
+				return {
+					id,
+					name,
+					type: supportedSourceType(object.common?.type) || '',
+					role: String(object.common?.role || ''),
+					alreadyAdded: monitoredSources.has(id),
+				};
+			})
+			.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+	}
 	public getDeviceConfiguration(deviceId: string): DeviceConfiguration | undefined {
 		return this.devices.find(device => device.id === deviceId);
 	}
@@ -659,13 +1376,14 @@ class DeviceMonitoring extends utils.Adapter {
 		);
 		return result.sort((a, b) => rank[a.status] - rank[b.status] || a.device.name.localeCompare(b.device.name));
 	}
-	public async addDevice(name: string): Promise<void> {
+	public async addDevice(name: string): Promise<string> {
 		const used = new Set(this.devices.map(device => device.id));
 		let id: string;
 		do {
 			id = `device_${String(this.nextDeviceNumber++).padStart(3, '0')}`;
 		} while (used.has(id));
 		await this.saveDevices([...this.devices, { id, name: name.trim(), states: [] }]);
+		return id;
 	}
 	public async renameDevice(id: string, name: string): Promise<void> {
 		await this.saveDevices(this.devices.map(d => (d.id === id ? { ...d, name: name.trim() } : d)));
@@ -685,6 +1403,25 @@ class DeviceMonitoring extends utils.Adapter {
 		await this.saveDevices(
 			this.devices.map(d =>
 				d.id === deviceId ? { ...d, states: [...d.states, this.normalizeState(data, id)] } : d,
+			),
+			false,
+		);
+	}
+	public async addWatchedStates(deviceId: string, entries: any[]): Promise<void> {
+		const device = this.devices.find(d => d.id === deviceId);
+		if (!device || !entries.length) {
+			return;
+		}
+		const usedIds = new Set([DEVICE_CARD_DETAILS_ID, ...device.states.map(state => state.id)]);
+		const states = entries.map(entry => {
+			const id = uniqueId(safeId(String(entry.name), 'state'), usedIds);
+			usedIds.add(id);
+			this.saveFunctionTemplate(entry);
+			return this.normalizeState(entry, id);
+		});
+		await this.saveDevices(
+			this.devices.map(current =>
+				current.id === deviceId ? { ...current, states: [...current.states, ...states] } : current,
 			),
 			false,
 		);
@@ -730,6 +1467,7 @@ class DeviceMonitoring extends utils.Adapter {
 		const limit = (input: any, fallback: LimitMode): LimitConfiguration => ({
 			enabled: input?.enabled === true,
 			mode: ['below', 'above', 'outside', 'inside'].includes(input?.mode) ? input.mode : fallback,
+			booleanValue: input?.booleanValue === false || input?.booleanValue === 'false' ? false : true,
 			min: typeof input?.min === 'number' ? input.min : undefined,
 			max: typeof input?.max === 'number' ? input.max : undefined,
 		});
@@ -1030,12 +1768,20 @@ class DeviceMonitoring extends utils.Adapter {
 				warning: {
 					enabled: template.warning?.enabled === true,
 					mode: mode(template.warning?.mode),
+					booleanValue:
+						template.warning?.booleanValue === false || template.warning?.booleanValue === 'false'
+							? false
+							: true,
 					min: number(template.warning?.min),
 					max: number(template.warning?.max),
 				},
 				alarm: {
 					enabled: template.alarm?.enabled === true,
 					mode: mode(template.alarm?.mode),
+					booleanValue:
+						template.alarm?.booleanValue === false || template.alarm?.booleanValue === 'false'
+							? false
+							: true,
 					min: number(template.alarm?.min),
 					max: number(template.alarm?.max),
 				},
@@ -1091,11 +1837,18 @@ class DeviceMonitoring extends utils.Adapter {
 		await this.refreshSourceValidity();
 	}
 	private isValidSourceObject(object: ioBroker.Object | null | undefined): object is ioBroker.StateObject {
-		return object?.type === 'state';
+		return object?.type === 'state' && !!supportedSourceType(object.common?.type);
+	}
+	public async getValidSourceTypes(): Promise<Record<string, SupportedSourceType>> {
+		const objects = await this.getForeignObjectsAsync('*', 'state');
+		return Object.fromEntries(
+			Object.entries(objects)
+				.map(([id, object]) => [id, supportedSourceType(object.common?.type)] as const)
+				.filter((entry): entry is readonly [string, SupportedSourceType] => !!entry[1]),
+		);
 	}
 	public async getValidSourceIds(): Promise<string[]> {
-		const objects = await this.getForeignObjectsAsync('*', 'state');
-		return Object.keys(objects);
+		return Object.keys(await this.getValidSourceTypes());
 	}
 	private async refreshSourceValidity(): Promise<void> {
 		this.invalidSources.clear();
@@ -1116,7 +1869,8 @@ class DeviceMonitoring extends utils.Adapter {
 			return this.sourceUnits.get(sourceId) || '';
 		}
 		const object = await this.getForeignObjectAsync(sourceId);
-		const unit = object?.type === 'state' && typeof object.common.unit === 'string' ? object.common.unit : '';
+		const unit =
+			this.isValidSourceObject(object) && typeof object.common.unit === 'string' ? object.common.unit : '';
 		this.sourceUnits.set(sourceId, unit);
 		return unit;
 	}
@@ -1333,16 +2087,16 @@ class DeviceMonitoring extends utils.Adapter {
 		if (watched.warning.enabled) {
 			tooltip.push(
 				this.localize(
-					`Warning limit: ${limitDisplay(watched.warning, unit)}`,
-					`Warngrenze: ${limitDisplay(watched.warning, unit)}`,
+					`Warning limit: ${limitDisplay(watched.warning, unit, typeof data.value === 'boolean')}`,
+					`Warngrenze: ${limitDisplay(watched.warning, unit, typeof data.value === 'boolean')}`,
 				),
 			);
 		}
 		if (watched.alarm.enabled) {
 			tooltip.push(
 				this.localize(
-					`Alarm limit: ${limitDisplay(watched.alarm, unit)}`,
-					`Alarmgrenze: ${limitDisplay(watched.alarm, unit)}`,
+					`Alarm limit: ${limitDisplay(watched.alarm, unit, typeof data.value === 'boolean')}`,
+					`Alarmgrenze: ${limitDisplay(watched.alarm, unit, typeof data.value === 'boolean')}`,
 				),
 			);
 		}
