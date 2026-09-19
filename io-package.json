@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.17",
+    "version": "0.0.18",
     "news": {
+      "0.0.18": {
+        "en": "Add an option to send configured notifications via notify while always publishing them to `info.message`.",
+        "de": "Fügt die Option hinzu, konfigurierte Benachrichtigungen per Notify zu senden und immer in `info.message` zu posten.",
+        "ru": "Добавьте возможность отправлять настроенные уведомления с помощью уведомлений, всегда публикуя их в `info.message`.",
+        "pt": "Adicione a opção de enviar notificações configuradas via notify publicando-as sempre em `info.message`.",
+        "nl": "Voeg een optie toe om geconfigureerde meldingen via Notify te verzenden en ze altijd te publiceren op `info.message`.",
+        "fr": "Ajout d'une option pour envoyer des notifications configurées via Notify tout en les publiant sur « info.message ».",
+        "it": "Aggiunga un'opzione per inviare notifiche configurate pubblicandole sempre su `info.message`.",
+        "es": "Añada una opción para enviar notificaciones configuradas mediante Notify y publicarlas siempre en `info.message`.",
+        "pl": "Dodaj opcję wysyłania skonfigurowanych powiadomień za pośrednictwem powiadomień, zawsze publikując je na stronie `info.message`.",
+        "uk": "Додайте опцію надсилання налаштованих сповіщень через сповіщення, завжди публікуючи їх у `info.message`.",
+        "zh-cn": "添加一个选项，通过通知发送已配置的通知，同时始终将其发布到 `info.message`。"
+      },
       "0.0.17": {
         "en": "Update the default recovery notification message to identify the state and device.",
         "de": "Aktualisieren Sie die Standard-Wiederherstellungsmeldung mit Status und Gerät.",
@@ -80,19 +93,6 @@
         "pl": "Napraw zapisywanie dowolnie wprowadzonych nazw funkcji i ich szablonów",
         "uk": "Виправлено збереження вільно введених імен функцій та їх шаблонів",
         "zh-cn": "修复了保存自由输入的函数名称及其模板的问题"
-      },
-      "0.0.11": {
-        "en": "Add delayed and manual backup and restore of the device configuration\nReset update intervals on adapter start while retaining the current source timestamp\nAlways show the option to save or update a function template",
-        "de": "Manuelles Backup und Restore der Gerätekonfiguration hinzufügen\nAktualisierungsintervalle beim Adapterstart unter Beibehaltung des Quellzeitstempels\nFunktionsvorlagen immer speichern oder aktualisieren",
-        "ru": "Добавьте отложенное и ручное резервное копирование и восстановление конфигурации устройства\nСбросьте интервалы обновления при запуске адаптера с сохранением текущей исходной временной метки\nВсегда показывайте возможность сохранить или обновить шаблон функции",
-        "pt": "Adicione backup e restauração atrasados e manuais do dispositivo\nRedefina os intervalos de atualização ao iniciar o adaptador, mantendo a fonte atual\nSempre exiba a opção de salvar ou atualizar um modelo",
-        "nl": "Voeg een vertraagde en handmatige back-up en herstel van de apparaatconfiguratie toe\nDe update-intervallen opnieuw instellen bij het starten van de adapter, met behoud van de huidige tijdstempel van de bron\nLaat altijd de optie zien om een functiesjabloon op te slaan of bij te werken",
-        "fr": "Ajouter une sauvegarde et une restauration manuelles différées de l'appareil\nRéinitialiser les mises à jour au démarrage de l'adaptateur en conservant l'horodatage de la source\nChoisissez toujours de sauvegarder ou de mettre à jour un modèle de fonction",
-        "it": "Aggiungere backup e ripristino manuale e ritardato del dispositivo\nReimposta gli intervalli di aggiornamento all'avvio dell'adattatore mantenendo la fonte\nMostri sempre di salvare o aggiornare un modello di funzione",
-        "es": "Añadir respaldo y restauración retrasados y manuales de la configuración del dispositivo\nRestablecer los intervalos de actualización al iniciar el adaptador conservando la hora fuente actual\nMostrar siempre la opción de guardar o actualizar una plantilla",
-        "pl": "Dodaj opóźnione i ręczne tworzenie kopii zapasowych oraz przywracanie konfiguracji urządzenia\nZresetuj interwały aktualizacji po uruchomieniu adaptera, zachowując aktualny znacznik czasowy źródła\nZawsze wyświetlaj opcję zapisywania lub aktualizacji szablonu funkcji",
-        "uk": "Додайте відкладене та ручне резервне копіювання та відновлення конфігурації пристрою\nСкидання інтервалів оновлення при запуску адаптера, зберігаючи поточну позначку часу джерела\nЗавжди показувати можливість збереження або оновлення шаблону функції",
-        "zh-cn": "添加设备配置的延迟和手动备份和恢复\n在适配器启动时重置更新间隔，同时保留当前源时间戳\n始终显示保存或更新函数模板的选项"
       }
     },
     "titleLang": {
