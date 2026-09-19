@@ -269,6 +269,16 @@
   ],
   "native": {
     "configurationBackupDelayMinutes": 60,
+    "warningTitleTemplate": "Warnung: {{device}} - {{state}}",
+    "warningMessageTemplate": "Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}})",
+    "alarmTitleTemplate": "Alarm: {{device}} - {{state}}",
+    "alarmMessageTemplate": "Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}})",
+    "timeoutTitleTemplate": "Aktualisierungs-Timeout: {{device}} - {{state}}",
+    "timeoutMessageTemplate": "Der State {{state}} vom Gerät {{device}} hat sich mindestens {{timeoutMinutes}} Minuten nicht gemeldet. Letzte Aktualisierung: {{lastUpdate}} ({{remark}})",
+    "invalidSourceTitleTemplate": "Ungültige oder gelöschte Quelle: {{device}} - {{state}}",
+    "invalidSourceMessageTemplate": "Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})",
+    "recoveredTitleTemplate": "Gerät wieder in Ordnung: {{device}} - {{state}}",
+    "recoveredMessageTemplate": "{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})",
     "enabledNotifications": [
       "deviceWarning",
       "deviceAlarm",
@@ -310,6 +320,19 @@
         "read": true,
         "write": false,
         "def": "{\"devices\":[]}"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.message",
+      "type": "state",
+      "common": {
+        "role": "json",
+        "name": "Notification message",
+        "type": "string",
+        "read": true,
+        "write": false,
+        "def": "{}"
       },
       "native": {}
     },

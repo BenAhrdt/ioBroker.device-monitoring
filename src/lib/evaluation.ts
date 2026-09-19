@@ -22,6 +22,8 @@ export interface WatchedStateConfiguration {
 	name: string;
 	/** Full ioBroker object ID of the source state. */
 	sourceId: string;
+	/** Optional user note included in notification templates. */
+	remark?: string;
 	/** Function name used to group and reuse monitoring settings. */
 	function: string;
 	/** Warning-limit configuration. */

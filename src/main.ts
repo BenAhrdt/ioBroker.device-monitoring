@@ -80,6 +80,105 @@ const OBSOLETE_DIRECT_STATE_IDS = [
 ] as const;
 const OBSOLETE_DATA_STATE_IDS = ['value', 'status', 'warning', 'alarm', 'updateTimeout'] as const;
 const DEVICE_CARD_DETAILS_ID = '__card_details';
+type MessageTemplateType = 'warning' | 'alarm' | 'timeout' | 'invalidSource' | 'recovered';
+
+interface MessageTrigger {
+	type: MessageTemplateType;
+	title: string;
+	deviceId: string;
+	deviceName: string;
+	stateId: string;
+	stateName: string;
+	sourceId: string;
+	remark: string;
+	value: ioBroker.StateValue;
+	unit: string;
+	triggeredAt: number;
+	lastUpdate: number | null;
+	timeoutMinutes?: number;
+	message: string;
+}
+
+const DEFAULT_MESSAGE_TEMPLATES: Record<MessageTemplateType, { en: string; de: string }> = {
+	warning: {
+		en: 'State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}})',
+		de: 'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}})',
+	},
+	alarm: {
+		en: 'State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}})',
+		de: 'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}})',
+	},
+	timeout: {
+		en: 'State {{state}} on device {{device}} has not reported for at least {{timeoutMinutes}} minutes. Last update: {{lastUpdate}} ({{remark}})',
+		de: 'Der State {{state}} vom Gerät {{device}} hat sich mindestens {{timeoutMinutes}} Minuten nicht gemeldet. Letzte Aktualisierung: {{lastUpdate}} ({{remark}})',
+	},
+	invalidSource: {
+		en: 'Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}})',
+		de: 'Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})',
+	},
+	recovered: {
+		en: '{{device}} / {{state}} is back to normal: {{value}} {{unit}} ({{remark}})',
+		de: '{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})',
+	},
+};
+const DEFAULT_NOTIFICATION_TITLE_TEMPLATES: Record<MessageTemplateType, { en: string; de: string }> = {
+	warning: { en: 'Warning: {{device}} - {{state}}', de: 'Warnung: {{device}} - {{state}}' },
+	alarm: { en: 'Alarm: {{device}} - {{state}}', de: 'Alarm: {{device}} - {{state}}' },
+	timeout: { en: 'Update timeout: {{device}} - {{state}}', de: 'Aktualisierungs-Timeout: {{device}} - {{state}}' },
+	invalidSource: {
+		en: 'Invalid or deleted source: {{device}} - {{state}}',
+		de: 'Ungültige oder gelöschte Quelle: {{device}} - {{state}}',
+	},
+	recovered: {
+		en: 'Device recovered: {{device}} - {{state}}',
+		de: 'Gerät wieder in Ordnung: {{device}} - {{state}}',
+	},
+};
+const LEGACY_DEFAULT_MESSAGE_TEMPLATES: Partial<Record<MessageTemplateType, readonly string[]>> = {
+	warning: [
+		'Warnung bei {{device}} / {{state}}: {{value}} {{unit}}',
+		'Warning at {{device}} / {{state}}: {{value}} {{unit}}',
+		'Warnung bei {{device}} / {{state}}: {{value}} {{unit}} (Grenze: {{warningLimits}})',
+		'Warning at {{device}} / {{state}}: {{value}} {{unit}} (limit: {{warningLimits}})',
+	],
+	alarm: [
+		'Alarm bei {{device}} / {{state}}: {{value}} {{unit}}',
+		'Alarm at {{device}} / {{state}}: {{value}} {{unit}}',
+		'Alarm bei {{device}} / {{state}}: {{value}} {{unit}} (Grenze: {{alarmLimits}})',
+		'Alarm at {{device}} / {{state}}: {{value}} {{unit}} (limit: {{alarmLimits}})',
+	],
+	timeout: [
+		'Keine Aktualisierung bei {{device}} / {{state}} seit {{timeoutMinutes}} Minuten. Letzter Wert: {{value}} {{unit}} (letzte Aktualisierung: {{lastUpdate}})',
+		'No update at {{device}} / {{state}} for {{timeoutMinutes}} minutes. Last value: {{value}} {{unit}} (last update: {{lastUpdate}})',
+	],
+	invalidSource: [
+		'Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}}',
+		'Invalid or deleted source for {{device}} / {{state}}: {{sourceId}}',
+	],
+	recovered: [
+		'{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}}',
+		'{{device}} / {{state}} is back to normal: {{value}} {{unit}}',
+	],
+};
+const LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES: Partial<Record<MessageTemplateType, readonly string[]>> = {
+	warning: ['Warnung: {{device}} / {{state}}'],
+	alarm: ['Alarm: {{device}} / {{state}}'],
+	timeout: ['Aktualisierungs-Timeout: {{device}} / {{state}}'],
+	invalidSource: ['Ungültige oder gelöschte Quelle: {{device}} / {{state}}'],
+	recovered: ['Gerät wieder in Ordnung: {{device}} / {{state}}'],
+};
+
+function renderMessageTemplate(template: string, values: Record<string, string>): string {
+	const remark = values.remark?.trim() || '';
+	const templateWithoutEmptyRemark = remark
+		? template
+		: template.replace(/[ \t]*\(\s*\{\{\s*remark\s*\}\}\s*\)/g, '');
+	return templateWithoutEmptyRemark
+		.replace(/\{\{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*\}\}/g, (placeholder, key: string) => values[key] ?? placeholder)
+		.replace(/[ \t]{2,}/g, ' ')
+		.trim();
+}
+
 function safeId(value: string, fallback: string): string {
 	return (
 		value
@@ -98,19 +197,6 @@ function uniqueId(base: string, used: Set<string>): string {
 		id = `${base}_${i++}`;
 	}
 	return id;
-}
-function limitDisplay(limit: LimitConfiguration, unit = '', booleanSource = false): string {
-	if (booleanSource && limit.booleanValue !== undefined) {
-		return `= ${limit.booleanValue ? 'true' : 'false'}`;
-	}
-	const suffix = unit ? ` ${unit}` : '';
-	if (limit.mode === 'below') {
-		return `< ${limit.min ?? '—'}${suffix}`;
-	}
-	if (limit.mode === 'above') {
-		return `> ${limit.max ?? '—'}${suffix}`;
-	}
-	return `${limit.min ?? '—'}–${limit.max ?? '—'}${suffix}`;
 }
 function timestampDisplay(timestamp: number): string {
 	const date = new Date(timestamp);
@@ -294,6 +380,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 									...data,
 									...typeSettings,
 									name: String(row.name || candidate.name).trim(),
+									remark: String(row.remark || '').trim(),
 									sourceId: candidate.id,
 									sourceType: candidate.type,
 									targetDevice: row.targetDevice,
@@ -545,6 +632,7 @@ function defaultStateForm(validSourceIds: string[], sourceTypes: Record<string, 
 	return {
 		name: '',
 		sourceId: '',
+		remark: '',
 		_validSourceIds: validSourceIds,
 		_sourceTypes: sourceTypes,
 		function: '',
@@ -648,6 +736,7 @@ function defaultBulkStateForm(candidates: StateCandidate[], devices: { id: strin
 		states: candidates.map(candidate => ({
 			selected: !candidate.alreadyAdded,
 			name: candidate.name,
+			remark: '',
 			sourceId: candidate.id,
 			role: candidate.role || '—',
 			type: candidate.type || '—',
@@ -753,8 +842,8 @@ function bulkStateForm(
 			statesHeader: {
 				type: 'staticText',
 				text: t(
-					`Select states, target devices and display names (${candidates.length} matches)`,
-					`States, Zielgeräte und Anzeigenamen anpassen (${candidates.length} Treffer)`,
+					`Select states, target devices, display names and remarks (${candidates.length} matches)`,
+					`States, Zielgeräte, Anzeigenamen und Bemerkungen anpassen (${candidates.length} Treffer)`,
 				),
 				newLine: true,
 				xs: 12,
@@ -768,14 +857,20 @@ function bulkStateForm(
 						type: 'text',
 						attr: 'name',
 						title: t('Display name', 'Anzeigename'),
-						width: '20%',
+						width: '17%',
 					},
 					{
 						type: 'text',
 						attr: 'sourceId',
 						title: 'State-ID',
 						disabled: true,
-						width: '30%',
+						width: '25%',
+					},
+					{
+						type: 'text',
+						attr: 'remark',
+						title: t('Remark', 'Bemerkung'),
+						width: '16%',
 					},
 					{
 						type: 'autocomplete',
@@ -784,14 +879,14 @@ function bulkStateForm(
 						options: devices.map(device => ({ value: device.id, label: device.name })),
 						freeSolo: true,
 						noTranslation: true,
-						width: '24%',
+						width: '20%',
 					},
 					{
 						type: 'text',
 						attr: 'role',
 						title: t('Role', 'Rolle'),
 						disabled: true,
-						width: '12%',
+						width: '8%',
 					},
 					{
 						type: 'text',
@@ -838,10 +933,19 @@ function stateForm(
 	const key = (path: string): string => (stateId ? `${stateId}.${path}` : path);
 	const data = (path: string): string => (stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`);
 	const selectedSourceType =
-		sourceTypeExpression || `data._sourceTypes[String(${data('sourceId')} || '').trim()] || 'number'`;
+		sourceTypeExpression || `data._sourceTypes[String(${data('sourceId')} || '').trim()] || ''`;
 	const mixedSource = mixedSourceExpression || `(${selectedSourceType}) === 'mixed'`;
 	const booleanSource = booleanSourceExpression || `(${selectedSourceType}) === 'boolean'`;
-	const numericSource = numericSourceExpression || `(${selectedSourceType}) !== 'boolean'`;
+	const numericSource = numericSourceExpression || `(${selectedSourceType}) === 'number'`;
+	const gateSettingsUntilValidSource = !stateId && !sourceTypeExpression;
+	const validSource = `Array.isArray(data._validSourceIds) && data._validSourceIds.includes(String(${data('sourceId')} || '').trim())`;
+	const hideUntilValidSource = gateSettingsUntilValidSource ? `!(${validSource})` : undefined;
+	const combineHidden = (condition?: string): string | undefined =>
+		hideUntilValidSource
+			? condition
+				? `${hideUntilValidSource} || (${condition})`
+				: hideUntilValidSource
+			: condition;
 	const visibilityDependencies = hiddenDependsOn ? { hiddenDependsOn } : {};
 	const existingNames = JSON.stringify(states.map(state => state.name.trim().toLowerCase()));
 	const otherStateIds = JSON.stringify(states.filter(state => state.id !== stateId).map(state => state.id));
@@ -870,13 +974,17 @@ function stateForm(
 		},
 	});
 	const limits = (prefix: 'warning' | 'alarm', label: ioBroker.Translated, color: string): Record<string, any> => ({
-		[key(`${prefix}Header`)]: { ...sectionHeader(label, color), hidden: mixedSource, ...visibilityDependencies },
+		[key(`${prefix}Header`)]: {
+			...sectionHeader(label, color),
+			hidden: combineHidden(mixedSource),
+			...visibilityDependencies,
+		},
 		[key(`${prefix}.enabled`)]: {
 			type: 'checkbox',
 			label: t('Enabled', 'Aktiviert'),
 			newLine: true,
 			xs: 4,
-			hidden: mixedSource,
+			hidden: combineHidden(mixedSource),
 			...visibilityDependencies,
 		},
 		[key(`${prefix}.mode`)]: {
@@ -889,7 +997,7 @@ function stateForm(
 				{ value: 'outside', label: t('outside the allowed range', 'außerhalb des erlaubten Bereichs liegt') },
 				{ value: 'inside', label: t('inside the forbidden range', 'im verbotenen Bereich liegt') },
 			],
-			hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource})`,
+			hidden: combineHidden(`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource})`),
 			...visibilityDependencies,
 		},
 		[key(`${prefix}.booleanValue`)]: {
@@ -901,7 +1009,7 @@ function stateForm(
 			],
 			newLine: true,
 			xs: 8,
-			hidden: `${data(`${prefix}.enabled`)} !== true || !(${booleanSource}) || (${mixedSource})`,
+			hidden: combineHidden(`${data(`${prefix}.enabled`)} !== true || !(${booleanSource}) || (${mixedSource})`),
 			...visibilityDependencies,
 		},
 		[key(`${prefix}.min`)]: {
@@ -910,7 +1018,9 @@ function stateForm(
 			step: 0.01,
 			newLine: true,
 			xs: 6,
-			hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'above'`,
+			hidden: combineHidden(
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'above'`,
+			),
 			...visibilityDependencies,
 		},
 		[key(`${prefix}.max`)]: {
@@ -918,7 +1028,9 @@ function stateForm(
 			label: t('Upper limit', 'Obergrenze'),
 			step: 0.01,
 			xs: 6,
-			hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below'`,
+			hidden: combineHidden(
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below'`,
+			),
 			...visibilityDependencies,
 		},
 	});
@@ -950,6 +1062,21 @@ function stateForm(
 				),
 				validatorNoSaveOnError: true,
 			},
+			...(!sourceTypeExpression
+				? {
+						[key('remark')]: {
+							type: 'text',
+							label: t('Remark', 'Bemerkung'),
+							help: t(
+								'Optional note available as the {{remark}} notification-template placeholder.',
+								'Optionale Bemerkung, die als Platzhalter {{remark}} in Benachrichtigungsvorlagen verwendet werden kann.',
+							),
+							hidden: hideUntilValidSource,
+							newLine: true,
+							xs: 12,
+						},
+					}
+				: {}),
 			[key('function')]: {
 				type: 'autocomplete',
 				label: t('Function', 'Funktion'),
@@ -974,6 +1101,7 @@ function stateForm(
 				help: functions.length
 					? t(`Existing functions: ${functions.join(', ')}`, `Vorhandene Funktionen: ${functions.join(', ')}`)
 					: undefined,
+				hidden: hideUntilValidSource,
 				newLine: true,
 				xs: 12,
 			},
@@ -983,15 +1111,20 @@ function stateForm(
 					'Save or update this selection as function template',
 					'Diese Auswahl als Funktionsvorlage speichern oder aktualisieren',
 				),
+				hidden: hideUntilValidSource,
 				newLine: true,
 				xs: 12,
 			},
 			...limits('warning', t('Warning limits', 'Warngrenzen'), '#d6a500'),
 			...limits('alarm', t('Alarm limits', 'Alarmgrenzen'), '#c62828'),
-			[key('staleWarningHeader')]: sectionHeader(t('Update timeout', 'Aktualisierungs-Timeout'), '#1976d2'),
+			[key('staleWarningHeader')]: {
+				...sectionHeader(t('Update timeout', 'Aktualisierungs-Timeout'), '#1976d2'),
+				hidden: hideUntilValidSource,
+			},
 			[key('staleWarning.enabled')]: {
 				type: 'checkbox',
 				label: t('Warn if the state is not updated', 'Warnen, wenn der State nicht aktualisiert wird'),
+				hidden: hideUntilValidSource,
 				newLine: true,
 				xs: 12,
 			},
@@ -1002,7 +1135,7 @@ function stateForm(
 				step: 1,
 				newLine: true,
 				xs: 12,
-				hidden: `${data('staleWarning.enabled')} !== true`,
+				hidden: combineHidden(`${data('staleWarning.enabled')} !== true`),
 			},
 		},
 	};
@@ -1135,6 +1268,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private updateHistoryQueues = new Map<string, Promise<void>>();
 	private notificationStatuses = new Map<string, WatchStatus>();
 	private notificationLastSent = new Map<string, number>();
+	private messageWriteQueue: Promise<void> = Promise.resolve();
 	private cardDetails = new Map<string, string>();
 	private cardDetailsQueues = new Map<string, Promise<void>>();
 	private legacyRuntimeStatesRemoved = false;
@@ -1167,6 +1301,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private async onReady(): Promise<void> {
 		const systemConfig = await this.getForeignObjectAsync('system.config');
 		this.displayLanguage = systemConfig?.common?.language === 'de' ? 'de' : 'en';
+		await this.migrateNotificationTemplateDefaults();
 		this.deviceManagement = new DeviceMonitoringManagement(this);
 		const legacyDevices = this.normalizeDevices(this.config.devices);
 		this.devices = legacyDevices.length ? legacyDevices : await this.loadDevicesFromObjects();
@@ -1176,6 +1311,13 @@ class DeviceMonitoring extends utils.Adapter {
 			}
 		}
 		await this.ensureState('info.deviceInfo', t('Device information', 'Geräteinformationen'), 'string', 'json');
+		await this.ensureState(
+			'info.message',
+			t('Notification message', 'Benachrichtigungsnachricht'),
+			'string',
+			'json',
+		);
+		await this.clearLegacyMessageState();
 		await this.rebuildObjects();
 		if (legacyDevices.length) {
 			await this.removeLegacyDeviceConfig();
@@ -1190,6 +1332,64 @@ class DeviceMonitoring extends utils.Adapter {
 			void this.updateAll();
 		}, 60_000);
 		this.scheduleConfigurationBackup();
+	}
+	private async clearLegacyMessageState(): Promise<void> {
+		const state = await this.getStateAsync('info.message');
+		if (typeof state?.val !== 'string') {
+			return;
+		}
+		try {
+			const parsed = JSON.parse(state.val) as unknown;
+			if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && !('messages' in parsed)) {
+				return;
+			}
+		} catch {
+			// Clear malformed or legacy JSON so consumers only see the new single-message format.
+		}
+		await this.setStateChangedAsync('info.message', { val: '{}', ack: true });
+	}
+	private async migrateNotificationTemplateDefaults(): Promise<void> {
+		const instanceId = `system.adapter.${this.namespace}`;
+		const instanceObject = await this.getForeignObjectAsync(instanceId);
+		if (!instanceObject) {
+			return;
+		}
+		const native = { ...instanceObject.native };
+		const configKeys: Record<MessageTemplateType, { message: string; title: string }> = {
+			warning: { message: 'warningMessageTemplate', title: 'warningTitleTemplate' },
+			alarm: { message: 'alarmMessageTemplate', title: 'alarmTitleTemplate' },
+			timeout: { message: 'timeoutMessageTemplate', title: 'timeoutTitleTemplate' },
+			invalidSource: { message: 'invalidSourceMessageTemplate', title: 'invalidSourceTitleTemplate' },
+			recovered: { message: 'recoveredMessageTemplate', title: 'recoveredTitleTemplate' },
+		};
+		let changed = false;
+		for (const type of Object.keys(configKeys) as MessageTemplateType[]) {
+			const { message, title } = configKeys[type];
+			const configuredMessage = native[message];
+			if (
+				typeof configuredMessage !== 'string' ||
+				!configuredMessage.trim() ||
+				LEGACY_DEFAULT_MESSAGE_TEMPLATES[type]?.includes(configuredMessage)
+			) {
+				native[message] = this.localize(DEFAULT_MESSAGE_TEMPLATES[type].en, DEFAULT_MESSAGE_TEMPLATES[type].de);
+				changed = true;
+			}
+			const configuredTitle = native[title];
+			if (
+				typeof configuredTitle !== 'string' ||
+				!configuredTitle.trim() ||
+				LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type]?.includes(configuredTitle)
+			) {
+				native[title] = this.localize(
+					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].en,
+					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].de,
+				);
+				changed = true;
+			}
+		}
+		if (changed) {
+			await this.setForeignObjectAsync(instanceId, { ...(instanceObject as ioBroker.InstanceObject), native });
+		}
 	}
 	private async onMessage(message: ioBroker.Message): Promise<void> {
 		if (message.command === 'bulkStateSelection') {
@@ -1475,6 +1675,7 @@ class DeviceMonitoring extends utils.Adapter {
 			id,
 			name: String(data.name || id).trim(),
 			sourceId: String(data.sourceId || '').trim(),
+			remark: String(data.remark || '').trim(),
 			function: String(data.function || '').trim(),
 			warning: limit(data.warning, 'outside'),
 			alarm: limit(data.alarm, 'outside'),
@@ -1670,6 +1871,7 @@ class DeviceMonitoring extends utils.Adapter {
 					'indicator.maintenance',
 				);
 				await this.ensureState(`${base}.sourceId`, t('Source state', 'Quell-State'), 'string', 'text');
+				await this.ensureState(`${base}.remark`, t('Remark', 'Bemerkung'), 'string', 'text');
 				await this.setObjectAsync(`${base}.data`, {
 					type: 'channel',
 					common: { name: t('Monitoring data', 'Überwachungsdaten'), expert: true },
@@ -1994,6 +2196,18 @@ class DeviceMonitoring extends utils.Adapter {
 		await this.updateDeviceInfo();
 		await this.removeLegacyRuntimeStates();
 	}
+	private async queueMessageEvent(event: MessageTrigger): Promise<void> {
+		const write = this.messageWriteQueue
+			.catch(() => undefined)
+			.then(async () => {
+				await this.setStateChangedAsync('info.message', {
+					val: JSON.stringify(event),
+					ack: true,
+				});
+			});
+		this.messageWriteQueue = write;
+		await write;
+	}
 	private async updateDeviceInfo(): Promise<void> {
 		const devices = await Promise.all(
 			this.devices.map(async device => {
@@ -2086,18 +2300,12 @@ class DeviceMonitoring extends utils.Adapter {
 		const tooltip: string[] = [];
 		if (watched.warning.enabled) {
 			tooltip.push(
-				this.localize(
-					`Warning limit: ${limitDisplay(watched.warning, unit, typeof data.value === 'boolean')}`,
-					`Warngrenze: ${limitDisplay(watched.warning, unit, typeof data.value === 'boolean')}`,
-				),
+				`${this.localize('Warning condition:', 'Warnbedingung:')} ${this.formatLimitDescription(watched.warning, data.value, unit)}`,
 			);
 		}
 		if (watched.alarm.enabled) {
 			tooltip.push(
-				this.localize(
-					`Alarm limit: ${limitDisplay(watched.alarm, unit, typeof data.value === 'boolean')}`,
-					`Alarmgrenze: ${limitDisplay(watched.alarm, unit, typeof data.value === 'boolean')}`,
-				),
+				`${this.localize('Alarm condition:', 'Alarmbedingung:')} ${this.formatLimitDescription(watched.alarm, data.value, unit)}`,
 			);
 		}
 		if (watched.staleWarning.enabled) {
@@ -2198,6 +2406,7 @@ class DeviceMonitoring extends utils.Adapter {
 			this.setStateChangedAsync(`${base}.alarm`, { val: data.alarm, ack: true }),
 			this.setStateChangedAsync(`${base}.updateTimeout`, { val: data.updateTimeout, ack: true }),
 			this.setStateChangedAsync(`${base}.sourceId`, { val: data.sourceId, ack: true }),
+			this.setStateChangedAsync(`${base}.remark`, { val: watched.remark || '', ack: true }),
 			this.setStateChangedAsync(`${base}.data.lastUpdate`, { val: data.lastUpdate, ack: true }),
 			this.setStateChangedAsync(`${base}.data.previousUpdate`, { val: data.previousUpdate, ack: true }),
 			this.setStateChangedAsync(`${base}.data.updateInterval`, { val: data.updateInterval, ack: true }),
@@ -2211,14 +2420,14 @@ class DeviceMonitoring extends utils.Adapter {
 			}),
 		]);
 		this.resetUpdateHistories.delete(base);
-		await this.notifyStatusTransition(device, watched, status, display);
+		await this.notifyStatusTransition(device, watched, status, data);
 		await this.updateDetailsDisplay(device, watched, status, display, unit, data);
 	}
 	private async notifyStatusTransition(
 		device: DeviceConfiguration,
 		watched: WatchedStateConfiguration,
 		status: WatchStatus,
-		display: string,
+		data: MonitoringData,
 	): Promise<void> {
 		const key = `${device.id}.${watched.id}`;
 		const previous = this.notificationStatuses.get(key);
@@ -2227,41 +2436,132 @@ class DeviceMonitoring extends utils.Adapter {
 			return;
 		}
 		const category = notificationCategoryForTransition(previous, status);
-		if (!category || !this.isNotificationEnabled(category)) {
+		if (!category) {
+			return;
+		}
+		if (!this.isNotificationEnabled(category)) {
 			return;
 		}
 		if (category === 'deviceTimeout' && !watched.staleWarning.enabled) {
 			return;
 		}
-		const location = `${device.name} / ${watched.name}`;
-		const message: Record<NotificationCategory, string> = {
-			deviceWarning: this.localize(`Warning for ${location}: ${display}`, `Warnung bei ${location}: ${display}`),
-			deviceAlarm: this.localize(`Alarm for ${location}: ${display}`, `Alarm bei ${location}: ${display}`),
-			deviceTimeout: this.localize(
-				`Update timeout for ${location} (${watched.sourceId})`,
-				`Aktualisierungs-Timeout bei ${location} (${watched.sourceId})`,
-			),
-			invalidSource: this.localize(
-				`Invalid or deleted source for ${location}: ${watched.sourceId}`,
-				`Ungültige oder gelöschte Quelle bei ${location}: ${watched.sourceId}`,
-			),
-			deviceRecovered: this.localize(
-				`${location} is OK again: ${display}`,
-				`${location} ist wieder in Ordnung: ${display}`,
-			),
+		const templateTypes: Record<NotificationCategory, MessageTemplateType> = {
+			deviceWarning: 'warning',
+			deviceAlarm: 'alarm',
+			deviceTimeout: 'timeout',
+			invalidSource: 'invalidSource',
+			deviceRecovered: 'recovered',
 		};
-		const notificationKey = `${key}|${category}|${message[category]}`;
+		const templateType = templateTypes[category];
 		const now = Date.now();
+		const messageValues = {
+			device: device.name,
+			state: watched.name,
+			sourceId: watched.sourceId,
+			value: data.value === null ? '—' : String(data.value),
+			unit: data.unit,
+			remark: watched.remark?.trim() || '',
+			warningLimits: this.formatLimitDescription(watched.warning, data.value, data.unit),
+			alarmLimits: this.formatLimitDescription(watched.alarm, data.value, data.unit),
+			timeoutMinutes: String(watched.staleWarning.minutes),
+			lastUpdate: data.lastUpdate === null ? '—' : timestampDisplay(data.lastUpdate),
+			triggeredAt: timestampDisplay(now),
+		};
+		const messageText = renderMessageTemplate(this.getMessageTemplate(templateType), messageValues);
+		const notificationTitle = renderMessageTemplate(this.getNotificationTitleTemplate(templateType), messageValues);
+		const notificationKey = `${key}|${category}|${notificationTitle}|${messageText}`;
 		const lastSent = this.notificationLastSent.get(notificationKey);
 		if (lastSent !== undefined && now - lastSent < 10_000) {
 			return;
 		}
 		this.notificationLastSent.set(notificationKey, now);
+		const messageEvent: MessageTrigger = {
+			type: templateType,
+			title: notificationTitle,
+			deviceId: device.id,
+			deviceName: device.name,
+			stateId: watched.id,
+			stateName: watched.name,
+			sourceId: watched.sourceId,
+			remark: watched.remark?.trim() || '',
+			value: data.value,
+			unit: data.unit,
+			triggeredAt: now,
+			lastUpdate: data.lastUpdate,
+			...(category === 'deviceTimeout' ? { timeoutMinutes: watched.staleWarning.minutes } : {}),
+			message: messageText,
+		};
 		try {
-			await this.registerNotification('device-monitoring', category, message[category]);
+			await this.queueMessageEvent(messageEvent);
+		} catch (error) {
+			this.log.warn(`Could not write notification message state: ${String(error)}`);
+		}
+		try {
+			const notificationText = notificationTitle ? `${notificationTitle}\n${messageText}` : messageText;
+			await this.registerNotification('device-monitoring', category, notificationText);
 		} catch (error) {
 			this.log.warn(`Could not register notification ${category}: ${String(error)}`);
 		}
+	}
+	private formatLimitDescription(limit: LimitConfiguration, value: ioBroker.StateValue, unit: string): string {
+		if (!limit.enabled) {
+			return this.localize('disabled', 'deaktiviert');
+		}
+		if (typeof value === 'boolean') {
+			return limit.booleanValue === undefined ? '—' : String(limit.booleanValue);
+		}
+		if (typeof value !== 'number' && limit.min === undefined && limit.max === undefined) {
+			return '—';
+		}
+		const suffix = unit ? ` ${unit}` : '';
+		const min = limit.min === undefined ? '—' : `${limit.min}${suffix}`;
+		const max = limit.max === undefined ? '—' : `${limit.max}${suffix}`;
+		switch (limit.mode) {
+			case 'below':
+				return this.localize(`below ${min}`, `kleiner als ${min}`);
+			case 'above':
+				return this.localize(`above ${max}`, `größer als ${max}`);
+			case 'outside':
+				return this.localize(`outside ${min} - ${max}`, `außerhalb ${min} - ${max}`);
+			case 'inside':
+				return this.localize(`inside ${min} - ${max}`, `innerhalb ${min} - ${max}`);
+		}
+		return '—';
+	}
+	private getMessageTemplate(type: MessageTemplateType): string {
+		const configKeys: Record<MessageTemplateType, keyof ioBroker.AdapterConfig> = {
+			warning: 'warningMessageTemplate',
+			alarm: 'alarmMessageTemplate',
+			timeout: 'timeoutMessageTemplate',
+			invalidSource: 'invalidSourceMessageTemplate',
+			recovered: 'recoveredMessageTemplate',
+		};
+		const configKey = configKeys[type];
+		const configured = this.config[configKey];
+		return typeof configured === 'string' &&
+			configured.trim() &&
+			!LEGACY_DEFAULT_MESSAGE_TEMPLATES[type]?.includes(configured)
+			? configured
+			: this.localize(DEFAULT_MESSAGE_TEMPLATES[type].en, DEFAULT_MESSAGE_TEMPLATES[type].de);
+	}
+	private getNotificationTitleTemplate(type: MessageTemplateType): string {
+		const configKeys: Record<MessageTemplateType, keyof ioBroker.AdapterConfig> = {
+			warning: 'warningTitleTemplate',
+			alarm: 'alarmTitleTemplate',
+			timeout: 'timeoutTitleTemplate',
+			invalidSource: 'invalidSourceTitleTemplate',
+			recovered: 'recoveredTitleTemplate',
+		};
+		const configKey = configKeys[type];
+		const configured = this.config[configKey];
+		return typeof configured === 'string' &&
+			configured.trim() &&
+			!LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type]?.includes(configured)
+			? configured
+			: this.localize(
+					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].en,
+					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].de,
+				);
 	}
 	private isNotificationEnabled(category: NotificationCategory): boolean {
 		const configured = this.config.enabledNotifications as readonly string[] | undefined;

@@ -91,6 +91,83 @@ const OBSOLETE_DIRECT_STATE_IDS = [
 ];
 const OBSOLETE_DATA_STATE_IDS = ["value", "status", "warning", "alarm", "updateTimeout"];
 const DEVICE_CARD_DETAILS_ID = "__card_details";
+const DEFAULT_MESSAGE_TEMPLATES = {
+  warning: {
+    en: "State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}})",
+    de: "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}})"
+  },
+  alarm: {
+    en: "State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}})",
+    de: "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}})"
+  },
+  timeout: {
+    en: "State {{state}} on device {{device}} has not reported for at least {{timeoutMinutes}} minutes. Last update: {{lastUpdate}} ({{remark}})",
+    de: "Der State {{state}} vom Ger\xE4t {{device}} hat sich mindestens {{timeoutMinutes}} Minuten nicht gemeldet. Letzte Aktualisierung: {{lastUpdate}} ({{remark}})"
+  },
+  invalidSource: {
+    en: "Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}})",
+    de: "Ung\xFCltige oder gel\xF6schte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})"
+  },
+  recovered: {
+    en: "{{device}} / {{state}} is back to normal: {{value}} {{unit}} ({{remark}})",
+    de: "{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})"
+  }
+};
+const DEFAULT_NOTIFICATION_TITLE_TEMPLATES = {
+  warning: { en: "Warning: {{device}} - {{state}}", de: "Warnung: {{device}} - {{state}}" },
+  alarm: { en: "Alarm: {{device}} - {{state}}", de: "Alarm: {{device}} - {{state}}" },
+  timeout: { en: "Update timeout: {{device}} - {{state}}", de: "Aktualisierungs-Timeout: {{device}} - {{state}}" },
+  invalidSource: {
+    en: "Invalid or deleted source: {{device}} - {{state}}",
+    de: "Ung\xFCltige oder gel\xF6schte Quelle: {{device}} - {{state}}"
+  },
+  recovered: {
+    en: "Device recovered: {{device}} - {{state}}",
+    de: "Ger\xE4t wieder in Ordnung: {{device}} - {{state}}"
+  }
+};
+const LEGACY_DEFAULT_MESSAGE_TEMPLATES = {
+  warning: [
+    "Warnung bei {{device}} / {{state}}: {{value}} {{unit}}",
+    "Warning at {{device}} / {{state}}: {{value}} {{unit}}",
+    "Warnung bei {{device}} / {{state}}: {{value}} {{unit}} (Grenze: {{warningLimits}})",
+    "Warning at {{device}} / {{state}}: {{value}} {{unit}} (limit: {{warningLimits}})"
+  ],
+  alarm: [
+    "Alarm bei {{device}} / {{state}}: {{value}} {{unit}}",
+    "Alarm at {{device}} / {{state}}: {{value}} {{unit}}",
+    "Alarm bei {{device}} / {{state}}: {{value}} {{unit}} (Grenze: {{alarmLimits}})",
+    "Alarm at {{device}} / {{state}}: {{value}} {{unit}} (limit: {{alarmLimits}})"
+  ],
+  timeout: [
+    "Keine Aktualisierung bei {{device}} / {{state}} seit {{timeoutMinutes}} Minuten. Letzter Wert: {{value}} {{unit}} (letzte Aktualisierung: {{lastUpdate}})",
+    "No update at {{device}} / {{state}} for {{timeoutMinutes}} minutes. Last value: {{value}} {{unit}} (last update: {{lastUpdate}})"
+  ],
+  invalidSource: [
+    "Ung\xFCltige oder gel\xF6schte Quelle bei {{device}} / {{state}}: {{sourceId}}",
+    "Invalid or deleted source for {{device}} / {{state}}: {{sourceId}}"
+  ],
+  recovered: [
+    "{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}}",
+    "{{device}} / {{state}} is back to normal: {{value}} {{unit}}"
+  ]
+};
+const LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES = {
+  warning: ["Warnung: {{device}} / {{state}}"],
+  alarm: ["Alarm: {{device}} / {{state}}"],
+  timeout: ["Aktualisierungs-Timeout: {{device}} / {{state}}"],
+  invalidSource: ["Ung\xFCltige oder gel\xF6schte Quelle: {{device}} / {{state}}"],
+  recovered: ["Ger\xE4t wieder in Ordnung: {{device}} / {{state}}"]
+};
+function renderMessageTemplate(template, values) {
+  var _a;
+  const remark = ((_a = values.remark) == null ? void 0 : _a.trim()) || "";
+  const templateWithoutEmptyRemark = remark ? template : template.replace(/[ \t]*\(\s*\{\{\s*remark\s*\}\}\s*\)/g, "");
+  return templateWithoutEmptyRemark.replace(/\{\{\s*([a-zA-Z][a-zA-Z0-9_]*)\s*\}\}/g, (placeholder, key) => {
+    var _a2;
+    return (_a2 = values[key]) != null ? _a2 : placeholder;
+  }).replace(/[ \t]{2,}/g, " ").trim();
+}
 function safeId(value, fallback) {
   return value.trim().toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || fallback;
 }
@@ -101,20 +178,6 @@ function uniqueId(base, used) {
     id = `${base}_${i++}`;
   }
   return id;
-}
-function limitDisplay(limit, unit = "", booleanSource = false) {
-  var _a, _b, _c, _d;
-  if (booleanSource && limit.booleanValue !== void 0) {
-    return `= ${limit.booleanValue ? "true" : "false"}`;
-  }
-  const suffix = unit ? ` ${unit}` : "";
-  if (limit.mode === "below") {
-    return `< ${(_a = limit.min) != null ? _a : "\u2014"}${suffix}`;
-  }
-  if (limit.mode === "above") {
-    return `> ${(_b = limit.max) != null ? _b : "\u2014"}${suffix}`;
-  }
-  return `${(_c = limit.min) != null ? _c : "\u2014"}\u2013${(_d = limit.max) != null ? _d : "\u2014"}${suffix}`;
 }
 function timestampDisplay(timestamp) {
   const date = new Date(timestamp);
@@ -265,6 +328,7 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
                 ...data,
                 ...typeSettings,
                 name: String(row.name || candidate.name).trim(),
+                remark: String(row.remark || "").trim(),
                 sourceId: candidate.id,
                 sourceType: candidate.type,
                 targetDevice: row.targetDevice
@@ -496,6 +560,7 @@ function defaultStateForm(validSourceIds, sourceTypes) {
   return {
     name: "",
     sourceId: "",
+    remark: "",
     _validSourceIds: validSourceIds,
     _sourceTypes: sourceTypes,
     function: "",
@@ -592,6 +657,7 @@ function defaultBulkStateForm(candidates, devices) {
       return {
         selected: !candidate.alreadyAdded,
         name: candidate.name,
+        remark: "",
         sourceId: candidate.id,
         role: candidate.role || "\u2014",
         type: candidate.type || "\u2014",
@@ -689,8 +755,8 @@ function bulkStateForm(candidates, devices, functionTemplates, functionNames, se
       statesHeader: {
         type: "staticText",
         text: t(
-          `Select states, target devices and display names (${candidates.length} matches)`,
-          `States, Zielger\xE4te und Anzeigenamen anpassen (${candidates.length} Treffer)`
+          `Select states, target devices, display names and remarks (${candidates.length} matches)`,
+          `States, Zielger\xE4te, Anzeigenamen und Bemerkungen anpassen (${candidates.length} Treffer)`
         ),
         newLine: true,
         xs: 12,
@@ -704,14 +770,20 @@ function bulkStateForm(candidates, devices, functionTemplates, functionNames, se
             type: "text",
             attr: "name",
             title: t("Display name", "Anzeigename"),
-            width: "20%"
+            width: "17%"
           },
           {
             type: "text",
             attr: "sourceId",
             title: "State-ID",
             disabled: true,
-            width: "30%"
+            width: "25%"
+          },
+          {
+            type: "text",
+            attr: "remark",
+            title: t("Remark", "Bemerkung"),
+            width: "16%"
           },
           {
             type: "autocomplete",
@@ -720,14 +792,14 @@ function bulkStateForm(candidates, devices, functionTemplates, functionNames, se
             options: devices.map((device) => ({ value: device.id, label: device.name })),
             freeSolo: true,
             noTranslation: true,
-            width: "24%"
+            width: "20%"
           },
           {
             type: "text",
             attr: "role",
             title: t("Role", "Rolle"),
             disabled: true,
-            width: "12%"
+            width: "8%"
           },
           {
             type: "text",
@@ -763,10 +835,14 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
   const functions = [.../* @__PURE__ */ new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
   const key = (path) => stateId ? `${stateId}.${path}` : path;
   const data = (path) => stateId ? `data[${JSON.stringify(stateId)}].${path}` : `data.${path}`;
-  const selectedSourceType = sourceTypeExpression || `data._sourceTypes[String(${data("sourceId")} || '').trim()] || 'number'`;
+  const selectedSourceType = sourceTypeExpression || `data._sourceTypes[String(${data("sourceId")} || '').trim()] || ''`;
   const mixedSource = mixedSourceExpression || `(${selectedSourceType}) === 'mixed'`;
   const booleanSource = booleanSourceExpression || `(${selectedSourceType}) === 'boolean'`;
-  const numericSource = numericSourceExpression || `(${selectedSourceType}) !== 'boolean'`;
+  const numericSource = numericSourceExpression || `(${selectedSourceType}) === 'number'`;
+  const gateSettingsUntilValidSource = !stateId && !sourceTypeExpression;
+  const validSource = `Array.isArray(data._validSourceIds) && data._validSourceIds.includes(String(${data("sourceId")} || '').trim())`;
+  const hideUntilValidSource = gateSettingsUntilValidSource ? `!(${validSource})` : void 0;
+  const combineHidden = (condition) => hideUntilValidSource ? condition ? `${hideUntilValidSource} || (${condition})` : hideUntilValidSource : condition;
   const visibilityDependencies = hiddenDependsOn ? { hiddenDependsOn } : {};
   const existingNames = JSON.stringify(states.map((state) => state.name.trim().toLowerCase()));
   const otherStateIds = JSON.stringify(states.filter((state) => state.id !== stateId).map((state) => state.id));
@@ -791,13 +867,17 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
     }
   });
   const limits = (prefix, label, color) => ({
-    [key(`${prefix}Header`)]: { ...sectionHeader(label, color), hidden: mixedSource, ...visibilityDependencies },
+    [key(`${prefix}Header`)]: {
+      ...sectionHeader(label, color),
+      hidden: combineHidden(mixedSource),
+      ...visibilityDependencies
+    },
     [key(`${prefix}.enabled`)]: {
       type: "checkbox",
       label: t("Enabled", "Aktiviert"),
       newLine: true,
       xs: 4,
-      hidden: mixedSource,
+      hidden: combineHidden(mixedSource),
       ...visibilityDependencies
     },
     [key(`${prefix}.mode`)]: {
@@ -810,7 +890,7 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
         { value: "outside", label: t("outside the allowed range", "au\xDFerhalb des erlaubten Bereichs liegt") },
         { value: "inside", label: t("inside the forbidden range", "im verbotenen Bereich liegt") }
       ],
-      hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource})`,
+      hidden: combineHidden(`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource})`),
       ...visibilityDependencies
     },
     [key(`${prefix}.booleanValue`)]: {
@@ -822,7 +902,7 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
       ],
       newLine: true,
       xs: 8,
-      hidden: `${data(`${prefix}.enabled`)} !== true || !(${booleanSource}) || (${mixedSource})`,
+      hidden: combineHidden(`${data(`${prefix}.enabled`)} !== true || !(${booleanSource}) || (${mixedSource})`),
       ...visibilityDependencies
     },
     [key(`${prefix}.min`)]: {
@@ -831,7 +911,9 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
       step: 0.01,
       newLine: true,
       xs: 6,
-      hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'above'`,
+      hidden: combineHidden(
+        `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'above'`
+      ),
       ...visibilityDependencies
     },
     [key(`${prefix}.max`)]: {
@@ -839,7 +921,9 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
       label: t("Upper limit", "Obergrenze"),
       step: 0.01,
       xs: 6,
-      hidden: `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below'`,
+      hidden: combineHidden(
+        `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below'`
+      ),
       ...visibilityDependencies
     }
   });
@@ -871,6 +955,19 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
         ),
         validatorNoSaveOnError: true
       },
+      ...!sourceTypeExpression ? {
+        [key("remark")]: {
+          type: "text",
+          label: t("Remark", "Bemerkung"),
+          help: t(
+            "Optional note available as the {{remark}} notification-template placeholder.",
+            "Optionale Bemerkung, die als Platzhalter {{remark}} in Benachrichtigungsvorlagen verwendet werden kann."
+          ),
+          hidden: hideUntilValidSource,
+          newLine: true,
+          xs: 12
+        }
+      } : {},
       [key("function")]: {
         type: "autocomplete",
         label: t("Function", "Funktion"),
@@ -893,6 +990,7 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
           ].map((path) => ({ attr: key(path), onChange: templateValue(path) }))
         ],
         help: functions.length ? t(`Existing functions: ${functions.join(", ")}`, `Vorhandene Funktionen: ${functions.join(", ")}`) : void 0,
+        hidden: hideUntilValidSource,
         newLine: true,
         xs: 12
       },
@@ -902,15 +1000,20 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
           "Save or update this selection as function template",
           "Diese Auswahl als Funktionsvorlage speichern oder aktualisieren"
         ),
+        hidden: hideUntilValidSource,
         newLine: true,
         xs: 12
       },
       ...limits("warning", t("Warning limits", "Warngrenzen"), "#d6a500"),
       ...limits("alarm", t("Alarm limits", "Alarmgrenzen"), "#c62828"),
-      [key("staleWarningHeader")]: sectionHeader(t("Update timeout", "Aktualisierungs-Timeout"), "#1976d2"),
+      [key("staleWarningHeader")]: {
+        ...sectionHeader(t("Update timeout", "Aktualisierungs-Timeout"), "#1976d2"),
+        hidden: hideUntilValidSource
+      },
       [key("staleWarning.enabled")]: {
         type: "checkbox",
         label: t("Warn if the state is not updated", "Warnen, wenn der State nicht aktualisiert wird"),
+        hidden: hideUntilValidSource,
         newLine: true,
         xs: 12
       },
@@ -921,7 +1024,7 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
         step: 1,
         newLine: true,
         xs: 12,
-        hidden: `${data("staleWarning.enabled")} !== true`
+        hidden: combineHidden(`${data("staleWarning.enabled")} !== true`)
       }
     }
   };
@@ -1038,6 +1141,7 @@ class DeviceMonitoring extends utils.Adapter {
   updateHistoryQueues = /* @__PURE__ */ new Map();
   notificationStatuses = /* @__PURE__ */ new Map();
   notificationLastSent = /* @__PURE__ */ new Map();
+  messageWriteQueue = Promise.resolve();
   cardDetails = /* @__PURE__ */ new Map();
   cardDetailsQueues = /* @__PURE__ */ new Map();
   legacyRuntimeStatesRemoved = false;
@@ -1071,6 +1175,7 @@ class DeviceMonitoring extends utils.Adapter {
     var _a;
     const systemConfig = await this.getForeignObjectAsync("system.config");
     this.displayLanguage = ((_a = systemConfig == null ? void 0 : systemConfig.common) == null ? void 0 : _a.language) === "de" ? "de" : "en";
+    await this.migrateNotificationTemplateDefaults();
     this.deviceManagement = new DeviceMonitoringManagement(this);
     const legacyDevices = this.normalizeDevices(this.config.devices);
     this.devices = legacyDevices.length ? legacyDevices : await this.loadDevicesFromObjects();
@@ -1080,6 +1185,13 @@ class DeviceMonitoring extends utils.Adapter {
       }
     }
     await this.ensureState("info.deviceInfo", t("Device information", "Ger\xE4teinformationen"), "string", "json");
+    await this.ensureState(
+      "info.message",
+      t("Notification message", "Benachrichtigungsnachricht"),
+      "string",
+      "json"
+    );
+    await this.clearLegacyMessageState();
     await this.rebuildObjects();
     if (legacyDevices.length) {
       await this.removeLegacyDeviceConfig();
@@ -1095,6 +1207,56 @@ class DeviceMonitoring extends utils.Adapter {
       void this.updateAll();
     }, 6e4);
     this.scheduleConfigurationBackup();
+  }
+  async clearLegacyMessageState() {
+    const state = await this.getStateAsync("info.message");
+    if (typeof (state == null ? void 0 : state.val) !== "string") {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(state.val);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && !("messages" in parsed)) {
+        return;
+      }
+    } catch {
+    }
+    await this.setStateChangedAsync("info.message", { val: "{}", ack: true });
+  }
+  async migrateNotificationTemplateDefaults() {
+    var _a, _b;
+    const instanceId = `system.adapter.${this.namespace}`;
+    const instanceObject = await this.getForeignObjectAsync(instanceId);
+    if (!instanceObject) {
+      return;
+    }
+    const native = { ...instanceObject.native };
+    const configKeys = {
+      warning: { message: "warningMessageTemplate", title: "warningTitleTemplate" },
+      alarm: { message: "alarmMessageTemplate", title: "alarmTitleTemplate" },
+      timeout: { message: "timeoutMessageTemplate", title: "timeoutTitleTemplate" },
+      invalidSource: { message: "invalidSourceMessageTemplate", title: "invalidSourceTitleTemplate" },
+      recovered: { message: "recoveredMessageTemplate", title: "recoveredTitleTemplate" }
+    };
+    let changed = false;
+    for (const type of Object.keys(configKeys)) {
+      const { message, title } = configKeys[type];
+      const configuredMessage = native[message];
+      if (typeof configuredMessage !== "string" || !configuredMessage.trim() || ((_a = LEGACY_DEFAULT_MESSAGE_TEMPLATES[type]) == null ? void 0 : _a.includes(configuredMessage))) {
+        native[message] = this.localize(DEFAULT_MESSAGE_TEMPLATES[type].en, DEFAULT_MESSAGE_TEMPLATES[type].de);
+        changed = true;
+      }
+      const configuredTitle = native[title];
+      if (typeof configuredTitle !== "string" || !configuredTitle.trim() || ((_b = LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type]) == null ? void 0 : _b.includes(configuredTitle))) {
+        native[title] = this.localize(
+          DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].en,
+          DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].de
+        );
+        changed = true;
+      }
+    }
+    if (changed) {
+      await this.setForeignObjectAsync(instanceId, { ...instanceObject, native });
+    }
   }
   async onMessage(message) {
     var _a;
@@ -1373,6 +1535,7 @@ class DeviceMonitoring extends utils.Adapter {
       id,
       name: String(data.name || id).trim(),
       sourceId: String(data.sourceId || "").trim(),
+      remark: String(data.remark || "").trim(),
       function: String(data.function || "").trim(),
       warning: limit(data.warning, "outside"),
       alarm: limit(data.alarm, "outside"),
@@ -1558,6 +1721,7 @@ class DeviceMonitoring extends utils.Adapter {
           "indicator.maintenance"
         );
         await this.ensureState(`${base}.sourceId`, t("Source state", "Quell-State"), "string", "text");
+        await this.ensureState(`${base}.remark`, t("Remark", "Bemerkung"), "string", "text");
         await this.setObjectAsync(`${base}.data`, {
           type: "channel",
           common: { name: t("Monitoring data", "\xDCberwachungsdaten"), expert: true },
@@ -1859,6 +2023,16 @@ class DeviceMonitoring extends utils.Adapter {
     await this.updateDeviceInfo();
     await this.removeLegacyRuntimeStates();
   }
+  async queueMessageEvent(event) {
+    const write = this.messageWriteQueue.catch(() => void 0).then(async () => {
+      await this.setStateChangedAsync("info.message", {
+        val: JSON.stringify(event),
+        ack: true
+      });
+    });
+    this.messageWriteQueue = write;
+    await write;
+  }
   async updateDeviceInfo() {
     const devices = await Promise.all(
       this.devices.map(async (device) => {
@@ -1935,18 +2109,12 @@ class DeviceMonitoring extends utils.Adapter {
     const tooltip = [];
     if (watched.warning.enabled) {
       tooltip.push(
-        this.localize(
-          `Warning limit: ${limitDisplay(watched.warning, unit, typeof data.value === "boolean")}`,
-          `Warngrenze: ${limitDisplay(watched.warning, unit, typeof data.value === "boolean")}`
-        )
+        `${this.localize("Warning condition:", "Warnbedingung:")} ${this.formatLimitDescription(watched.warning, data.value, unit)}`
       );
     }
     if (watched.alarm.enabled) {
       tooltip.push(
-        this.localize(
-          `Alarm limit: ${limitDisplay(watched.alarm, unit, typeof data.value === "boolean")}`,
-          `Alarmgrenze: ${limitDisplay(watched.alarm, unit, typeof data.value === "boolean")}`
-        )
+        `${this.localize("Alarm condition:", "Alarmbedingung:")} ${this.formatLimitDescription(watched.alarm, data.value, unit)}`
       );
     }
     if (watched.staleWarning.enabled) {
@@ -2022,6 +2190,7 @@ class DeviceMonitoring extends utils.Adapter {
       this.setStateChangedAsync(`${base}.alarm`, { val: data.alarm, ack: true }),
       this.setStateChangedAsync(`${base}.updateTimeout`, { val: data.updateTimeout, ack: true }),
       this.setStateChangedAsync(`${base}.sourceId`, { val: data.sourceId, ack: true }),
+      this.setStateChangedAsync(`${base}.remark`, { val: watched.remark || "", ack: true }),
       this.setStateChangedAsync(`${base}.data.lastUpdate`, { val: data.lastUpdate, ack: true }),
       this.setStateChangedAsync(`${base}.data.previousUpdate`, { val: data.previousUpdate, ack: true }),
       this.setStateChangedAsync(`${base}.data.updateInterval`, { val: data.updateInterval, ack: true }),
@@ -2035,10 +2204,11 @@ class DeviceMonitoring extends utils.Adapter {
       })
     ]);
     this.resetUpdateHistories.delete(base);
-    await this.notifyStatusTransition(device, watched, status, display);
+    await this.notifyStatusTransition(device, watched, status, data);
     await this.updateDetailsDisplay(device, watched, status, display, unit, data);
   }
-  async notifyStatusTransition(device, watched, status, display) {
+  async notifyStatusTransition(device, watched, status, data) {
+    var _a, _b;
     const key = `${device.id}.${watched.id}`;
     const previous = this.notificationStatuses.get(key);
     this.notificationStatuses.set(key, status);
@@ -2046,41 +2216,127 @@ class DeviceMonitoring extends utils.Adapter {
       return;
     }
     const category = (0, import_notifications.notificationCategoryForTransition)(previous, status);
-    if (!category || !this.isNotificationEnabled(category)) {
+    if (!category) {
+      return;
+    }
+    if (!this.isNotificationEnabled(category)) {
       return;
     }
     if (category === "deviceTimeout" && !watched.staleWarning.enabled) {
       return;
     }
-    const location = `${device.name} / ${watched.name}`;
-    const message = {
-      deviceWarning: this.localize(`Warning for ${location}: ${display}`, `Warnung bei ${location}: ${display}`),
-      deviceAlarm: this.localize(`Alarm for ${location}: ${display}`, `Alarm bei ${location}: ${display}`),
-      deviceTimeout: this.localize(
-        `Update timeout for ${location} (${watched.sourceId})`,
-        `Aktualisierungs-Timeout bei ${location} (${watched.sourceId})`
-      ),
-      invalidSource: this.localize(
-        `Invalid or deleted source for ${location}: ${watched.sourceId}`,
-        `Ung\xFCltige oder gel\xF6schte Quelle bei ${location}: ${watched.sourceId}`
-      ),
-      deviceRecovered: this.localize(
-        `${location} is OK again: ${display}`,
-        `${location} ist wieder in Ordnung: ${display}`
-      )
+    const templateTypes = {
+      deviceWarning: "warning",
+      deviceAlarm: "alarm",
+      deviceTimeout: "timeout",
+      invalidSource: "invalidSource",
+      deviceRecovered: "recovered"
     };
-    const notificationKey = `${key}|${category}|${message[category]}`;
+    const templateType = templateTypes[category];
     const now = Date.now();
+    const messageValues = {
+      device: device.name,
+      state: watched.name,
+      sourceId: watched.sourceId,
+      value: data.value === null ? "\u2014" : String(data.value),
+      unit: data.unit,
+      remark: ((_a = watched.remark) == null ? void 0 : _a.trim()) || "",
+      warningLimits: this.formatLimitDescription(watched.warning, data.value, data.unit),
+      alarmLimits: this.formatLimitDescription(watched.alarm, data.value, data.unit),
+      timeoutMinutes: String(watched.staleWarning.minutes),
+      lastUpdate: data.lastUpdate === null ? "\u2014" : timestampDisplay(data.lastUpdate),
+      triggeredAt: timestampDisplay(now)
+    };
+    const messageText = renderMessageTemplate(this.getMessageTemplate(templateType), messageValues);
+    const notificationTitle = renderMessageTemplate(this.getNotificationTitleTemplate(templateType), messageValues);
+    const notificationKey = `${key}|${category}|${notificationTitle}|${messageText}`;
     const lastSent = this.notificationLastSent.get(notificationKey);
     if (lastSent !== void 0 && now - lastSent < 1e4) {
       return;
     }
     this.notificationLastSent.set(notificationKey, now);
+    const messageEvent = {
+      type: templateType,
+      title: notificationTitle,
+      deviceId: device.id,
+      deviceName: device.name,
+      stateId: watched.id,
+      stateName: watched.name,
+      sourceId: watched.sourceId,
+      remark: ((_b = watched.remark) == null ? void 0 : _b.trim()) || "",
+      value: data.value,
+      unit: data.unit,
+      triggeredAt: now,
+      lastUpdate: data.lastUpdate,
+      ...category === "deviceTimeout" ? { timeoutMinutes: watched.staleWarning.minutes } : {},
+      message: messageText
+    };
     try {
-      await this.registerNotification("device-monitoring", category, message[category]);
+      await this.queueMessageEvent(messageEvent);
+    } catch (error) {
+      this.log.warn(`Could not write notification message state: ${String(error)}`);
+    }
+    try {
+      const notificationText = notificationTitle ? `${notificationTitle}
+${messageText}` : messageText;
+      await this.registerNotification("device-monitoring", category, notificationText);
     } catch (error) {
       this.log.warn(`Could not register notification ${category}: ${String(error)}`);
     }
+  }
+  formatLimitDescription(limit, value, unit) {
+    if (!limit.enabled) {
+      return this.localize("disabled", "deaktiviert");
+    }
+    if (typeof value === "boolean") {
+      return limit.booleanValue === void 0 ? "\u2014" : String(limit.booleanValue);
+    }
+    if (typeof value !== "number" && limit.min === void 0 && limit.max === void 0) {
+      return "\u2014";
+    }
+    const suffix = unit ? ` ${unit}` : "";
+    const min = limit.min === void 0 ? "\u2014" : `${limit.min}${suffix}`;
+    const max = limit.max === void 0 ? "\u2014" : `${limit.max}${suffix}`;
+    switch (limit.mode) {
+      case "below":
+        return this.localize(`below ${min}`, `kleiner als ${min}`);
+      case "above":
+        return this.localize(`above ${max}`, `gr\xF6\xDFer als ${max}`);
+      case "outside":
+        return this.localize(`outside ${min} - ${max}`, `au\xDFerhalb ${min} - ${max}`);
+      case "inside":
+        return this.localize(`inside ${min} - ${max}`, `innerhalb ${min} - ${max}`);
+    }
+    return "\u2014";
+  }
+  getMessageTemplate(type) {
+    var _a;
+    const configKeys = {
+      warning: "warningMessageTemplate",
+      alarm: "alarmMessageTemplate",
+      timeout: "timeoutMessageTemplate",
+      invalidSource: "invalidSourceMessageTemplate",
+      recovered: "recoveredMessageTemplate"
+    };
+    const configKey = configKeys[type];
+    const configured = this.config[configKey];
+    return typeof configured === "string" && configured.trim() && !((_a = LEGACY_DEFAULT_MESSAGE_TEMPLATES[type]) == null ? void 0 : _a.includes(configured)) ? configured : this.localize(DEFAULT_MESSAGE_TEMPLATES[type].en, DEFAULT_MESSAGE_TEMPLATES[type].de);
+  }
+  getNotificationTitleTemplate(type) {
+    var _a;
+    const configKeys = {
+      warning: "warningTitleTemplate",
+      alarm: "alarmTitleTemplate",
+      timeout: "timeoutTitleTemplate",
+      invalidSource: "invalidSourceTitleTemplate",
+      recovered: "recoveredTitleTemplate"
+    };
+    const configKey = configKeys[type];
+    const configured = this.config[configKey];
+    return typeof configured === "string" && configured.trim() && !((_a = LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type]) == null ? void 0 : _a.includes(configured)) ? configured : this.localize(
+      DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].en,
+      DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].de
+    );
   }
   isNotificationEnabled(category) {
     const configured = this.config.enabledNotifications;

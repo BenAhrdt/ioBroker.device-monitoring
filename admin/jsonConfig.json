@@ -32,7 +32,7 @@
 		"enabledNotifications": {
 			"type": "select",
 			"label": "Enabled notifications",
-			"help": "Select which status changes should create ioBroker notifications.",
+			"help": "Select which status changes create ioBroker notifications and update info.message.",
 			"multiple": true,
 			"options": [
 				{ "label": "Device warning", "value": "deviceWarning" },
@@ -43,7 +43,272 @@
 			],
 			"default": ["deviceWarning", "deviceAlarm", "deviceTimeout", "invalidSource", "deviceRecovered"],
 			"newLine": true,
+			"xs": 12,
+			"sm": 6
+		},
+		"messageTemplateHeader": {
+			"type": "header",
+			"text": "Notification templates",
+			"size": 2,
+			"newLine": true,
 			"xs": 12
+		},
+		"messageTemplateHelpIntro": {
+			"type": "staticText",
+			"text": "Use placeholders in double curly braces. Their meanings are grouped below:",
+			"newLine": true,
+			"xs": 12
+		},
+		"messageTemplateHelpIdentity": {
+			"type": "staticText",
+			"text": "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID.",
+			"xs": 12
+		},
+		"messageTemplateHelpValues": {
+			"type": "staticText",
+			"text": "{{value}} current or last value; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.",
+			"xs": 12
+		},
+		"messageTemplateHelpConditions": {
+			"type": "staticText",
+			"text": "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.",
+			"newLine": true,
+			"xs": 12
+		},
+		"warningTemplateHeader": {
+			"type": "staticText",
+			"text": "Warning notification template",
+			"newLine": true,
+			"xs": 12,
+			"style": { "backgroundColor": "#d6a500", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#d6a500", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+		},
+		"warningTitleTemplate": {
+			"type": "text",
+			"label": "Title",
+			"default": "Warnung: {{device}} - {{state}}",
+			"newLine": true,
+			"xs": 12
+		},
+		"warningMessageTemplate": {
+			"type": "text",
+			"label": "Notification",
+			"default": "Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}})",
+			"newLine": true,
+			"xs": 12
+		},
+		"warningPreviewCaption": {
+			"type": "staticText",
+			"text": "Example sent notification (with sample values):",
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"fontSize": 12,
+				"fontWeight": 600,
+				"marginTop": 2,
+				"marginBottom": 0
+			}
+		},
+		"warningPreview": {
+			"type": "staticText",
+			"text": "${(String(data.warningTitleTemplate || '') ? String(data.warningTitleTemplate || '') + String.fromCharCode(10) + String(data.warningMessageTemplate || '') : String(data.warningMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Wohnzimmer\",\"Temperatur\",\"0_userdata.0.wohnzimmer.temperatur\",\"29.4\",\"°C\",\"Sensor nahe Fenster\",\"außerhalb 18 °C - 26 °C\",\"größer als 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"noTranslation": true,
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"whiteSpace": "pre-line",
+				"fontSize": 14,
+				"paddingLeft": 4,
+				"marginBottom": 10
+			}
+		},
+		"alarmTemplateHeader": {
+			"type": "staticText",
+			"text": "Alarm notification template",
+			"newLine": true,
+			"xs": 12,
+			"style": { "backgroundColor": "#c62828", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#c62828", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+		},
+		"alarmTitleTemplate": {
+			"type": "text",
+			"label": "Title",
+			"default": "Alarm: {{device}} - {{state}}",
+			"newLine": true,
+			"xs": 12
+		},
+		"alarmMessageTemplate": {
+			"type": "text",
+			"label": "Notification",
+			"default": "Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}})",
+			"newLine": true,
+			"xs": 12
+		},
+		"alarmPreviewCaption": {
+			"type": "staticText",
+			"text": "Example sent notification (with sample values):",
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"fontSize": 12,
+				"fontWeight": 600,
+				"marginTop": 2,
+				"marginBottom": 0
+			}
+		},
+		"alarmPreview": {
+			"type": "staticText",
+			"text": "${(String(data.alarmTitleTemplate || '') ? String(data.alarmTitleTemplate || '') + String.fromCharCode(10) + String(data.alarmMessageTemplate || '') : String(data.alarmMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Keller\",\"Luftfeuchtigkeit\",\"0_userdata.0.keller.luftfeuchtigkeit\",\"82\",\"%\",\"Lüften empfohlen\",\"größer als 70 %\",\"größer als 80 %\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"noTranslation": true,
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"whiteSpace": "pre-line",
+				"fontSize": 14,
+				"paddingLeft": 4,
+				"marginBottom": 10
+			}
+		},
+		"timeoutTemplateHeader": {
+			"type": "staticText",
+			"text": "Timeout notification template",
+			"newLine": true,
+			"xs": 12,
+			"style": { "backgroundColor": "#1976d2", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#1976d2", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+		},
+		"timeoutTitleTemplate": {
+			"type": "text",
+			"label": "Title",
+			"default": "Aktualisierungs-Timeout: {{device}} - {{state}}",
+			"newLine": true,
+			"xs": 12
+		},
+		"timeoutMessageTemplate": {
+			"type": "text",
+			"label": "Notification",
+			"default": "Der State {{state}} vom Gerät {{device}} hat sich mindestens {{timeoutMinutes}} Minuten nicht gemeldet. Letzte Aktualisierung: {{lastUpdate}} ({{remark}})",
+			"newLine": true,
+			"xs": 12
+		},
+		"timeoutPreviewCaption": {
+			"type": "staticText",
+			"text": "Example sent notification (with sample values):",
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"fontSize": 12,
+				"fontWeight": 600,
+				"marginTop": 2,
+				"marginBottom": 0
+			}
+		},
+		"timeoutPreview": {
+			"type": "staticText",
+			"text": "${(String(data.timeoutTitleTemplate || '') ? String(data.timeoutTitleTemplate || '') + String.fromCharCode(10) + String(data.timeoutMessageTemplate || '') : String(data.timeoutMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Heizung\",\"Vorlauftemperatur\",\"0_userdata.0.heizung.vorlauftemperatur\",\"21.7\",\"°C\",\"Letzte Aktualisierung prüfen\",\"kleiner als 15 °C\",\"größer als 35 °C\",\"60\",\"19.09.2026 13:32:10\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"noTranslation": true,
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"whiteSpace": "pre-line",
+				"fontSize": 14,
+				"paddingLeft": 4,
+				"marginBottom": 10
+			}
+		},
+		"invalidSourceTemplateHeader": {
+			"type": "staticText",
+			"text": "Invalid source notification template",
+			"newLine": true,
+			"xs": 12,
+			"style": { "backgroundColor": "#6d4c41", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#6d4c41", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+		},
+		"invalidSourceTitleTemplate": {
+			"type": "text",
+			"label": "Title",
+			"default": "Ungültige oder gelöschte Quelle: {{device}} - {{state}}",
+			"newLine": true,
+			"xs": 12
+		},
+		"invalidSourceMessageTemplate": {
+			"type": "text",
+			"label": "Notification",
+			"default": "Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})",
+			"newLine": true,
+			"xs": 12
+		},
+		"invalidSourcePreviewCaption": {
+			"type": "staticText",
+			"text": "Example sent notification (with sample values):",
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"fontSize": 12,
+				"fontWeight": 600,
+				"marginTop": 2,
+				"marginBottom": 0
+			}
+		},
+		"invalidSourcePreview": {
+			"type": "staticText",
+			"text": "${(String(data.invalidSourceTitleTemplate || '') ? String(data.invalidSourceTitleTemplate || '') + String.fromCharCode(10) + String(data.invalidSourceMessageTemplate || '') : String(data.invalidSourceMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Alarmanlage\",\"Fensterkontakt\",\"zigbee.0.ab12cd34.contact\",\"false\",\"\",\"Quelle im Adapter gelöscht\",\"kleiner als 18 °C\",\"größer als 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"noTranslation": true,
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"whiteSpace": "pre-line",
+				"fontSize": 14,
+				"paddingLeft": 4,
+				"marginBottom": 10
+			}
+		},
+		"recoveredTemplateHeader": {
+			"type": "staticText",
+			"text": "Recovered device notification template",
+			"newLine": true,
+			"xs": 12,
+			"style": { "backgroundColor": "#3f7d45", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#3f7d45", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+		},
+		"recoveredTitleTemplate": {
+			"type": "text",
+			"label": "Title",
+			"default": "Gerät wieder in Ordnung: {{device}} - {{state}}",
+			"newLine": true,
+			"xs": 12
+		},
+		"recoveredMessageTemplate": {
+			"type": "text",
+			"label": "Notification",
+			"default": "{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})",
+			"newLine": true,
+			"xs": 12
+		},
+		"recoveredPreviewCaption": {
+			"type": "staticText",
+			"text": "Example sent notification (with sample values):",
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"fontSize": 12,
+				"fontWeight": 600,
+				"marginTop": 2,
+				"marginBottom": 0
+			}
+		},
+		"recoveredPreview": {
+			"type": "staticText",
+			"text": "${(String(data.recoveredTitleTemplate || '') ? String(data.recoveredTitleTemplate || '') + String.fromCharCode(10) + String(data.recoveredMessageTemplate || '') : String(data.recoveredMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Waschküche\",\"Leckagesensor\",\"0_userdata.0.waschkueche.leckage\",\"trocken\",\"\",\"Sensor zurückgesetzt\",\"kleiner als 18 °C\",\"größer als 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"noTranslation": true,
+			"newLine": true,
+			"xs": 12,
+			"style": {
+				"whiteSpace": "pre-line",
+				"fontSize": 14,
+				"paddingLeft": 4,
+				"marginBottom": 10
+			}
 		},
 		"backupHeader": {
 			"type": "header",

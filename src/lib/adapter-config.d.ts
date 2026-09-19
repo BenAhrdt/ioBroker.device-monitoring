@@ -11,6 +11,26 @@ declare global {
 			deviceConfigurationBackup?: Record<string, unknown>;
 			/** Notification categories enabled by the user. */
 			enabledNotifications?: NotificationCategory[];
+			/** Title template used for warning notifications and info.message. */
+			warningTitleTemplate?: string;
+			/** Template used for warning notifications and info.message. */
+			warningMessageTemplate?: string;
+			/** Title template used for alarm notifications and info.message. */
+			alarmTitleTemplate?: string;
+			/** Template used for alarm notifications and info.message. */
+			alarmMessageTemplate?: string;
+			/** Title template used for timeout notifications and info.message. */
+			timeoutTitleTemplate?: string;
+			/** Template used for timeout notifications and info.message. */
+			timeoutMessageTemplate?: string;
+			/** Title template used for invalid-source notifications and info.message. */
+			invalidSourceTitleTemplate?: string;
+			/** Template used for invalid-source notifications and info.message. */
+			invalidSourceMessageTemplate?: string;
+			/** Title template used for recovery notifications and info.message. */
+			recoveredTitleTemplate?: string;
+			/** Template used for recovery notifications and info.message. */
+			recoveredMessageTemplate?: string;
 		}
 	}
 }
