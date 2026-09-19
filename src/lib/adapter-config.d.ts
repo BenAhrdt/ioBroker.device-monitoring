@@ -11,6 +11,8 @@ declare global {
 			deviceConfigurationBackup?: Record<string, unknown>;
 			/** Notification categories enabled by the user. */
 			enabledNotifications?: NotificationCategory[];
+			/** Whether enabled notification categories are also sent to ioBroker's notification system. Defaults to true. */
+			sendNotificationsViaNotify?: boolean;
 			/** Title template used for warning notifications and info.message. */
 			warningTitleTemplate?: string;
 			/** Template used for warning notifications and info.message. */

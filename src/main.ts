@@ -2496,11 +2496,13 @@ class DeviceMonitoring extends utils.Adapter {
 		} catch (error) {
 			this.log.warn(`Could not write notification message state: ${String(error)}`);
 		}
-		try {
-			const notificationText = notificationTitle ? `${notificationTitle}\n${messageText}` : messageText;
-			await this.registerNotification('device-monitoring', category, notificationText);
-		} catch (error) {
-			this.log.warn(`Could not register notification ${category}: ${String(error)}`);
+		if (this.config.sendNotificationsViaNotify !== false) {
+			try {
+				const notificationText = notificationTitle ? `${notificationTitle}\n${messageText}` : messageText;
+				await this.registerNotification('device-monitoring', category, notificationText);
+			} catch (error) {
+				this.log.warn(`Could not register notification ${category}: ${String(error)}`);
+			}
 		}
 	}
 	private formatLimitDescription(limit: LimitConfiguration, value: ioBroker.StateValue, unit: string): string {

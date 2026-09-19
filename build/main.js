@@ -2276,12 +2276,14 @@ class DeviceMonitoring extends utils.Adapter {
     } catch (error) {
       this.log.warn(`Could not write notification message state: ${String(error)}`);
     }
-    try {
-      const notificationText = notificationTitle ? `${notificationTitle}
+    if (this.config.sendNotificationsViaNotify !== false) {
+      try {
+        const notificationText = notificationTitle ? `${notificationTitle}
 ${messageText}` : messageText;
-      await this.registerNotification("device-monitoring", category, notificationText);
-    } catch (error) {
-      this.log.warn(`Could not register notification ${category}: ${String(error)}`);
+        await this.registerNotification("device-monitoring", category, notificationText);
+      } catch (error) {
+        this.log.warn(`Could not register notification ${category}: ${String(error)}`);
+      }
     }
   }
   formatLimitDescription(limit, value, unit) {

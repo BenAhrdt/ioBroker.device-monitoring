@@ -32,7 +32,7 @@
 		"enabledNotifications": {
 			"type": "select",
 			"label": "Enabled notifications",
-			"help": "Select which status changes create ioBroker notifications and update info.message.",
+			"help": "Select which status changes publish a message to info.message and, if enabled, send an ioBroker notification.",
 			"multiple": true,
 			"options": [
 				{ "label": "Device warning", "value": "deviceWarning" },
@@ -43,6 +43,15 @@
 			],
 			"default": ["deviceWarning", "deviceAlarm", "deviceTimeout", "invalidSource", "deviceRecovered"],
 			"newLine": true,
+			"xs": 12,
+			"sm": 6
+		},
+		"sendNotificationsViaNotify": {
+			"type": "checkbox",
+			"label": "Also send notifications via notify",
+			"tooltip": "The notification is received either by notify-manager or by Admin (bell). The info.message state is updated either way.",
+			"default": true,
+			"newLine": false,
 			"xs": 12,
 			"sm": 6
 		},

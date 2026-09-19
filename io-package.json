@@ -279,6 +279,7 @@
     "invalidSourceMessageTemplate": "Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})",
     "recoveredTitleTemplate": "Gerät wieder in Ordnung: {{device}} - {{state}}",
     "recoveredMessageTemplate": "Der State {{state}} vom Gerät {{device}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})",
+    "sendNotificationsViaNotify": true,
     "enabledNotifications": [
       "deviceWarning",
       "deviceAlarm",
