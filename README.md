@@ -103,7 +103,7 @@ The ioBroker.admin interface will then be available at http://localhost:undefine
 Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev-server#command-line) for more details.
 
 ## Changelog
-### **WORK IN PROGRESS**
+### 0.0.16 (2026-09-19)
 * (BenAhrdt) Show monitoring settings for the selected state type only after a valid source state is selected when adding a monitored state
 * (BenAhrdt) Add editable notification title and message templates for warnings, alarms, timeouts, invalid sources and recoveries; show each pair under a color-coded header bar with a live sample preview, and reuse the rendered text for ioBroker notifications and single-event JSON in `info.message`, including mode-aware limits and optional remarks
 
