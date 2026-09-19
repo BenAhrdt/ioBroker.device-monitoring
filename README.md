@@ -107,7 +107,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
     Placeholder for the next version (at the begin of the line):
     ### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.17 (2026-09-19)
 * (BenAhrdt) Update the default recovery notification message to identify the state and device.
 
 ### 0.0.16 (2026-09-19)

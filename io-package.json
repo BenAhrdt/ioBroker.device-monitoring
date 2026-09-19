@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.16",
+    "version": "0.0.17",
     "news": {
+      "0.0.17": {
+        "en": "Update the default recovery notification message to identify the state and device.",
+        "de": "Aktualisieren Sie die Standard-Wiederherstellungsmeldung mit Status und Gerät.",
+        "ru": "Обновите сообщение с уведомлением о восстановлении по умолчанию, чтобы определить состояние и устройство.",
+        "pt": "Atualize o aviso de recuperação padrão para identificar o estado e o dispositivo.",
+        "nl": "Update het standaardbericht voor herstelmeldingen om de status en het apparaat te identificeren.",
+        "fr": "Mettez à jour le message de restauration par défaut pour identifier l'état et l'appareil.",
+        "it": "Aggiorna la notifica di ripristino predefinita per lo stato e il dispositivo.",
+        "es": "Actualice el mensaje de recuperación por defecto para identificar el estado y el dispositivo.",
+        "pl": "Zaktualizuj domyślny komunikat o odzyskiwaniu, aby zidentyfikować stan i urządzenie.",
+        "uk": "Оновіть повідомлення про відновлення за замовчуванням, щоб визначити стан та пристрій.",
+        "zh-cn": "更新默认恢复通知消息以识别状态和设备。"
+      },
       "0.0.16": {
         "en": "Show monitoring settings for the selected state type only after a valid source state is selected when adding a monitored state\nAdd editable notification title and message templates for warnings, alarms, timeouts, invalid sources and recoveries; show each pair under a color-coded header bar with a live sample preview, and reuse the rendered text for ioBroker notifications and single-event JSON in `info.message`, including mode-aware limits and optional remarks",
         "de": "Zeigt die Überwachungseinstellungen für den ausgewählten Zustandstyp erst an, wenn ein gültiger Quellstatus ausgewählt wurde\nFüge editierbare Titel und Vorlagen für Warnungen, Alarme, Timeouts, ungültige Quellen und Wiederherstellungen hinzu; zeige jedes Paar unter einer farbkodierten Kopfleiste mit Live-Vorschau und verwende den Text für ioBroker-Meldungen und Single-Event-JSON in `info.message`, mit modusspezifischen Limits und optionalen Hinweisen",
@@ -80,19 +93,6 @@
         "pl": "Dodaj opóźnione i ręczne tworzenie kopii zapasowych oraz przywracanie konfiguracji urządzenia\nZresetuj interwały aktualizacji po uruchomieniu adaptera, zachowując aktualny znacznik czasowy źródła\nZawsze wyświetlaj opcję zapisywania lub aktualizacji szablonu funkcji",
         "uk": "Додайте відкладене та ручне резервне копіювання та відновлення конфігурації пристрою\nСкидання інтервалів оновлення при запуску адаптера, зберігаючи поточну позначку часу джерела\nЗавжди показувати можливість збереження або оновлення шаблону функції",
         "zh-cn": "添加设备配置的延迟和手动备份和恢复\n在适配器启动时重置更新间隔，同时保留当前源时间戳\n始终显示保存或更新函数模板的选项"
-      },
-      "0.0.10": {
-        "en": "Show active limits, timeout settings, update timestamps and intervals on device cards\nAccept existing mixed-type states while retaining runtime numeric-value checks",
-        "de": "Aktive Limits, Timeouts, Aktualisierungszeitstempel und Intervalle auf Gerätekarten anzeigen\nAkzeptiert bestehende gemischte Zustände unter Beibehaltung von Zahlenwertprüfungen",
-        "ru": "Отображение активных лимитов, настроек тайм-аута, временных меток и интервалов обновления на картах устройств\nПринимайте существующие состояния смешанного типа, сохраняя при этом проверки числовых значений во время выполнения",
-        "pt": "Mostre limites ativos, limites de tempo limite e intervalos nas placas do dispositivo\nAceite estados mistos existentes, mantendo as verificações numéricas",
-        "nl": "Actieve limieten, time-outinstellingen weergeven, tijdstempels en intervallen bijwerken op apparaatkaarten\nAccepteer bestaande staten van verschillende typen met behoud van de numerieke waarden tijdens de looptijd",
-        "fr": "Afficher les limites d'activité, les délais et les intervalles sur les cartes des appareils\nAcceptez les états mixtes existants tout en vérifiant les valeurs numériques à l'exécution",
-        "it": "Mostra limiti attivi, timeout, aggiorna i timestamp e gli intervalli sulle schede\nAccetti gli stati misti esistenti mantenendo i controlli numerici in runtime",
-        "es": "Mostrar los límites activos, los tiempos de espera y los intervalos de actualización en las tarjetas\nAceptar los estados de tipo mixto existentes sin perder los valores numéricos",
-        "pl": "Wyświetlanie aktywnych limitów, ustawień limitu czasu, aktualizacji znaczników czasowych i interwałów na kartach urządzeń\nAkceptuj istniejące stany typu mieszanego przy zachowaniu kontroli wartości liczbowych w czasie wykonywania",
-        "uk": "Показувати активні ліміти, налаштування тайм-ауту, оновлення часових міток і інтервалів на картках пристроїв\nПриймайте існуючі стани змішаного типу, зберігаючи при цьому перевірки числових значень під час виконання",
-        "zh-cn": "显示设备卡上的活动限制、超时设置、更新时间戳和间隔\n接受现有的混合类型状态，同时保留运行时数值检查"
       }
     },
     "titleLang": {
