@@ -105,10 +105,10 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 ## Changelog
 <!--
     Placeholder for the next version (at the begin of the line):
-    ### **IN PROGRESS**
+    ### **WORK IN PROGRESS**
 -->
-### **IN PROGRESS**
-- (BenAhrdt) Update the default recovery notification message to identify the state and device.
+### **WORK IN PROGRESS**
+* (BenAhrdt) Update the default recovery notification message to identify the state and device.
 
 ### 0.0.16 (2026-09-19)
 * (BenAhrdt) Show monitoring settings for the selected state type only after a valid source state is selected when adding a monitored state
