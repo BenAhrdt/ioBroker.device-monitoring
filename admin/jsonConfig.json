@@ -281,7 +281,7 @@
 		"recoveredMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})",
+			"default": "Der State {{state}} vom Gerät {{device}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})",
 			"newLine": true,
 			"xs": 12
 		},
