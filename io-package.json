@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.18",
+    "version": "0.0.19",
     "news": {
+      "0.0.19": {
+        "en": "Show time-weighted averages inline with numeric values and show the average update interval beside the latest interval, ignoring sample gaps longer than an enabled update timeout",
+        "de": "Zeigt zeitgewichtete Mittelwerte mit numerischen Werten an und zeigt das durchschnittliche Aktualisierungsintervall neben dem letzten Intervall an.",
+        "ru": "Отображайте взвешенные по времени средние значения в соответствии с числовыми значениями и показывайте средний интервал обновления рядом с последним интервалом, игнорируя промежутки выборки, превышающие разрешенное время ожидания обновления",
+        "pt": "Mostre médias ponderadas pelo tempo em linha com valores numéricos e o intervalo médio de atualização ao lado do último, ignorando lacunas de amostra maiores que o tempo limite",
+        "nl": "Tijdgewogen gemiddelden in lijn met numerieke waarden weergeven en het gemiddelde update-interval weergeven naast het laatste interval, waarbij steekproefhiaten worden genegeerd die langer zijn dan een ingeschakelde updatetime-out",
+        "fr": "Afficher les moyennes pondérées dans le temps en ligne avec des valeurs numériques et afficher l'intervalle de mise à jour moyen à côté du dernier intervalle, en ignorant les intervalles de mise à jour",
+        "it": "Mostra le medie ponderate in linea con i valori numerici e l'intervallo di aggiornamento medio accanto all'ultimo intervallo, ignorando gli intervalli",
+        "es": "Mostrar los promedios ponderados según el tiempo en línea con los valores numéricos y mostrar el intervalo de actualización medio junto al último intervalo, ignorando los huecos de muestra superiores a un tiempo de espera",
+        "pl": "Wyświetlanie średnich ważonych czasowo w linii z wartościami liczbowymi i wyświetlanie średniego przedziału aktualizacji obok ostatniego interwału, ignorując próbek przerwy dłuższe niż włączony limit czasu aktualizacji",
+        "uk": "Показуйте середні зважені за часом у рядку з числовими значеннями та покажіть середній інтервал оновлення поряд із останнім інтервалом, ігноруючи прогалини вибірки, довші за увімкнений тайм-аут оновлення",
+        "zh-cn": "显示带有数值的时间加权平均值，并在最新间隔旁边显示平均更新间隔，忽略超过启用的更新超时时间的样本间隔"
+      },
       "0.0.18": {
         "en": "Add an option to send configured notifications via notify while always publishing them to `info.message`.",
         "de": "Fügt die Option hinzu, konfigurierte Benachrichtigungen per Notify zu senden und immer in `info.message` zu posten.",
@@ -80,19 +93,6 @@
         "pl": "Wyświetlanie znaczników czasu aktualizacji w lokalnym czasie systemowym hosta adaptera zamiast UTC",
         "uk": "Відображення позначок часу оновлення в локальному системному часі хоста адаптера замість UTC",
         "zh-cn": "以适配器主机的本地系统时间而不是 UTC 显示更新时间戳"
-      },
-      "0.0.12": {
-        "en": "Fix saving freely entered function names and their templates",
-        "de": "Fix: Speichern von Funktionsnamen und Vorlagen",
-        "ru": "Исправить сохранение произвольно введенных имен функций и их шаблонов",
-        "pt": "Corrige salvar nomes de funções e seus modelos livres",
-        "nl": "Oplossing voor het opslaan van vrij ingevoerde functienamen en bijbehorende sjablonen",
-        "fr": "Corrigé la sauvegarde des noms de fonctions et de leurs modèles",
-        "it": "Risolto il salvataggio dei nomi e dei modelli delle funzioni",
-        "es": "Corregir guardar los nombres de funciones y sus plantillas introducidos",
-        "pl": "Napraw zapisywanie dowolnie wprowadzonych nazw funkcji i ich szablonów",
-        "uk": "Виправлено збереження вільно введених імен функцій та їх шаблонів",
-        "zh-cn": "修复了保存自由输入的函数名称及其模板的问题"
       }
     },
     "titleLang": {
