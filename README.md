@@ -105,8 +105,10 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 ## Changelog
 <!--
     Placeholder for the next version (at the begin of the line):
-    ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Remove the separate Device Monitoring admin tab
+
 ### 0.0.19 (2026-09-20)
 * (BenAhrdt) Show time-weighted averages inline with numeric values and show the average update interval beside the latest interval, ignoring sample gaps longer than an enabled update timeout
 

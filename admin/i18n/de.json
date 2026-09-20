@@ -1,7 +1,5 @@
 {
 	"device-monitoring adapter settings": "Einstellungen für Geräteüberwachung",
-	"This adapter is configured in the Device Monitoring adapter tab.": "Dieser Adapter wird im Tab Geräteüberwachung konfiguriert.",
-	"Open Device Monitoring": "Geräteüberwachung öffnen",
 	"Notifications": "Benachrichtigungen",
 	"Enabled notifications": "Aktive Benachrichtigungen",
 	"Select which status changes publish a message to info.message and, if enabled, send an ioBroker notification.": "Wählen Sie aus, welche Statusänderungen eine Meldung in info.message veröffentlichen und bei aktivierter Option auch eine ioBroker-Benachrichtigung senden.",

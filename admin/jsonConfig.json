@@ -2,26 +2,6 @@
 	"i18n": true,
 	"type": "panel",
 	"items": {
-		"info": {
-			"type": "staticText",
-			"text": "This adapter is configured in the Device Monitoring adapter tab.",
-			"newLine": true,
-			"xs": 12,
-			"style": { "fontSize": 16, "lineHeight": 1.5 }
-		},
-		"link": {
-			"type": "staticLink",
-			"label": "Open Device Monitoring",
-			"href": "#tab-device-monitoring",
-			"target": "_self",
-			"button": true,
-			"variant": "contained",
-			"color": "primary",
-			"newLine": true,
-			"xs": 12,
-			"sm": 8,
-			"md": 6
-		},
 		"notificationHeader": {
 			"type": "header",
 			"text": "Notifications",

@@ -151,25 +151,7 @@
       "deviceManager": true
     },
     "adminUI": {
-      "config": "json",
-      "tab": "json"
-    },
-    "adminTab": {
-      "singleton": true,
-      "name": {
-        "en": "Device Monitoring",
-        "de": "Geräte-Überwachung",
-        "ru": "Мониторинг устройств",
-        "pt": "Monitoramento de dispositivos",
-        "nl": "Apparaatbewaking",
-        "fr": "Surveillance des appareils",
-        "it": "Monitoraggio dispositivi",
-        "es": "Monitorización de dispositivos",
-        "pl": "Monitorowanie urządzeń",
-        "uk": "Моніторинг пристроїв",
-        "zh-cn": "设备监控"
-      },
-      "link": "jsonTab.json5"
+      "config": "json"
     },
     "dependencies": [
       {
