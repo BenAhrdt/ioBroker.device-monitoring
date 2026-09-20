@@ -1760,8 +1760,24 @@ class DeviceMonitoring extends utils.Adapter {
           true
         );
         await this.ensureState(
+          `${base}.data.averageValue`,
+          t("Average value", "Durchschnittlicher Wert"),
+          "number",
+          "value",
+          unit,
+          true
+        );
+        await this.ensureState(
           `${base}.data.updateHistory`,
           t("Last update timestamps", "Letzte Aktualisierungszeitstempel"),
+          "string",
+          "json",
+          void 0,
+          true
+        );
+        await this.ensureState(
+          `${base}.data.valueHistory`,
+          t("Last numeric values", "Letzte numerische Werte"),
           "string",
           "json",
           void 0,
@@ -1932,7 +1948,8 @@ class DeviceMonitoring extends utils.Adapter {
       previousUpdate,
       updateInterval,
       average,
-      history
+      history,
+      valueHistory
     ] = await Promise.all([
       this.getStateAsync(`${base}.value`),
       this.getStateAsync(`${base}.data.value`),
@@ -1949,7 +1966,8 @@ class DeviceMonitoring extends utils.Adapter {
       this.getStateAsync(`${base}.data.previousUpdate`),
       this.getStateAsync(`${base}.data.updateInterval`),
       this.getStateAsync(`${base}.data.averageUpdateInterval`),
-      this.getStateAsync(`${base}.data.updateHistory`)
+      this.getStateAsync(`${base}.data.updateHistory`),
+      this.getStateAsync(`${base}.data.valueHistory`)
     ]);
     if (status || bundledStatus) {
       return {
@@ -1963,7 +1981,8 @@ class DeviceMonitoring extends utils.Adapter {
         previousUpdate: typeof (previousUpdate == null ? void 0 : previousUpdate.val) === "number" ? previousUpdate.val : void 0,
         updateInterval: typeof (updateInterval == null ? void 0 : updateInterval.val) === "number" ? updateInterval.val : void 0,
         averageUpdateInterval: typeof (average == null ? void 0 : average.val) === "number" ? average.val : void 0,
-        updateHistory: (0, import_update_history.parseUpdateHistory)(history == null ? void 0 : history.val)
+        updateHistory: (0, import_update_history.parseUpdateHistory)(history == null ? void 0 : history.val),
+        valueHistory: (0, import_update_history.parseValueHistory)(valueHistory == null ? void 0 : valueHistory.val)
       };
     }
     const legacy = await Promise.all(LEGACY_RUNTIME_STATE_IDS.map((id) => this.getStateAsync(`${base}.${id}`)));
@@ -1982,7 +2001,8 @@ class DeviceMonitoring extends utils.Adapter {
       previousUpdate: typeof value("previousUpdate") === "number" ? Number(value("previousUpdate")) : void 0,
       updateInterval: typeof value("updateInterval") === "number" ? Number(value("updateInterval")) : void 0,
       averageUpdateInterval: typeof value("averageUpdateInterval") === "number" ? Number(value("averageUpdateInterval")) : void 0,
-      updateHistory: (0, import_update_history.parseUpdateHistory)(value("updateHistory"))
+      updateHistory: (0, import_update_history.parseUpdateHistory)(value("updateHistory")),
+      valueHistory: []
     };
   }
   async removeLegacyRuntimeStates() {
@@ -2124,10 +2144,10 @@ class DeviceMonitoring extends utils.Adapter {
     const previousTimestamp = data.previousUpdate === null ? "-" : timestampDisplay(data.previousUpdate);
     const updateInterval = data.updateInterval === null ? "-" : (0, import_update_history.intervalDisplay)(data.updateInterval);
     const averageUpdateInterval = data.averageUpdateInterval === null ? "-" : (0, import_update_history.intervalDisplay)(data.averageUpdateInterval);
-    const intervalLabel = this.localize("Interval:", "Intervall:");
-    const averageLabel = this.localize("Average:", "Durchschnitt:");
+    const averageValue = data.averageValue === null || data.updateTimeout || typeof data.value !== "number" || !Number.isFinite(data.value) ? "" : ` \xD8: ${String(Number(data.averageValue.toFixed(2)))}${unit ? ` ${unit}` : ""}`;
+    const intervalLabel = this.localize("Last interval:", "Letztes Intervall:");
     const title = tooltip.length ? ` title="${escapeHtml(tooltip.join("\n"))}"` : "";
-    const details = `<div${title} style="width:268px;max-width:none;box-sizing:border-box;text-align:center;line-height:1.2;margin:4px 0 10px"><img src="${STATUS_ICONS[status]}" style="display:block;width:24px;height:24px;margin:0 auto 3px"><div style="color:${COLORS[status]}">${escapeHtml(display)}</div><div>${escapeHtml(this.localize("Previous:", "Vorletzter:"))} ${escapeHtml(previousTimestamp)}</div><div>${escapeHtml(this.localize("Last:", "Letzter:"))} ${escapeHtml(lastTimestamp)}</div><div>${escapeHtml(intervalLabel)} ${escapeHtml(updateInterval)}</div><div>${escapeHtml(averageLabel)} ${escapeHtml(averageUpdateInterval)}</div></div>`;
+    const details = `<div${title} style="width:268px;max-width:none;box-sizing:border-box;text-align:center;line-height:1.2;margin:4px 0 10px"><img src="${STATUS_ICONS[status]}" style="display:block;width:24px;height:24px;margin:0 auto 3px"><div style="color:${COLORS[status]}">${escapeHtml(display)}${escapeHtml(averageValue)}</div><div>${escapeHtml(this.localize("Previous:", "Vorletzter:"))} ${escapeHtml(previousTimestamp)}</div><div>${escapeHtml(this.localize("Last:", "Letzter:"))} ${escapeHtml(lastTimestamp)}</div><div style="white-space:nowrap">${escapeHtml(intervalLabel)} ${escapeHtml(updateInterval)} &nbsp;\xD8: ${escapeHtml(averageUpdateInterval)}</div></div>`;
     await this.setStateChangedAsync(`${base}.data.details`, { val: details, ack: true });
     this.cardDetails.set(`${device.id}.${watched.id}`, details);
     await this.updateDeviceCardDetails(device);
@@ -2147,7 +2167,7 @@ class DeviceMonitoring extends utils.Adapter {
     }
   }
   async updateValueNow(device, watched, sourceState) {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     const base = `devices.${device.id}.${watched.id}`;
     const previousData = await this.readMonitoringData(base, watched.sourceId);
     const sameSource = !this.resetUpdateHistories.has(base) && previousData.sourceId === watched.sourceId;
@@ -2160,12 +2180,26 @@ class DeviceMonitoring extends utils.Adapter {
     if (typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0 && (lastTimestamp === void 0 || timestamp > lastTimestamp)) {
       updateHistory = [...updateHistory, timestamp].slice(-import_update_history.UPDATE_HISTORY_SIZE);
     }
-    const lastUpdate = (_a = updateHistory.at(-1)) != null ? _a : null;
-    const previousUpdate = (_b = updateHistory.at(-2)) != null ? _b : null;
+    const value = (_a = sourceState == null ? void 0 : sourceState.val) != null ? _a : null;
+    let valueHistory = sameSource ? (0, import_update_history.parseValueHistory)(previousData.valueHistory) : [];
+    if (value !== null && typeof value !== "number") {
+      valueHistory = [];
+    }
+    if (typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0) {
+      const lastValueTimestamp = (_b = valueHistory.at(-1)) == null ? void 0 : _b.timestamp;
+      if (typeof value === "number" && Number.isFinite(value) && (lastValueTimestamp === void 0 || timestamp > lastValueTimestamp)) {
+        valueHistory = [...valueHistory, { timestamp, value }].slice(-import_update_history.UPDATE_HISTORY_SIZE);
+      }
+    }
+    const lastUpdate = (_c = updateHistory.at(-1)) != null ? _c : null;
+    const previousUpdate = (_d = updateHistory.at(-2)) != null ? _d : null;
     const updateInterval = lastUpdate === null || previousUpdate === null ? null : lastUpdate - previousUpdate;
     const averageUpdateInterval = (0, import_update_history.averageInterval)(updateHistory);
-    const value = (_c = sourceState == null ? void 0 : sourceState.val) != null ? _c : null;
     const updateTimedOut = (0, import_evaluation.isUpdateTimedOut)(sourceState, watched.staleWarning);
+    const averageValue = (0, import_update_history.timeWeightedAverage)(
+      valueHistory,
+      watched.staleWarning.enabled ? watched.staleWarning.minutes * 6e4 : void 0
+    );
     const status = this.getWatchedStatus(watched, sourceState, updateTimedOut);
     const unit = await this.getSourceUnit(watched.sourceId);
     const display = status === "invalid" ? `${watched.name}: \u26A0 ${watched.sourceId}` : `${watched.name}: ${value === null ? "\u2014" : `${String(value)}${unit ? ` ${unit}` : ""}`}`;
@@ -2181,7 +2215,9 @@ class DeviceMonitoring extends utils.Adapter {
       previousUpdate,
       updateInterval,
       averageUpdateInterval,
-      updateHistory
+      updateHistory,
+      averageValue,
+      valueHistory
     };
     await Promise.all([
       this.setStateChangedAsync(`${base}.value`, { val: data.value, ack: true }),
@@ -2198,8 +2234,13 @@ class DeviceMonitoring extends utils.Adapter {
         val: data.averageUpdateInterval,
         ack: true
       }),
+      this.setStateChangedAsync(`${base}.data.averageValue`, { val: data.averageValue, ack: true }),
       this.setStateChangedAsync(`${base}.data.updateHistory`, {
         val: JSON.stringify(data.updateHistory),
+        ack: true
+      }),
+      this.setStateChangedAsync(`${base}.data.valueHistory`, {
+        val: JSON.stringify(data.valueHistory),
         ack: true
       })
     ]);

@@ -14,7 +14,14 @@ import {
 import { configurationBackupNeedsUpdate } from './lib/configuration-backup';
 import type { MonitoringData } from './lib/monitoring-data';
 import { notificationCategoryForTransition, type NotificationCategory } from './lib/notifications';
-import { averageInterval, intervalDisplay, parseUpdateHistory, UPDATE_HISTORY_SIZE } from './lib/update-history';
+import {
+	averageInterval,
+	intervalDisplay,
+	parseUpdateHistory,
+	parseValueHistory,
+	timeWeightedAverage,
+	UPDATE_HISTORY_SIZE,
+} from './lib/update-history';
 
 const t = (en: string, de: string): ioBroker.Translated => ({ en, de });
 const COLORS: Record<WatchStatus, string> = {
@@ -1910,8 +1917,24 @@ class DeviceMonitoring extends utils.Adapter {
 					true,
 				);
 				await this.ensureState(
+					`${base}.data.averageValue`,
+					t('Average value', 'Durchschnittlicher Wert'),
+					'number',
+					'value',
+					unit,
+					true,
+				);
+				await this.ensureState(
 					`${base}.data.updateHistory`,
 					t('Last update timestamps', 'Letzte Aktualisierungszeitstempel'),
+					'string',
+					'json',
+					undefined,
+					true,
+				);
+				await this.ensureState(
+					`${base}.data.valueHistory`,
+					t('Last numeric values', 'Letzte numerische Werte'),
 					'string',
 					'json',
 					undefined,
@@ -2094,6 +2117,7 @@ class DeviceMonitoring extends utils.Adapter {
 			updateInterval,
 			average,
 			history,
+			valueHistory,
 		] = await Promise.all([
 			this.getStateAsync(`${base}.value`),
 			this.getStateAsync(`${base}.data.value`),
@@ -2111,6 +2135,7 @@ class DeviceMonitoring extends utils.Adapter {
 			this.getStateAsync(`${base}.data.updateInterval`),
 			this.getStateAsync(`${base}.data.averageUpdateInterval`),
 			this.getStateAsync(`${base}.data.updateHistory`),
+			this.getStateAsync(`${base}.data.valueHistory`),
 		]);
 		if (status || bundledStatus) {
 			return {
@@ -2137,6 +2162,7 @@ class DeviceMonitoring extends utils.Adapter {
 				updateInterval: typeof updateInterval?.val === 'number' ? updateInterval.val : undefined,
 				averageUpdateInterval: typeof average?.val === 'number' ? average.val : undefined,
 				updateHistory: parseUpdateHistory(history?.val),
+				valueHistory: parseValueHistory(valueHistory?.val),
 			};
 		}
 		const legacy = await Promise.all(LEGACY_RUNTIME_STATE_IDS.map(id => this.getStateAsync(`${base}.${id}`)));
@@ -2156,6 +2182,7 @@ class DeviceMonitoring extends utils.Adapter {
 			averageUpdateInterval:
 				typeof value('averageUpdateInterval') === 'number' ? Number(value('averageUpdateInterval')) : undefined,
 			updateHistory: parseUpdateHistory(value('updateHistory')),
+			valueHistory: [],
 		};
 	}
 	private async removeLegacyRuntimeStates(): Promise<void> {
@@ -2316,17 +2343,22 @@ class DeviceMonitoring extends utils.Adapter {
 		const updateInterval = data.updateInterval === null ? '-' : intervalDisplay(data.updateInterval);
 		const averageUpdateInterval =
 			data.averageUpdateInterval === null ? '-' : intervalDisplay(data.averageUpdateInterval);
-		const intervalLabel = this.localize('Interval:', 'Intervall:');
-		const averageLabel = this.localize('Average:', 'Durchschnitt:');
+		const averageValue =
+			data.averageValue === null ||
+			data.updateTimeout ||
+			typeof data.value !== 'number' ||
+			!Number.isFinite(data.value)
+				? ''
+				: ` Ø: ${String(Number(data.averageValue.toFixed(2)))}${unit ? ` ${unit}` : ''}`;
+		const intervalLabel = this.localize('Last interval:', 'Letztes Intervall:');
 		const title = tooltip.length ? ` title="${escapeHtml(tooltip.join('\n'))}"` : '';
 		const details =
 			`<div${title} style="width:268px;max-width:none;box-sizing:border-box;text-align:center;line-height:1.2;margin:4px 0 10px">` +
 			`<img src="${STATUS_ICONS[status]}" style="display:block;width:24px;height:24px;margin:0 auto 3px">` +
-			`<div style="color:${COLORS[status]}">${escapeHtml(display)}</div>` +
+			`<div style="color:${COLORS[status]}">${escapeHtml(display)}${escapeHtml(averageValue)}</div>` +
 			`<div>${escapeHtml(this.localize('Previous:', 'Vorletzter:'))} ${escapeHtml(previousTimestamp)}</div>` +
 			`<div>${escapeHtml(this.localize('Last:', 'Letzter:'))} ${escapeHtml(lastTimestamp)}</div>` +
-			`<div>${escapeHtml(intervalLabel)} ${escapeHtml(updateInterval)}</div>` +
-			`<div>${escapeHtml(averageLabel)} ${escapeHtml(averageUpdateInterval)}</div>` +
+			`<div style="white-space:nowrap">${escapeHtml(intervalLabel)} ${escapeHtml(updateInterval)} &nbsp;Ø: ${escapeHtml(averageUpdateInterval)}</div>` +
 			`</div>`;
 		await this.setStateChangedAsync(`${base}.data.details`, { val: details, ack: true });
 		this.cardDetails.set(`${device.id}.${watched.id}`, details);
@@ -2373,12 +2405,30 @@ class DeviceMonitoring extends utils.Adapter {
 		) {
 			updateHistory = [...updateHistory, timestamp].slice(-UPDATE_HISTORY_SIZE);
 		}
+		const value = sourceState?.val ?? null;
+		let valueHistory = sameSource ? parseValueHistory(previousData.valueHistory) : [];
+		if (value !== null && typeof value !== 'number') {
+			valueHistory = [];
+		}
+		if (typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0) {
+			const lastValueTimestamp = valueHistory.at(-1)?.timestamp;
+			if (
+				typeof value === 'number' &&
+				Number.isFinite(value) &&
+				(lastValueTimestamp === undefined || timestamp > lastValueTimestamp)
+			) {
+				valueHistory = [...valueHistory, { timestamp, value }].slice(-UPDATE_HISTORY_SIZE);
+			}
+		}
 		const lastUpdate = updateHistory.at(-1) ?? null;
 		const previousUpdate = updateHistory.at(-2) ?? null;
 		const updateInterval = lastUpdate === null || previousUpdate === null ? null : lastUpdate - previousUpdate;
 		const averageUpdateInterval = averageInterval(updateHistory);
-		const value = sourceState?.val ?? null;
 		const updateTimedOut = isUpdateTimedOut(sourceState, watched.staleWarning);
+		const averageValue = timeWeightedAverage(
+			valueHistory,
+			watched.staleWarning.enabled ? watched.staleWarning.minutes * 60_000 : undefined,
+		);
 		const status = this.getWatchedStatus(watched, sourceState, updateTimedOut);
 		const unit = await this.getSourceUnit(watched.sourceId);
 		const display =
@@ -2398,6 +2448,8 @@ class DeviceMonitoring extends utils.Adapter {
 			updateInterval,
 			averageUpdateInterval,
 			updateHistory,
+			averageValue,
+			valueHistory,
 		};
 		await Promise.all([
 			this.setStateChangedAsync(`${base}.value`, { val: data.value, ack: true }),
@@ -2414,8 +2466,13 @@ class DeviceMonitoring extends utils.Adapter {
 				val: data.averageUpdateInterval,
 				ack: true,
 			}),
+			this.setStateChangedAsync(`${base}.data.averageValue`, { val: data.averageValue, ack: true }),
 			this.setStateChangedAsync(`${base}.data.updateHistory`, {
 				val: JSON.stringify(data.updateHistory),
+				ack: true,
+			}),
+			this.setStateChangedAsync(`${base}.data.valueHistory`, {
+				val: JSON.stringify(data.valueHistory),
 				ack: true,
 			}),
 		]);

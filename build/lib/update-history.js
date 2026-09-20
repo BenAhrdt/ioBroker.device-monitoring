@@ -21,7 +21,9 @@ __export(update_history_exports, {
   UPDATE_HISTORY_SIZE: () => UPDATE_HISTORY_SIZE,
   averageInterval: () => averageInterval,
   intervalDisplay: () => intervalDisplay,
-  parseUpdateHistory: () => parseUpdateHistory
+  parseUpdateHistory: () => parseUpdateHistory,
+  parseValueHistory: () => parseValueHistory,
+  timeWeightedAverage: () => timeWeightedAverage
 });
 module.exports = __toCommonJS(update_history_exports);
 const UPDATE_HISTORY_SIZE = 10;
@@ -49,17 +51,54 @@ function parseUpdateHistory(value) {
     return [];
   }
 }
+function parseValueHistory(value) {
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) : value;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    const byTimestamp = /* @__PURE__ */ new Map();
+    for (const entry of parsed) {
+      if (typeof entry === "object" && entry !== null && typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp) && entry.timestamp > 0 && typeof entry.value === "number" && Number.isFinite(entry.value)) {
+        byTimestamp.set(entry.timestamp, { timestamp: entry.timestamp, value: entry.value });
+      }
+    }
+    return [...byTimestamp.values()].sort((a, b) => a.timestamp - b.timestamp).slice(-UPDATE_HISTORY_SIZE);
+  } catch {
+    return [];
+  }
+}
 function averageInterval(timestamps) {
   if (timestamps.length < 2) {
     return null;
   }
   return (timestamps[timestamps.length - 1] - timestamps[0]) / (timestamps.length - 1);
 }
+function timeWeightedAverage(samples, maxGapMilliseconds) {
+  if (samples.length < 2) {
+    return null;
+  }
+  let weightedSum = 0;
+  let totalDuration = 0;
+  for (let index = 1; index < samples.length; index++) {
+    const previous = samples[index - 1];
+    const current = samples[index];
+    const duration = current.timestamp - previous.timestamp;
+    if (duration <= 0 || maxGapMilliseconds !== void 0 && duration > maxGapMilliseconds) {
+      continue;
+    }
+    weightedSum += (previous.value + current.value) / 2 * duration;
+    totalDuration += duration;
+  }
+  return totalDuration > 0 ? weightedSum / totalDuration : null;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   UPDATE_HISTORY_SIZE,
   averageInterval,
   intervalDisplay,
-  parseUpdateHistory
+  parseUpdateHistory,
+  parseValueHistory,
+  timeWeightedAverage
 });
 //# sourceMappingURL=update-history.js.map

@@ -107,6 +107,9 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
     Placeholder for the next version (at the begin of the line):
     ### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Show time-weighted averages inline with numeric values and show the average update interval beside the latest interval, ignoring sample gaps longer than an enabled update timeout
+
 ### 0.0.18 (2026-09-19)
 * (BenAhrdt) Add an option to send configured notifications via notify while always publishing them to `info.message`.
 

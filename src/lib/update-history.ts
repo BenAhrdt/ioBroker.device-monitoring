@@ -1,5 +1,13 @@
 export const UPDATE_HISTORY_SIZE = 10;
 
+/** A numeric value and the source timestamp at which it was observed. */
+export interface NumericValueSample {
+	/** Source timestamp in milliseconds. */
+	timestamp: number;
+	/** Numeric source value. */
+	value: number;
+}
+
 /**
  * Formats a duration while omitting trailing zero-value units.
  *
@@ -43,6 +51,37 @@ export function parseUpdateHistory(value: unknown): number[] {
 }
 
 /**
+ * Reads, validates, sorts and limits a persisted numeric value history.
+ *
+ * @param value Persisted JSON value.
+ */
+export function parseValueHistory(value: unknown): NumericValueSample[] {
+	try {
+		const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+		if (!Array.isArray(parsed)) {
+			return [];
+		}
+		const byTimestamp = new Map<number, NumericValueSample>();
+		for (const entry of parsed) {
+			if (
+				typeof entry === 'object' &&
+				entry !== null &&
+				typeof entry.timestamp === 'number' &&
+				Number.isFinite(entry.timestamp) &&
+				entry.timestamp > 0 &&
+				typeof entry.value === 'number' &&
+				Number.isFinite(entry.value)
+			) {
+				byTimestamp.set(entry.timestamp, { timestamp: entry.timestamp, value: entry.value });
+			}
+		}
+		return [...byTimestamp.values()].sort((a, b) => a.timestamp - b.timestamp).slice(-UPDATE_HISTORY_SIZE);
+	} catch {
+		return [];
+	}
+}
+
+/**
  * Calculates the mean of all consecutive intervals represented by the timestamps.
  *
  * @param timestamps Sorted timestamps used for the calculation.
@@ -52,4 +91,30 @@ export function averageInterval(timestamps: number[]): number | null {
 		return null;
 	}
 	return (timestamps[timestamps.length - 1] - timestamps[0]) / (timestamps.length - 1);
+}
+
+/**
+ * Calculates a time-weighted average by linearly interpolating between numeric samples.
+ * Gaps longer than maxGapMilliseconds are skipped because their values are stale or missing.
+ *
+ * @param samples Ordered timestamped numeric samples.
+ * @param maxGapMilliseconds Optional maximum sample gap to include.
+ */
+export function timeWeightedAverage(samples: NumericValueSample[], maxGapMilliseconds?: number): number | null {
+	if (samples.length < 2) {
+		return null;
+	}
+	let weightedSum = 0;
+	let totalDuration = 0;
+	for (let index = 1; index < samples.length; index++) {
+		const previous = samples[index - 1];
+		const current = samples[index];
+		const duration = current.timestamp - previous.timestamp;
+		if (duration <= 0 || (maxGapMilliseconds !== undefined && duration > maxGapMilliseconds)) {
+			continue;
+		}
+		weightedSum += ((previous.value + current.value) / 2) * duration;
+		totalDuration += duration;
+	}
+	return totalDuration > 0 ? weightedSum / totalDuration : null;
 }

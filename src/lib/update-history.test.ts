@@ -1,6 +1,13 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
-import { averageInterval, intervalDisplay, parseUpdateHistory, UPDATE_HISTORY_SIZE } from './update-history';
+import {
+	averageInterval,
+	intervalDisplay,
+	parseUpdateHistory,
+	parseValueHistory,
+	timeWeightedAverage,
+	UPDATE_HISTORY_SIZE,
+} from './update-history';
 
 describe('update history', () => {
 	it('omits empty trailing interval units', () => {
@@ -25,5 +32,52 @@ describe('update history', () => {
 	it('calculates the average of the represented intervals', () => {
 		expect(averageInterval([1_000, 2_000, 5_000])).to.equal(2_000);
 		expect(averageInterval([1_000])).to.equal(null);
+	});
+
+	it('keeps the ten newest valid timestamped numeric values', () => {
+		const samples = [
+			{ timestamp: 12, value: 12 },
+			{ timestamp: 4, value: 4 },
+			{ timestamp: 4, value: 40 },
+			{ timestamp: 0, value: 0 },
+			{ timestamp: 13, value: Number.NaN },
+			...Array.from({ length: 11 }, (_, index) => ({ timestamp: index + 1, value: index + 1 })),
+		];
+		expect(parseValueHistory(JSON.stringify(samples))).to.deep.equal(
+			Array.from({ length: UPDATE_HISTORY_SIZE }, (_, index) => ({ timestamp: index + 3, value: index + 3 })),
+		);
+	});
+
+	it('calculates a time-weighted average from irregularly spaced measurements', () => {
+		expect(
+			timeWeightedAverage([
+				{ timestamp: 1_000, value: 10 },
+				{ timestamp: 2_000, value: 20 },
+				{ timestamp: 11_000, value: 20 },
+			]),
+		).to.equal(19.5);
+		expect(timeWeightedAverage([{ timestamp: 1_000, value: 10 }])).to.equal(null);
+	});
+
+	it('skips sample gaps longer than the configured timeout', () => {
+		expect(
+			timeWeightedAverage(
+				[
+					{ timestamp: 1_000, value: 10 },
+					{ timestamp: 101_000, value: 100 },
+					{ timestamp: 111_000, value: 20 },
+				],
+				20_000,
+			),
+		).to.equal(60);
+		expect(
+			timeWeightedAverage(
+				[
+					{ timestamp: 1_000, value: 10 },
+					{ timestamp: 101_000, value: 100 },
+				],
+				20_000,
+			),
+		).to.equal(null);
 	});
 });
