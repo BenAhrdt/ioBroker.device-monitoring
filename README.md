@@ -106,7 +106,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 <!--
     Placeholder for the next version (at the begin of the line):
 -->
-### **WORK IN PROGRESS**
+### 0.0.20 (2026-09-20)
 * (BenAhrdt) Remove the separate Device Monitoring admin tab
 
 ### 0.0.19 (2026-09-20)

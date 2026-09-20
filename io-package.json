@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.19",
+    "version": "0.0.20",
     "news": {
+      "0.0.20": {
+        "en": "Remove the separate Device Monitoring admin tab",
+        "de": "Den separaten Admin-Tab „Geräteüberwachung“ entfernen",
+        "ru": "Удалите отдельную вкладку администратора мониторинга устройств",
+        "pt": "Remova a guia Admin separada do Device Monitoring",
+        "nl": "Verwijder het aparte beheerderstabblad Device Monitoring",
+        "fr": "Supprimer l'onglet admin Device Monitoring séparé",
+        "it": "Rimuovi la scheda separata di Device Monitoring",
+        "es": "Eliminar la pestaña de administrador de Device Monitoring",
+        "pl": "Usuń oddzielną kartę administratora monitorowania urządzeń",
+        "uk": "Видаліть окрему вкладку адміністратора «Моніторинг пристроїв»",
+        "zh-cn": "移除单独的 “设备监控” 管理员选项卡"
+      },
       "0.0.19": {
         "en": "Show time-weighted averages inline with numeric values and show the average update interval beside the latest interval, ignoring sample gaps longer than an enabled update timeout",
         "de": "Zeigt zeitgewichtete Mittelwerte mit numerischen Werten an und zeigt das durchschnittliche Aktualisierungsintervall neben dem letzten Intervall an.",
@@ -80,19 +93,6 @@
         "pl": "Zachowaj dziesięć ostatnich sygnatur czasowych aktualizacji i pokaż poprzedni znacznik czasu, ostatni interwał i średni interwał na kartach urządzeń\nPomiń końcowe jednostki wartości zerowej z wyświetlonych przedziałów aktualizacji\nDodaj konfigurowalne powiadomienia ioBroker dotyczące ostrzeżeń, alarmów, limitu czasu, nieprawidłowych źródeł i odzyskiwania\nGrupuj monitorowane wartości środowiska wykonawczego w eksperckim kanale danych z wpisanymi stanami i historią aktualizacji JSON\nUmieść opcję szablonu funkcji bezpośrednio pod zaznaczeniem funkcji\nUżyj stabilnego stanu HTML eksperta dla szczegółów karty urządzenia, aby nowo dodane monitorowane stany pojawiały się bez przebudowy schematu karty",
         "uk": "Зберігайте останні десять міток часу оновлення та показуйте попередню мітку часу, останній інтервал та середній інтервал на картках пристроїв\nОпустити кінцеві одиниці нульового значення з відображених інтервалів оновлення\nДодайте настроювані сповіщення IObroker для попереджень, тривог, тайм-аутів, недійсних джерел та відновлення\nГрупові контрольовані значення виконання в експертному каналі даних із введеними станами та історією оновлень JSON\nРозмістіть параметр функції-шаблон безпосередньо під вибором функції\nВикористовуйте стабільний експертний стан HTML для деталей картки пристрою, щоб нещодавно додані контрольовані стани з'являлися без відновлення схеми картки",
         "zh-cn": "保留最近十次更新时间戳，并在设备卡上显示先前的时间戳、最新间隔和平均间隔\n从显示的更新间隔中省略尾随的零值单位\n为警告、警报、超时、无效来源和恢复添加可配置的 IOBroker 通知\n使用键入的状态和 JSON 更新历史记录将受监控的运行时值分组到专家数据通道中\n将函数模板选项放在函数选择的正下方\n使用稳定的专家 HTML 状态来获取设备卡的详细信息，这样无需重建卡架构即可显示新添加的监控状态"
-      },
-      "0.0.13": {
-        "en": "Display update timestamps in the adapter host's local system time instead of UTC",
-        "de": "Zeigt Aktualisierungszeitstempel in der lokalen Systemzeit des Adapters an statt UTC",
-        "ru": "Отображать временные метки обновления в локальном системном времени хоста адаптера вместо UTC",
-        "pt": "Exibir timestamps de atualização no sistema local do host em vez de UTC",
-        "nl": "Tijdstempels voor updates weergeven in de lokale systeemtijd van de adapterhost in plaats van UTC",
-        "fr": "Afficher l'horodatage des mises à jour en fonction de l'heure locale de l'hôte au lieu de l'UTC",
-        "it": "Mostra gli orari di aggiornamento nell'ora locale dell'host anziché UTC",
-        "es": "Mostrar las marcas de hora de actualización en el sistema local del host adaptador en lugar de UTC",
-        "pl": "Wyświetlanie znaczników czasu aktualizacji w lokalnym czasie systemowym hosta adaptera zamiast UTC",
-        "uk": "Відображення позначок часу оновлення в локальному системному часі хоста адаптера замість UTC",
-        "zh-cn": "以适配器主机的本地系统时间而不是 UTC 显示更新时间戳"
       }
     },
     "titleLang": {
