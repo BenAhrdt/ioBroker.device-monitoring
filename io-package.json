@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.24",
+    "version": "0.0.25",
     "news": {
+      "0.0.25": {
+        "en": "Exclude the historical changelog from the npm package and link to it from the README.",
+        "de": "Schließt das historische Changelog aus dem npm-Paket aus und verlinkt es in der README.",
+        "ru": "Исключите исторический журнал изменений из пакета npm и создайте ссылку на него из README.",
+        "pt": "Exclua o changelog histórico do pacote npm e vincule-o ao README.",
+        "nl": "Sluit de historische changelog uit het npm-pakket en link ernaar vanuit de README.",
+        "fr": "Excluez l'historique des modifications du package npm et créez un lien vers celui-ci depuis le README.",
+        "it": "Escluda il changelog storico dal pacchetto npm e collegalo dal README.",
+        "es": "Excluya el registro de cambios histórico del paquete npm y enlácelo desde el README.",
+        "pl": "Wyklucz historyczny dziennik zmian z pakietu npm i połącz do niego z README.",
+        "uk": "Виключити історичний журнал змін з пакета npm та посилатися на нього з README.",
+        "zh-cn": "从 npm 包中排除历史变更日志，并从 README 中链接到该日志。"
+      },
       "0.0.24": {
         "en": "Complete responsive widths for all Admin configuration fields.",
         "de": "Vollständige Breite für alle Admin-Felder.",
@@ -80,19 +93,6 @@
         "pl": "Wyświetlanie średnich ważonych czasowo w linii z wartościami liczbowymi i wyświetlanie średniego przedziału aktualizacji obok ostatniego interwału, ignorując próbek przerwy dłuższe niż włączony limit czasu aktualizacji",
         "uk": "Показуйте середні зважені за часом у рядку з числовими значеннями та покажіть середній інтервал оновлення поряд із останнім інтервалом, ігноруючи прогалини вибірки, довші за увімкнений тайм-аут оновлення",
         "zh-cn": "显示带有数值的时间加权平均值，并在最新间隔旁边显示平均更新间隔，忽略超过启用的更新超时时间的样本间隔"
-      },
-      "0.0.18": {
-        "en": "Add an option to send configured notifications via notify while always publishing them to `info.message`.",
-        "de": "Fügt die Option hinzu, konfigurierte Benachrichtigungen per Notify zu senden und immer in `info.message` zu posten.",
-        "ru": "Добавьте возможность отправлять настроенные уведомления с помощью уведомлений, всегда публикуя их в `info.message`.",
-        "pt": "Adicione a opção de enviar notificações configuradas via notify publicando-as sempre em `info.message`.",
-        "nl": "Voeg een optie toe om geconfigureerde meldingen via Notify te verzenden en ze altijd te publiceren op `info.message`.",
-        "fr": "Ajout d'une option pour envoyer des notifications configurées via Notify tout en les publiant sur « info.message ».",
-        "it": "Aggiunga un'opzione per inviare notifiche configurate pubblicandole sempre su `info.message`.",
-        "es": "Añada una opción para enviar notificaciones configuradas mediante Notify y publicarlas siempre en `info.message`.",
-        "pl": "Dodaj opcję wysyłania skonfigurowanych powiadomień za pośrednictwem powiadomień, zawsze publikując je na stronie `info.message`.",
-        "uk": "Додайте опцію надсилання налаштованих сповіщень через сповіщення, завжди публікуючи їх у `info.message`.",
-        "zh-cn": "添加一个选项，通过通知发送已配置的通知，同时始终将其发布到 `info.message`。"
       }
     },
     "titleLang": {

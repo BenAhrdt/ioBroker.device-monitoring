@@ -1,4 +1,9 @@
 # Older changelog entries
+## 0.0.20 (2026-09-20)
+* (BenAhrdt) Remove the separate Device Monitoring admin tab
+
+Older changes are available in [CHANGELOG_OLD.md](https://github.com/BenAhrdt/ioBroker.device-monitoring/blob/main/CHANGELOG_OLD.md).
+
 ## 0.0.19 (2026-09-20)
 * (BenAhrdt) Show time-weighted averages inline with numeric values and show the average update interval beside the latest interval, ignoring sample gaps longer than an enabled update timeout
 

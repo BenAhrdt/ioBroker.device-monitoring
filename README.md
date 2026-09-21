@@ -154,8 +154,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-
-### **WORK IN PROGRESS**
+### 0.0.25 (2026-09-21)
 * (BenAhrdt) Exclude the historical changelog from the npm package and link to it from the README.
 
 ### 0.0.24 (2026-09-21)
@@ -170,11 +169,6 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 
 ### 0.0.21 (2026-09-21)
 * (BenAhrdt) Add per-state notification levels with acknowledgements and document their values and the `info.message` event format
-
-### 0.0.20 (2026-09-20)
-* (BenAhrdt) Remove the separate Device Monitoring admin tab
-
-Older changes are available in [CHANGELOG_OLD.md](https://github.com/BenAhrdt/ioBroker.device-monitoring/blob/main/CHANGELOG_OLD.md).
 
 ## License
 MIT License
