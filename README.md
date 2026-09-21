@@ -78,7 +78,7 @@ You are almost done, only a few steps left:
 	```bash
 	git push origin main
 	```
-1. Add a new secret under https://github.com/BenAhrdt/ioBroker.device-monitoring/settings/secrets. It must be named `AUTO_MERGE_TOKEN` and contain a personal access token with push access to the repository, e.g. yours. You can create a new token under https://github.com/settings/tokens.
+1. Dependabot pull requests use the repository's `GITHUB_TOKEN` for auto-merge; a personal access token is not required.
 
 1. Head over to [src/main.ts](src/main.ts) and start programming!
 
@@ -154,6 +154,10 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Require Admin 8 or newer, complete adapter metadata and required language entries, and update repository checks and scheduled dependency updates
+* (BenAhrdt) Add a link from the instance configuration to the Device Manager tab
+
 ### 0.0.21 (2026-09-21)
 * (BenAhrdt) Add per-state notification levels with acknowledgements and document their values and the `info.message` event format
 

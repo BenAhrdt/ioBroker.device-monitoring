@@ -1302,9 +1302,9 @@ class DeviceMonitoring extends utils.Adapter {
 	private resetUpdateHistories = new Set<string>();
 	private displayLanguage: 'de' | 'en' = 'en';
 	private deviceManagement?: DeviceMonitoringManagement;
-	private sortRefreshTimer?: NodeJS.Timeout;
-	private staleCheckTimer?: NodeJS.Timeout;
-	private configurationBackupTimer?: NodeJS.Timeout;
+	private sortRefreshTimer: ioBroker.Interval | undefined;
+	private staleCheckTimer: ioBroker.Interval | undefined;
+	private configurationBackupTimer: ioBroker.Timeout | undefined;
 	private bulkSelectionSessions = new Map<string, any>();
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({ ...options, name: 'device-monitoring' });
@@ -1314,13 +1314,13 @@ class DeviceMonitoring extends utils.Adapter {
 		this.on('message', this.onMessage.bind(this));
 		this.on('unload', callback => {
 			if (this.sortRefreshTimer) {
-				clearInterval(this.sortRefreshTimer);
+				this.clearInterval(this.sortRefreshTimer);
 			}
 			if (this.staleCheckTimer) {
-				clearInterval(this.staleCheckTimer);
+				this.clearInterval(this.staleCheckTimer);
 			}
 			if (this.configurationBackupTimer) {
-				clearTimeout(this.configurationBackupTimer);
+				this.clearTimeout(this.configurationBackupTimer);
 			}
 			callback();
 		});
@@ -1352,10 +1352,10 @@ class DeviceMonitoring extends utils.Adapter {
 		await this.refreshSubscriptions();
 		await this.updateAll();
 		await this.setState('info.connection', true, true);
-		this.sortRefreshTimer = setInterval(() => {
+		this.sortRefreshTimer = this.setInterval(() => {
 			void this.deviceManagement?.refreshCards();
 		}, 10_000);
-		this.staleCheckTimer = setInterval(() => {
+		this.staleCheckTimer = this.setInterval(() => {
 			void this.updateAll();
 		}, 60_000);
 		this.scheduleConfigurationBackup();
@@ -1571,7 +1571,7 @@ class DeviceMonitoring extends utils.Adapter {
 	public createBulkSelectionSession(data: any): string {
 		const token = `bulk_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 		this.bulkSelectionSessions.set(token, JSON.parse(JSON.stringify(data)));
-		setTimeout(() => this.bulkSelectionSessions.delete(token), 10 * 60 * 1000);
+		this.setTimeout(() => this.bulkSelectionSessions.delete(token), 10 * 60 * 1000);
 		return token;
 	}
 	public removeBulkSelectionSession(token: string): void {
@@ -1797,14 +1797,14 @@ class DeviceMonitoring extends utils.Adapter {
 	}
 	private scheduleConfigurationBackup(): void {
 		if (this.configurationBackupTimer) {
-			clearTimeout(this.configurationBackupTimer);
+			this.clearTimeout(this.configurationBackupTimer);
 			this.configurationBackupTimer = undefined;
 		}
 		const minutes = Number(this.config.configurationBackupDelayMinutes ?? 60);
 		if (!Number.isFinite(minutes) || minutes <= 0) {
 			return;
 		}
-		this.configurationBackupTimer = setTimeout(
+		this.configurationBackupTimer = this.setTimeout(
 			() => {
 				this.configurationBackupTimer = undefined;
 				void this.backupDeviceConfiguration().catch(error =>

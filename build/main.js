@@ -1171,13 +1171,13 @@ class DeviceMonitoring extends utils.Adapter {
     this.on("message", this.onMessage.bind(this));
     this.on("unload", (callback) => {
       if (this.sortRefreshTimer) {
-        clearInterval(this.sortRefreshTimer);
+        this.clearInterval(this.sortRefreshTimer);
       }
       if (this.staleCheckTimer) {
-        clearInterval(this.staleCheckTimer);
+        this.clearInterval(this.staleCheckTimer);
       }
       if (this.configurationBackupTimer) {
-        clearTimeout(this.configurationBackupTimer);
+        this.clearTimeout(this.configurationBackupTimer);
       }
       callback();
     });
@@ -1210,11 +1210,11 @@ class DeviceMonitoring extends utils.Adapter {
     await this.refreshSubscriptions();
     await this.updateAll();
     await this.setState("info.connection", true, true);
-    this.sortRefreshTimer = setInterval(() => {
+    this.sortRefreshTimer = this.setInterval(() => {
       var _a2;
       void ((_a2 = this.deviceManagement) == null ? void 0 : _a2.refreshCards());
     }, 1e4);
-    this.staleCheckTimer = setInterval(() => {
+    this.staleCheckTimer = this.setInterval(() => {
       void this.updateAll();
     }, 6e4);
     this.scheduleConfigurationBackup();
@@ -1421,7 +1421,7 @@ class DeviceMonitoring extends utils.Adapter {
   createBulkSelectionSession(data) {
     const token = `bulk_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     this.bulkSelectionSessions.set(token, JSON.parse(JSON.stringify(data)));
-    setTimeout(() => this.bulkSelectionSessions.delete(token), 10 * 60 * 1e3);
+    this.setTimeout(() => this.bulkSelectionSessions.delete(token), 10 * 60 * 1e3);
     return token;
   }
   removeBulkSelectionSession(token) {
@@ -1636,14 +1636,14 @@ class DeviceMonitoring extends utils.Adapter {
   scheduleConfigurationBackup() {
     var _a;
     if (this.configurationBackupTimer) {
-      clearTimeout(this.configurationBackupTimer);
+      this.clearTimeout(this.configurationBackupTimer);
       this.configurationBackupTimer = void 0;
     }
     const minutes = Number((_a = this.config.configurationBackupDelayMinutes) != null ? _a : 60);
     if (!Number.isFinite(minutes) || minutes <= 0) {
       return;
     }
-    this.configurationBackupTimer = setTimeout(
+    this.configurationBackupTimer = this.setTimeout(
       () => {
         this.configurationBackupTimer = void 0;
         void this.backupDeviceConfiguration().catch(

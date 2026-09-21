@@ -128,7 +128,8 @@
       "watch",
       "device",
       "warning",
-      "alert"
+      "alert",
+      "ioBroker"
     ],
     "licenseInformation": {
       "type": "free",
@@ -160,7 +161,7 @@
     ],
     "globalDependencies": [
       {
-        "admin": ">=7.0.23"
+        "admin": ">=8.0.0"
       }
     ]
   },
@@ -169,22 +170,58 @@
       "scope": "device-monitoring",
       "name": {
         "en": "Device monitoring",
-        "de": "Geräteüberwachung"
+        "de": "Geräteüberwachung",
+        "es": "Supervisión de dispositivos",
+        "fr": "Surveillance des appareils",
+        "it": "Monitoraggio dispositivi",
+        "nl": "Apparaatbewaking",
+        "pl": "Monitorowanie urządzeń",
+        "pt": "Monitoramento de dispositivos",
+        "ru": "Мониторинг устройств",
+        "uk": "Моніторинг пристроїв",
+        "zh-cn": "设备监控"
       },
       "description": {
         "en": "Status changes detected by the device-monitoring adapter",
-        "de": "Vom Geräteüberwachungsadapter erkannte Statusänderungen"
+        "de": "Vom Geräteüberwachungsadapter erkannte Statusänderungen",
+        "es": "Cambios de estado detectados por el adaptador de supervisión de dispositivos",
+        "fr": "Changements d’état détectés par l’adaptateur de surveillance des appareils",
+        "it": "Modifiche di stato rilevate dall’adattatore di monitoraggio dispositivi",
+        "nl": "Statuswijzigingen gedetecteerd door de apparaatbewakingsadapter",
+        "pl": "Zmiany stanu wykryte przez adapter monitorowania urządzeń",
+        "pt": "Alterações de estado detetadas pelo adaptador de monitoramento de dispositivos",
+        "ru": "Изменения состояния, обнаруженные адаптером мониторинга устройств",
+        "uk": "Зміни стану, виявлені адаптером моніторингу пристроїв",
+        "zh-cn": "设备监控适配器检测到的状态变化"
       },
       "categories": [
         {
           "category": "deviceWarning",
           "name": {
             "en": "Device warning",
-            "de": "Gerätewarnung"
+            "de": "Gerätewarnung",
+            "es": "Aviso del dispositivo",
+            "fr": "Avertissement de l’appareil",
+            "it": "Avviso del dispositivo",
+            "nl": "Apparaatwaarschuwing",
+            "pl": "Ostrzeżenie urządzenia",
+            "pt": "Aviso do dispositivo",
+            "ru": "Предупреждение устройства",
+            "uk": "Попередження пристрою",
+            "zh-cn": "设备警告"
           },
           "description": {
             "en": "A monitored value reached its warning range",
-            "de": "Ein überwachter Wert hat seinen Warnbereich erreicht"
+            "de": "Ein überwachter Wert hat seinen Warnbereich erreicht",
+            "es": "Un valor supervisado alcanzó el rango de aviso",
+            "fr": "Une valeur surveillée a atteint sa plage d’avertissement",
+            "it": "Un valore monitorato ha raggiunto l’intervallo di avviso",
+            "nl": "Een bewaakte waarde heeft het waarschuwingsbereik bereikt",
+            "pl": "Monitorowana wartość osiągnęła zakres ostrzeżenia",
+            "pt": "Um valor monitorado atingiu o intervalo de aviso",
+            "ru": "Отслеживаемое значение достигло порога предупреждения",
+            "uk": "Контрольоване значення досягло межі попередження",
+            "zh-cn": "受监控的值达到警告范围"
           },
           "severity": "notify",
           "regex": [],
@@ -194,11 +231,29 @@
           "category": "deviceAlarm",
           "name": {
             "en": "Device alarm",
-            "de": "Gerätealarm"
+            "de": "Gerätealarm",
+            "es": "Alarma del dispositivo",
+            "fr": "Alarme de l’appareil",
+            "it": "Allarme del dispositivo",
+            "nl": "Apparaatalarm",
+            "pl": "Alarm urządzenia",
+            "pt": "Alarme do dispositivo",
+            "ru": "Тревога устройства",
+            "uk": "Тривога пристрою",
+            "zh-cn": "设备警报"
           },
           "description": {
             "en": "A monitored value reached its alarm range",
-            "de": "Ein überwachter Wert hat seinen Alarmbereich erreicht"
+            "de": "Ein überwachter Wert hat seinen Alarmbereich erreicht",
+            "es": "Un valor supervisado alcanzó el rango de alarma",
+            "fr": "Une valeur surveillée a atteint sa plage d’alarme",
+            "it": "Un valore monitorato ha raggiunto l’intervallo di allarme",
+            "nl": "Een bewaakte waarde heeft het alarmbereik bereikt",
+            "pl": "Monitorowana wartość osiągnęła zakres alarmowy",
+            "pt": "Um valor monitorado atingiu o intervalo de alarme",
+            "ru": "Отслеживаемое значение достигло порога тревоги",
+            "uk": "Контрольоване значення досягло межі тривоги",
+            "zh-cn": "受监控的值达到警报范围"
           },
           "severity": "alert",
           "regex": [],
@@ -208,11 +263,29 @@
           "category": "deviceTimeout",
           "name": {
             "en": "Update timeout",
-            "de": "Aktualisierungs-Timeout"
+            "de": "Aktualisierungs-Timeout",
+            "es": "Tiempo de espera de actualización",
+            "fr": "Délai de mise à jour dépassé",
+            "it": "Timeout di aggiornamento",
+            "nl": "Update-time-out",
+            "pl": "Limit czasu aktualizacji",
+            "pt": "Tempo limite de atualização",
+            "ru": "Тайм-аут обновления",
+            "uk": "Час очікування оновлення",
+            "zh-cn": "更新超时"
           },
           "description": {
             "en": "A monitored value was not updated in time",
-            "de": "Ein überwachter Wert wurde nicht rechtzeitig aktualisiert"
+            "de": "Ein überwachter Wert wurde nicht rechtzeitig aktualisiert",
+            "es": "Un valor supervisado no se actualizó a tiempo",
+            "fr": "Une valeur surveillée n’a pas été mise à jour à temps",
+            "it": "Un valore monitorato non è stato aggiornato in tempo",
+            "nl": "Een bewaakte waarde is niet op tijd bijgewerkt",
+            "pl": "Monitorowana wartość nie została zaktualizowana na czas",
+            "pt": "Um valor monitorado não foi atualizado a tempo",
+            "ru": "Отслеживаемое значение не было обновлено вовремя",
+            "uk": "Контрольоване значення не було вчасно оновлено",
+            "zh-cn": "受监控的值未能及时更新"
           },
           "severity": "alert",
           "regex": [],
@@ -222,11 +295,29 @@
           "category": "invalidSource",
           "name": {
             "en": "Invalid source",
-            "de": "Ungültige Quelle"
+            "de": "Ungültige Quelle",
+            "es": "Origen no válido",
+            "fr": "Source invalide",
+            "it": "Sorgente non valida",
+            "nl": "Ongeldige bron",
+            "pl": "Nieprawidłowe źródło",
+            "pt": "Origem inválida",
+            "ru": "Недействительный источник",
+            "uk": "Недійсне джерело",
+            "zh-cn": "无效来源"
           },
           "description": {
             "en": "A configured source state is invalid or was deleted",
-            "de": "Ein konfigurierter Quell-State ist ungültig oder wurde gelöscht"
+            "de": "Ein konfigurierter Quell-State ist ungültig oder wurde gelöscht",
+            "es": "Un estado de origen configurado no es válido o se ha eliminado",
+            "fr": "Un état source configuré est invalide ou a été supprimé",
+            "it": "Uno stato sorgente configurato non è valido o è stato eliminato",
+            "nl": "Een ingestelde bronstatus is ongeldig of verwijderd",
+            "pl": "Skonfigurowany stan źródłowy jest nieprawidłowy lub został usunięty",
+            "pt": "Um estado de origem configurado é inválido ou foi eliminado",
+            "ru": "Настроенное состояние источника недействительно или удалено",
+            "uk": "Налаштований стан джерела недійсний або видалений",
+            "zh-cn": "配置的源状态无效或已删除"
           },
           "severity": "alert",
           "regex": [],
@@ -236,11 +327,29 @@
           "category": "deviceRecovered",
           "name": {
             "en": "Device recovered",
-            "de": "Gerät wieder in Ordnung"
+            "de": "Gerät wieder in Ordnung",
+            "es": "Dispositivo recuperado",
+            "fr": "Appareil rétabli",
+            "it": "Dispositivo ripristinato",
+            "nl": "Apparaat hersteld",
+            "pl": "Urządzenie przywrócone",
+            "pt": "Dispositivo recuperado",
+            "ru": "Устройство восстановлено",
+            "uk": "Пристрій відновлено",
+            "zh-cn": "设备已恢复"
           },
           "description": {
             "en": "A monitored value returned to its normal state",
-            "de": "Ein überwachter Wert ist wieder im Normalzustand"
+            "de": "Ein überwachter Wert ist wieder im Normalzustand",
+            "es": "Un valor supervisado volvió a su estado normal",
+            "fr": "Une valeur surveillée est revenue à son état normal",
+            "it": "Un valore monitorato è tornato allo stato normale",
+            "nl": "Een bewaakte waarde is teruggekeerd naar de normale status",
+            "pl": "Monitorowana wartość wróciła do normalnego stanu",
+            "pt": "Um valor monitorado voltou ao estado normal",
+            "ru": "Отслеживаемое значение вернулось в нормальное состояние",
+            "uk": "Контрольоване значення повернулося до нормального стану",
+            "zh-cn": "受监控的值已恢复正常"
           },
           "severity": "info",
           "regex": [],
@@ -250,11 +359,29 @@
           "category": "info",
           "name": {
             "en": "Information",
-            "de": "Info"
+            "de": "Info",
+            "es": "Información",
+            "fr": "Information",
+            "it": "Informazione",
+            "nl": "Informatie",
+            "pl": "Informacja",
+            "pt": "Informação",
+            "ru": "Информация",
+            "uk": "Інформація",
+            "zh-cn": "信息"
           },
           "description": {
             "en": "A general information message",
-            "de": "Eine allgemeine Informationsmeldung"
+            "de": "Eine allgemeine Informationsmeldung",
+            "es": "Mensaje informativo general",
+            "fr": "Message d’information général",
+            "it": "Messaggio informativo generale",
+            "nl": "Algemeen informatief bericht",
+            "pl": "Ogólna wiadomość informacyjna",
+            "pt": "Mensagem informativa geral",
+            "ru": "Общее информационное сообщение",
+            "uk": "Загальне інформаційне повідомлення",
+            "zh-cn": "一般信息消息"
           },
           "severity": "info",
           "regex": [],
@@ -264,11 +391,29 @@
           "category": "warnung",
           "name": {
             "en": "Warning",
-            "de": "Warnung"
+            "de": "Warnung",
+            "es": "Advertencia",
+            "fr": "Avertissement",
+            "it": "Avviso",
+            "nl": "Waarschuwing",
+            "pl": "Ostrzeżenie",
+            "pt": "Aviso",
+            "ru": "Предупреждение",
+            "uk": "Попередження",
+            "zh-cn": "警告"
           },
           "description": {
             "en": "A general warning message",
-            "de": "Eine allgemeine Warnmeldung"
+            "de": "Eine allgemeine Warnmeldung",
+            "es": "Mensaje de advertencia general",
+            "fr": "Message d’avertissement général",
+            "it": "Messaggio di avviso generale",
+            "nl": "Algemeen waarschuwingsbericht",
+            "pl": "Ogólna wiadomość ostrzegawcza",
+            "pt": "Mensagem de aviso geral",
+            "ru": "Общее предупреждение",
+            "uk": "Загальне попередження",
+            "zh-cn": "一般警告消息"
           },
           "severity": "notify",
           "regex": [],
@@ -278,11 +423,29 @@
           "category": "alarm",
           "name": {
             "en": "Alarm",
-            "de": "Alarm"
+            "de": "Alarm",
+            "es": "Alarma",
+            "fr": "Alarme",
+            "it": "Allarme",
+            "nl": "Alarm",
+            "pl": "Alarm",
+            "pt": "Alarme",
+            "ru": "Тревога",
+            "uk": "Тривога",
+            "zh-cn": "警报"
           },
           "description": {
             "en": "A general alarm message",
-            "de": "Eine allgemeine Alarmmeldung"
+            "de": "Eine allgemeine Alarmmeldung",
+            "es": "Mensaje de alarma general",
+            "fr": "Message d’alarme général",
+            "it": "Messaggio di allarme generale",
+            "nl": "Algemeen alarmbericht",
+            "pl": "Ogólna wiadomość alarmowa",
+            "pt": "Mensagem de alarme geral",
+            "ru": "Общее сообщение о тревоге",
+            "uk": "Загальне повідомлення про тривогу",
+            "zh-cn": "一般警报消息"
           },
           "severity": "alert",
           "regex": [],
