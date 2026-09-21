@@ -40,7 +40,11 @@
 			"text": "Notifications",
 			"size": 2,
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"enabledNotifications": {
 			"type": "select",
@@ -195,6 +199,10 @@
 			"text": "Alarm notification template",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": { "backgroundColor": "#c62828", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
 			"darkStyle": { "backgroundColor": "#c62828", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
 		},
@@ -203,20 +211,32 @@
 			"label": "Title",
 			"default": "Alarm: {{device}} - {{state}}",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"alarmMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
 			"default": "Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}})",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"alarmPreviewCaption": {
 			"type": "staticText",
 			"text": "Example sent notification (with sample values):",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"fontSize": 12,
 				"fontWeight": 600,
@@ -230,6 +250,10 @@
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"whiteSpace": "pre-line",
 				"fontSize": 14,
@@ -242,6 +266,10 @@
 			"text": "Timeout notification template",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": { "backgroundColor": "#1976d2", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
 			"darkStyle": { "backgroundColor": "#1976d2", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
 		},
@@ -250,20 +278,32 @@
 			"label": "Title",
 			"default": "Aktualisierungs-Timeout: {{device}} - {{state}}",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"timeoutMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
 			"default": "Der State {{state}} vom Gerät {{device}} hat sich mindestens {{timeoutMinutes}} Minuten nicht gemeldet. Letzte Aktualisierung: {{lastUpdate}} ({{remark}})",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"timeoutPreviewCaption": {
 			"type": "staticText",
 			"text": "Example sent notification (with sample values):",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"fontSize": 12,
 				"fontWeight": 600,
@@ -277,6 +317,10 @@
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"whiteSpace": "pre-line",
 				"fontSize": 14,
@@ -289,6 +333,10 @@
 			"text": "Invalid source notification template",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": { "backgroundColor": "#6d4c41", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
 			"darkStyle": { "backgroundColor": "#6d4c41", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
 		},
@@ -297,20 +345,32 @@
 			"label": "Title",
 			"default": "Ungültige oder gelöschte Quelle: {{device}} - {{state}}",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"invalidSourceMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
 			"default": "Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"invalidSourcePreviewCaption": {
 			"type": "staticText",
 			"text": "Example sent notification (with sample values):",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"fontSize": 12,
 				"fontWeight": 600,
@@ -324,6 +384,10 @@
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"whiteSpace": "pre-line",
 				"fontSize": 14,
@@ -336,6 +400,10 @@
 			"text": "Recovered device notification template",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": { "backgroundColor": "#3f7d45", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
 			"darkStyle": { "backgroundColor": "#3f7d45", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
 		},
@@ -344,20 +412,32 @@
 			"label": "Title",
 			"default": "Gerät wieder in Ordnung: {{device}} - {{state}}",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"recoveredMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
 			"default": "Der State {{state}} vom Gerät {{device}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"recoveredPreviewCaption": {
 			"type": "staticText",
 			"text": "Example sent notification (with sample values):",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"fontSize": 12,
 				"fontWeight": 600,
@@ -371,6 +451,10 @@
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"whiteSpace": "pre-line",
 				"fontSize": 14,
@@ -383,7 +467,11 @@
 			"text": "Device configuration backup",
 			"size": 2,
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"configurationBackupDelayMinutes": {
 			"type": "number",
@@ -396,7 +484,9 @@
 			"newLine": true,
 			"xs": 12,
 			"sm": 8,
-			"md": 6
+			"md": 6,
+			"lg": 6,
+			"xl": 6
 		},
 		"backupNow": {
 			"type": "sendTo",
@@ -411,7 +501,10 @@
 			},
 			"newLine": true,
 			"xs": 12,
-			"sm": 6
+			"sm": 6,
+			"md": 6,
+			"lg": 6,
+			"xl": 6
 		},
 		"restoreBackup": {
 			"type": "sendTo",
@@ -434,7 +527,10 @@
 			},
 			"newLine": true,
 			"xs": 12,
-			"sm": 6
+			"sm": 6,
+			"md": 6,
+			"lg": 6,
+			"xl": 6
 		}
 	}
 }
