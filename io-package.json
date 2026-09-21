@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.23",
+    "version": "0.0.24",
     "news": {
+      "0.0.24": {
+        "en": "Complete responsive widths for all Admin configuration fields.",
+        "de": "Vollständige Breite für alle Admin-Felder.",
+        "ru": "Полная адаптивная ширина всех полей конфигурации администратора.",
+        "pt": "Totalmente responsivo em todos os campos de configuração do Admin.",
+        "nl": "Volledig responsieve breedtes voor alle configuratievelden voor beheerders.",
+        "fr": "Largeur réactive complète pour tous les champs de configuration Admin.",
+        "it": "Ampiezze reattive complete per tutti i campi Admin.",
+        "es": "Anchos completos para todos los campos de configuración administrativa.",
+        "pl": "Uzupełnij responsywne szerokości dla wszystkich pól konfiguracji administratora.",
+        "uk": "Повна адаптивна ширина для всіх полів конфігурації адміністратора.",
+        "zh-cn": "所有管理员配置字段的完整响应宽度。"
+      },
       "0.0.23": {
         "en": "Fix responsive widths in the notification template settings.",
         "de": "Korrigieren Sie die Antwortbreiten in den Meldevorlagen.",
@@ -80,19 +93,6 @@
         "pl": "Dodaj opcję wysyłania skonfigurowanych powiadomień za pośrednictwem powiadomień, zawsze publikując je na stronie `info.message`.",
         "uk": "Додайте опцію надсилання налаштованих сповіщень через сповіщення, завжди публікуючи їх у `info.message`.",
         "zh-cn": "添加一个选项，通过通知发送已配置的通知，同时始终将其发布到 `info.message`。"
-      },
-      "0.0.17": {
-        "en": "Update the default recovery notification message to identify the state and device.",
-        "de": "Aktualisieren Sie die Standard-Wiederherstellungsmeldung mit Status und Gerät.",
-        "ru": "Обновите сообщение с уведомлением о восстановлении по умолчанию, чтобы определить состояние и устройство.",
-        "pt": "Atualize o aviso de recuperação padrão para identificar o estado e o dispositivo.",
-        "nl": "Update het standaardbericht voor herstelmeldingen om de status en het apparaat te identificeren.",
-        "fr": "Mettez à jour le message de restauration par défaut pour identifier l'état et l'appareil.",
-        "it": "Aggiorna la notifica di ripristino predefinita per lo stato e il dispositivo.",
-        "es": "Actualice el mensaje de recuperación por defecto para identificar el estado y el dispositivo.",
-        "pl": "Zaktualizuj domyślny komunikat o odzyskiwaniu, aby zidentyfikować stan i urządzenie.",
-        "uk": "Оновіть повідомлення про відновлення за замовчуванням, щоб визначити стан та пристрій.",
-        "zh-cn": "更新默认恢复通知消息以识别状态和设备。"
       }
     },
     "titleLang": {

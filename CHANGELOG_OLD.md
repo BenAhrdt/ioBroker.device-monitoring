@@ -1,4 +1,6 @@
 # Older changelog entries
+## 0.0.19 (2026-09-20)
+* (BenAhrdt) Show time-weighted averages inline with numeric values and show the average update interval beside the latest interval, ignoring sample gaps longer than an enabled update timeout
 
 ## 0.0.18 (2026-09-19)
 * (BenAhrdt) Add an option to send configured notifications via notify while always publishing them to `info.message`.

@@ -150,7 +150,7 @@ The ioBroker.admin interface will then be available at http://localhost:undefine
 Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev-server#command-line) for more details.
 
 ## Changelog
-### **WORK IN PROGRESS**
+### 0.0.24 (2026-09-21)
 * (BenAhrdt) Complete responsive widths for all Admin configuration fields.
 
 ### 0.0.23 (2026-09-21)
@@ -165,9 +165,6 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 
 ### 0.0.20 (2026-09-20)
 * (BenAhrdt) Remove the separate Device Monitoring admin tab
-
-### 0.0.19 (2026-09-20)
-* (BenAhrdt) Show time-weighted averages inline with numeric values and show the average update interval beside the latest interval, ignoring sample gaps longer than an enabled update timeout
 
 Older changes are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
 
