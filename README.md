@@ -154,7 +154,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.21 (2026-09-21)
 * (BenAhrdt) Add per-state notification levels with acknowledgements and document their values and the `info.message` event format
 
 ### 0.0.20 (2026-09-20)
