@@ -14,6 +14,12 @@ export type GeneralNotificationCategory = (typeof GENERAL_NOTIFICATION_CATEGORIE
 export type OutputNotificationCategory = NotificationCategory | GeneralNotificationCategory;
 export type NotificationLevelState = 'warning' | 'alarm' | 'timeout' | 'recovered' | 'invalid';
 
+/**
+ * Maps a notification category to the corresponding configurable level state.
+ *
+ * @param category Notification category emitted by the adapter.
+ * @returns The matching per-event level state ID.
+ */
 export function notificationLevelStateForCategory(category: NotificationCategory): NotificationLevelState {
 	switch (category) {
 		case 'deviceWarning':
@@ -32,6 +38,10 @@ export function notificationLevelStateForCategory(category: NotificationCategory
 /**
  * Applies a per-event notification level while retaining the original category as the default.
  * Unknown values fall back to the default so existing events continue to be delivered safely.
+ *
+ * @param level Configured level value.
+ * @param defaultCategory Original notification category used for standard or unknown levels.
+ * @returns The selected output category, or undefined when the event is disabled.
  */
 export function notificationCategoryForLevel(
 	level: unknown,
