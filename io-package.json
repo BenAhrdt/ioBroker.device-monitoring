@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.22",
+    "version": "0.0.23",
     "news": {
+      "0.0.23": {
+        "en": "Fix responsive widths in the notification template settings.",
+        "de": "Korrigieren Sie die Antwortbreiten in den Meldevorlagen.",
+        "ru": "Исправьте адаптивную ширину в настройках шаблона уведомлений.",
+        "pt": "Corrija larguras responsivas no modelo de notificação.",
+        "nl": "Repareer responsieve breedtes in de instellingen van het meldingssjabloon.",
+        "fr": "Corrigez la largeur réactive des modèles de notifications.",
+        "it": "Correggi le larghezze reattive nel modello di notifica.",
+        "es": "Corregir el ancho de respuesta en la plantilla de notificaciones.",
+        "pl": "Napraw responsywne szerokości w ustawieniach szablonu powiadomień.",
+        "uk": "Виправте адаптивну ширину в налаштуваннях шаблону сповіщень.",
+        "zh-cn": "修复通知模板设置中的响应宽度。"
+      },
       "0.0.22": {
         "en": "Require Admin 8 or newer, complete adapter metadata and required language entries, and update repository checks and scheduled dependency updates\nAdd a link from the instance configuration to the Device Manager tab",
         "de": "Admin 8 oder neuer, vollständige Adaptermetadaten und Spracheingaben sowie Repository-Checks und geplante Abhängigkeitsupdates\nLink von der Instanzkonfiguration zum Tab Gerätemanager hinzufügen",
@@ -80,19 +93,6 @@
         "pl": "Zaktualizuj domyślny komunikat o odzyskiwaniu, aby zidentyfikować stan i urządzenie.",
         "uk": "Оновіть повідомлення про відновлення за замовчуванням, щоб визначити стан та пристрій.",
         "zh-cn": "更新默认恢复通知消息以识别状态和设备。"
-      },
-      "0.0.16": {
-        "en": "Show monitoring settings for the selected state type only after a valid source state is selected when adding a monitored state\nAdd editable notification title and message templates for warnings, alarms, timeouts, invalid sources and recoveries; show each pair under a color-coded header bar with a live sample preview, and reuse the rendered text for ioBroker notifications and single-event JSON in `info.message`, including mode-aware limits and optional remarks",
-        "de": "Zeigt die Überwachungseinstellungen für den ausgewählten Zustandstyp erst an, wenn ein gültiger Quellstatus ausgewählt wurde\nFüge editierbare Titel und Vorlagen für Warnungen, Alarme, Timeouts, ungültige Quellen und Wiederherstellungen hinzu; zeige jedes Paar unter einer farbkodierten Kopfleiste mit Live-Vorschau und verwende den Text für ioBroker-Meldungen und Single-Event-JSON in `info.message`, mit modusspezifischen Limits und optionalen Hinweisen",
-        "ru": "Отображать настройки мониторинга для выбранного типа состояния только после выбора действительного исходного состояния при добавлении отслеживаемого состояния\nДобавляйте редактируемые заголовки уведомлений и шаблоны сообщений для предупреждений, аварийных сигналов, тайм-аутов, недействительных источников и восстановлений; покажите каждую пару под цветным заголовком с предварительным просмотром образцов в реальном времени и повторно используйте визуализированный текст для уведомлений IOBroker и JSON по одному событию в файле `info.message`, включая ограничения, связанные с режимом, и дополнительные примечания",
-        "pt": "Mostrar configurações de monitoramento para o tipo de estado selecionado somente após a adição de um estado de origem válido\nAdicione modelos editáveis de títulos e mensagens para alertas, alarmes, tempos limite, fontes inválidas e recuperações; mostre cada par em uma barra de cabeçalho colorida com uma amostra ao vivo e reutilize o texto renderizado para notificações do IOBroker e JSON de evento único em `info.message`, incluindo limites de modo e comentários opcionais",
-        "nl": "De bewakingsinstellingen voor het geselecteerde toestandstype alleen weergeven nadat een geldige bronstatus is geselecteerd wanneer een bewaakte status wordt toegevoegd\nVoeg bewerkbare meldingstitels en berichtsjablonen toe voor waarschuwingen, alarmen, time-outs, ongeldige bronnen en herstelacties; toon elk paar onder een kopbalk met kleurcode met een live voorbeeldvoorbeeld, en hergebruik de gerenderde tekst voor IOBroker-meldingen en JSON voor één gebeurtenis in `info.message`, inclusief modusbewuste limieten en optionele opmerkingen",
-        "fr": "Afficher les paramètres de surveillance pour le type d'état sélectionné uniquement lorsqu'un état source valide est ajouté\nAjoutez un titre et des modèles de messages modifiables pour les alertes, les alarmes, les timeouts, les sources non valides et les restaurations ; affichez chaque paire sous une barre d'en-tête colorée avec un aperçu en direct, et réutilisez le texte généré pour les notifications IObroker et le JSON à événement unique dans « info.message », y compris des limites et des remarques facultatives",
-        "it": "Mostra le impostazioni di monitoraggio per il tipo di stato selezionato solo dopo aver aggiunto uno stato di origine valido\nAggiungi titoli e modelli di messaggio modificabili per avvisi, allarmi, timeout, fonti non valide e recuperi; mostra ogni coppia sotto una barra di intestazione colorata con un'anteprima in tempo reale e riutilizza il testo renderizzato per le notifiche IOBroker e il JSON di un singolo evento in `info.message`",
-        "es": "Mostrar la configuración de monitoreo del tipo de estado seleccionado solo después de seleccionar un estado de origen válido al añadir\nAñada plantillas editables de títulos y mensajes para avisos, alarmas, tiempos de espera, fuentes no válidas y recuperaciones; muestre cada par en una barra de cabecera codificada por colores con una vista previa de muestra en vivo y reutilice el texto renderizado para las notificaciones de IOBroker y el JSON de un solo evento en `info.message`, incluidos los límites según el modo y las observaciones opcionales",
-        "pl": "Wyświetlanie ustawień monitorowania dla wybranego typu stanu tylko po wybraniu prawidłowego stanu źródłowego podczas dodawania stanu monitorowanego\nDodaj edytowalne szablony tytułów powiadomień i wiadomości dla ostrzeżeń, alarmów, limitu czasu, nieprawidłowych źródeł i odzyskiwania; pokaż każdą parę pod oznaczonym kolorami paskiem nagłówka z podglądem próbki na żywo i ponownie używaj renderowanego tekstu do powiadomień ioBroker i pojedynczego zdarzenia JSON w „info.message”, w tym ograniczenia dotyczące trybu i opcjonalne uwagi",
-        "uk": "Показувати параметри моніторингу для вибраного типу стану лише після того, як вибрано дійсний стан джерела при додаванні контрольованого стану\nДодайте редаговані заголовки сповіщень та шаблони повідомлень для попереджень, нагадувань, тайм-аутів, недійсних джерел та відновлення; показуйте кожну пару під кольоровим рядком заголовка з попереднім переглядом у режимі реального часу та повторно використовуйте відтворений текст для сповіщень IObroker та JSON для однієї події в `info.message`, включаючи обмеження щодо режиму та необов'язкові зауваження",
-        "zh-cn": "仅在添加监视状态时选择了有效的源状态后才显示所选状态类型的监视设置\n为警告、警报、超时、无效来源和恢复添加可编辑的通知标题和消息模板；在带有实时样本预览的颜色编码标题栏下显示每对通知，并在 “info.message” 中重复使用 IOBroker 通知和单事件 JSON 的呈现文本，包括模式感知限制和可选备注"
       }
     },
     "titleLang": {
