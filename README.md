@@ -150,6 +150,14 @@ The ioBroker.admin interface will then be available at http://localhost:undefine
 Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev-server#command-line) for more details.
 
 ## Changelog
+<!--
+	Placeholder for the next version (at the beginning of the line):
+	### **WORK IN PROGRESS**
+-->
+
+### **WORK IN PROGRESS**
+* (BenAhrdt) Exclude the historical changelog from the npm package and link to it from the README.
+
 ### 0.0.24 (2026-09-21)
 * (BenAhrdt) Complete responsive widths for all Admin configuration fields.
 
@@ -166,7 +174,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 ### 0.0.20 (2026-09-20)
 * (BenAhrdt) Remove the separate Device Monitoring admin tab
 
-Older changes are available in [CHANGELOG_OLD.md](CHANGELOG_OLD.md).
+Older changes are available in [CHANGELOG_OLD.md](https://github.com/BenAhrdt/ioBroker.device-monitoring/blob/main/CHANGELOG_OLD.md).
 
 ## License
 MIT License
