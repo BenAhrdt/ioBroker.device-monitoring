@@ -9,6 +9,47 @@ export const NOTIFICATION_CATEGORIES = [
 ] as const;
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
+export const GENERAL_NOTIFICATION_CATEGORIES = ['info', 'warnung', 'alarm'] as const;
+export type GeneralNotificationCategory = (typeof GENERAL_NOTIFICATION_CATEGORIES)[number];
+export type OutputNotificationCategory = NotificationCategory | GeneralNotificationCategory;
+export type NotificationLevelState = 'warning' | 'alarm' | 'timeout' | 'recovered' | 'invalid';
+
+export function notificationLevelStateForCategory(category: NotificationCategory): NotificationLevelState {
+	switch (category) {
+		case 'deviceWarning':
+			return 'warning';
+		case 'deviceAlarm':
+			return 'alarm';
+		case 'deviceTimeout':
+			return 'timeout';
+		case 'deviceRecovered':
+			return 'recovered';
+		case 'invalidSource':
+			return 'invalid';
+	}
+}
+
+/**
+ * Applies a per-event notification level while retaining the original category as the default.
+ * Unknown values fall back to the default so existing events continue to be delivered safely.
+ */
+export function notificationCategoryForLevel(
+	level: unknown,
+	defaultCategory: NotificationCategory,
+): OutputNotificationCategory | undefined {
+	switch (level) {
+		case 1:
+			return undefined;
+		case 2:
+			return 'info';
+		case 3:
+			return 'warnung';
+		case 4:
+			return 'alarm';
+		default:
+			return defaultCategory;
+	}
+}
 
 /**
  * Maps a real status transition to its notification category.

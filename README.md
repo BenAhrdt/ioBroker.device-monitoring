@@ -14,6 +14,53 @@
 
 Watches your devined device states and build warnings and alerts
 
+## Per-state notification levels
+
+Each monitored state has five writable level states under `devices.<deviceId>.<stateId>.level`:
+
+| State | Event |
+| --- | --- |
+| `warning` | Warning limit reached |
+| `alarm` | Alarm limit reached |
+| `timeout` | Source update timeout |
+| `invalid` | Source missing or invalid |
+| `recovered` | State returned to normal |
+
+Each level state accepts these values:
+
+| Value | Meaning |
+| --- | --- |
+| `0` — Standard | Use the event's normal notification category |
+| `1` — Disabled | Suppress this event |
+| `2` — Info | Send the event with the `info` category |
+| `3` — Warning | Send the event with the `warnung` category |
+| `4` — Alarm | Send the event with the `alarm` category |
+
+The adapter acknowledges recognized values from `0` to `4` by writing the selected value back with `ack = true`.
+
+## `info.message` state
+
+The read-only `info.message` state contains a JSON string for the latest notification event. Each new event replaces the previous one; this state is not a history. Events are written here even when sending notifications via `notify` is disabled. A level set to `Disabled` suppresses the event entirely.
+
+The JSON object contains these fields:
+
+| Field | Description |
+| --- | --- |
+| `type` | Original event type: `warning`, `alarm`, `timeout`, `invalidSource` or `recovered` |
+| `category` | Notification category after applying the level: `deviceWarning`, `deviceAlarm`, `deviceTimeout`, `invalidSource`, `deviceRecovered`, `info`, `warnung` or `alarm` |
+| `title` | Rendered notification title |
+| `message` | Rendered notification message |
+| `deviceId`, `deviceName` | Device identifier and display name |
+| `stateId`, `stateName` | Monitored state identifier and display name |
+| `sourceId` | Source state ID |
+| `remark` | Configured remark for the monitored state |
+| `value`, `unit` | Current source value and its unit |
+| `triggeredAt` | Event time as a Unix timestamp in milliseconds |
+| `lastUpdate` | Last source update time as a Unix timestamp in milliseconds, or `null` |
+| `timeoutMinutes` | Configured timeout duration; present for timeout events only |
+
+The `type` field remains the original event type when its notification category is changed by a level. The `info.message` state is acknowledged (`ack = true`) by the adapter.
+
 ## Developer manual
 This section is intended for the developer. It can be deleted later.
 
@@ -104,8 +151,12 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 
 ## Changelog
 <!--
-    Placeholder for the next version (at the begin of the line):
+	Placeholder for the next version (at the beginning of the line):
+	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Add per-state notification levels with acknowledgements and document their values and the `info.message` event format
+
 ### 0.0.20 (2026-09-20)
 * (BenAhrdt) Remove the separate Device Monitoring admin tab
 

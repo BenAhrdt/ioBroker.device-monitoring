@@ -245,6 +245,48 @@
           "severity": "info",
           "regex": [],
           "limit": 100
+        },
+        {
+          "category": "info",
+          "name": {
+            "en": "Information",
+            "de": "Info"
+          },
+          "description": {
+            "en": "A general information message",
+            "de": "Eine allgemeine Informationsmeldung"
+          },
+          "severity": "info",
+          "regex": [],
+          "limit": 100
+        },
+        {
+          "category": "warnung",
+          "name": {
+            "en": "Warning",
+            "de": "Warnung"
+          },
+          "description": {
+            "en": "A general warning message",
+            "de": "Eine allgemeine Warnmeldung"
+          },
+          "severity": "notify",
+          "regex": [],
+          "limit": 100
+        },
+        {
+          "category": "alarm",
+          "name": {
+            "en": "Alarm",
+            "de": "Alarm"
+          },
+          "description": {
+            "en": "A general alarm message",
+            "de": "Eine allgemeine Alarmmeldung"
+          },
+          "severity": "alert",
+          "regex": [],
+          "limit": 100
         }
       ]
     }

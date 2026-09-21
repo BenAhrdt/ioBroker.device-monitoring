@@ -13,7 +13,14 @@ import {
 } from './lib/evaluation';
 import { configurationBackupNeedsUpdate } from './lib/configuration-backup';
 import type { MonitoringData } from './lib/monitoring-data';
-import { notificationCategoryForTransition, type NotificationCategory } from './lib/notifications';
+import {
+	notificationCategoryForLevel,
+	notificationCategoryForTransition,
+	notificationLevelStateForCategory,
+	type NotificationCategory,
+	type NotificationLevelState,
+	type OutputNotificationCategory,
+} from './lib/notifications';
 import {
 	averageInterval,
 	intervalDisplay,
@@ -87,10 +94,18 @@ const OBSOLETE_DIRECT_STATE_IDS = [
 ] as const;
 const OBSOLETE_DATA_STATE_IDS = ['value', 'status', 'warning', 'alarm', 'updateTimeout'] as const;
 const DEVICE_CARD_DETAILS_ID = '__card_details';
+const NOTIFICATION_LEVEL_STATE_NAMES: Record<NotificationLevelState, ioBroker.Translated> = {
+	warning: t('Warning', 'Warnung'),
+	alarm: t('Alarm', 'Alarm'),
+	timeout: t('Timeout', 'Timeout'),
+	recovered: t('Recovered', 'Wiederhergestellt'),
+	invalid: t('Invalid source', 'Ungültige Quelle'),
+};
 type MessageTemplateType = 'warning' | 'alarm' | 'timeout' | 'invalidSource' | 'recovered';
 
 interface MessageTrigger {
 	type: MessageTemplateType;
+	category: OutputNotificationCategory;
 	title: string;
 	deviceId: string;
 	deviceName: string;
@@ -104,6 +119,10 @@ interface MessageTrigger {
 	lastUpdate: number | null;
 	timeoutMinutes?: number;
 	message: string;
+}
+
+function isNotificationLevelValue(value: unknown): value is number {
+	return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 4;
 }
 
 const DEFAULT_MESSAGE_TEMPLATES: Record<MessageTemplateType, { en: string; de: string }> = {
@@ -1270,6 +1289,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private functionTemplates: Record<string, FunctionTemplate> = {};
 	private nextDeviceNumber = 1;
 	private subscribed = new Set<string>();
+	private notificationLevelSubscriptions = new Set<string>();
 	private invalidSources = new Set<string>();
 	private sourceUnits = new Map<string, string>();
 	private updateHistoryQueues = new Map<string, Promise<void>>();
@@ -1450,6 +1470,13 @@ class DeviceMonitoring extends utils.Adapter {
 		if (!state) {
 			return;
 		}
+		const notificationLevelStateId = this.getNotificationLevelStateRelativeId(id);
+		if (notificationLevelStateId) {
+			if (state.ack === false && isNotificationLevelValue(state.val)) {
+				await this.setStateAsync(notificationLevelStateId, { val: state.val, ack: true });
+			}
+			return;
+		}
 		const affectedDevices = new Set<string>();
 		for (const device of this.devices) {
 			for (const watched of device.states) {
@@ -1468,6 +1495,23 @@ class DeviceMonitoring extends utils.Adapter {
 		if (affectedDevices.size) {
 			await this.updateDeviceInfo();
 		}
+	}
+	private getNotificationLevelStateRelativeId(id: string): string | undefined {
+		const namespacePrefix = `${this.namespace}.`;
+		const relativeId = id.startsWith(namespacePrefix) ? id.slice(namespacePrefix.length) : id;
+		for (const device of this.devices) {
+			for (const watched of device.states) {
+				const prefix = `devices.${device.id}.${watched.id}.level.`;
+				if (!relativeId.startsWith(prefix)) {
+					continue;
+				}
+				const levelId = relativeId.slice(prefix.length);
+				if (Object.prototype.hasOwnProperty.call(NOTIFICATION_LEVEL_STATE_NAMES, levelId)) {
+					return relativeId;
+				}
+			}
+		}
+		return undefined;
 	}
 	private async onObjectChange(id: string, object: ioBroker.Object | null | undefined): Promise<void> {
 		if (!this.subscribed.has(id)) {
@@ -1879,6 +1923,17 @@ class DeviceMonitoring extends utils.Adapter {
 				);
 				await this.ensureState(`${base}.sourceId`, t('Source state', 'Quell-State'), 'string', 'text');
 				await this.ensureState(`${base}.remark`, t('Remark', 'Bemerkung'), 'string', 'text');
+				await this.setObjectAsync(`${base}.level`, {
+					type: 'channel',
+					common: { name: t('Notification levels', 'Meldungs-Level') },
+					native: {},
+				});
+				for (const [levelId, levelName] of Object.entries(NOTIFICATION_LEVEL_STATE_NAMES) as [
+					NotificationLevelState,
+					ioBroker.Translated,
+				][]) {
+					await this.ensureNotificationLevelState(`${base}.level.${levelId}`, levelName);
+				}
 				await this.setObjectAsync(`${base}.data`, {
 					type: 'channel',
 					common: { name: t('Monitoring data', 'Überwachungsdaten'), expert: true },
@@ -2049,15 +2104,57 @@ class DeviceMonitoring extends utils.Adapter {
 			native: {},
 		});
 	}
+	private async ensureNotificationLevelState(id: string, name: ioBroker.Translated): Promise<void> {
+		await this.setObjectAsync(id, {
+			type: 'state',
+			common: {
+				name,
+				type: 'number',
+				role: 'value',
+				read: true,
+				write: true,
+				states: {
+					0: this.localize('Standard', 'Standard'),
+					1: this.localize('Disabled', 'Deaktiviert'),
+					2: 'Info',
+					3: this.localize('Warning', 'Warnung'),
+					4: 'Alarm',
+				},
+				def: 0,
+			},
+			native: {},
+		});
+		const current = await this.getStateAsync(id);
+		if (!isNotificationLevelValue(current?.val)) {
+			await this.setStateAsync(id, 0, true);
+		} else if (current.ack === false) {
+			await this.setStateAsync(id, { val: current.val, ack: true });
+		}
+	}
 	private async refreshSubscriptions(): Promise<void> {
 		for (const id of this.subscribed) {
 			this.unsubscribeForeignStates(id);
 			this.unsubscribeForeignObjects(id);
 		}
+		for (const id of this.notificationLevelSubscriptions) {
+			this.unsubscribeStates(id);
+		}
 		this.subscribed = new Set(this.devices.flatMap(d => d.states.map(s => s.sourceId)).filter(Boolean));
+		this.notificationLevelSubscriptions = new Set(
+			this.devices.flatMap(device =>
+				device.states.flatMap(watched =>
+					Object.keys(NOTIFICATION_LEVEL_STATE_NAMES).map(
+						levelId => `devices.${device.id}.${watched.id}.level.${levelId}`,
+					),
+				),
+			),
+		);
 		for (const id of this.subscribed) {
 			this.subscribeForeignStates(id);
 			this.subscribeForeignObjects(id);
+		}
+		for (const id of this.notificationLevelSubscriptions) {
+			this.subscribeStates(id);
 		}
 		await this.refreshSourceValidity();
 	}
@@ -2502,6 +2599,13 @@ class DeviceMonitoring extends utils.Adapter {
 		if (category === 'deviceTimeout' && !watched.staleWarning.enabled) {
 			return;
 		}
+		const base = `devices.${device.id}.${watched.id}`;
+		const levelStateId = notificationLevelStateForCategory(category);
+		const configuredLevel = await this.getStateAsync(`${base}.level.${levelStateId}`);
+		const outputCategory = notificationCategoryForLevel(configuredLevel?.val, category);
+		if (!outputCategory) {
+			return;
+		}
 		const templateTypes: Record<NotificationCategory, MessageTemplateType> = {
 			deviceWarning: 'warning',
 			deviceAlarm: 'alarm',
@@ -2526,7 +2630,7 @@ class DeviceMonitoring extends utils.Adapter {
 		};
 		const messageText = renderMessageTemplate(this.getMessageTemplate(templateType), messageValues);
 		const notificationTitle = renderMessageTemplate(this.getNotificationTitleTemplate(templateType), messageValues);
-		const notificationKey = `${key}|${category}|${notificationTitle}|${messageText}`;
+		const notificationKey = `${key}|${outputCategory}|${notificationTitle}|${messageText}`;
 		const lastSent = this.notificationLastSent.get(notificationKey);
 		if (lastSent !== undefined && now - lastSent < 10_000) {
 			return;
@@ -2534,6 +2638,7 @@ class DeviceMonitoring extends utils.Adapter {
 		this.notificationLastSent.set(notificationKey, now);
 		const messageEvent: MessageTrigger = {
 			type: templateType,
+			category: outputCategory,
 			title: notificationTitle,
 			deviceId: device.id,
 			deviceName: device.name,
@@ -2556,9 +2661,9 @@ class DeviceMonitoring extends utils.Adapter {
 		if (this.config.sendNotificationsViaNotify !== false) {
 			try {
 				const notificationText = notificationTitle ? `${notificationTitle}\n${messageText}` : messageText;
-				await this.registerNotification('device-monitoring', category, notificationText);
+				await this.registerNotification('device-monitoring', outputCategory, notificationText);
 			} catch (error) {
-				this.log.warn(`Could not register notification ${category}: ${String(error)}`);
+				this.log.warn(`Could not register notification ${outputCategory}: ${String(error)}`);
 			}
 		}
 	}

@@ -91,6 +91,16 @@ const OBSOLETE_DIRECT_STATE_IDS = [
 ];
 const OBSOLETE_DATA_STATE_IDS = ["value", "status", "warning", "alarm", "updateTimeout"];
 const DEVICE_CARD_DETAILS_ID = "__card_details";
+const NOTIFICATION_LEVEL_STATE_NAMES = {
+  warning: t("Warning", "Warnung"),
+  alarm: t("Alarm", "Alarm"),
+  timeout: t("Timeout", "Timeout"),
+  recovered: t("Recovered", "Wiederhergestellt"),
+  invalid: t("Invalid source", "Ung\xFCltige Quelle")
+};
+function isNotificationLevelValue(value) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 4;
+}
 const DEFAULT_MESSAGE_TEMPLATES = {
   warning: {
     en: "State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}})",
@@ -1136,6 +1146,7 @@ class DeviceMonitoring extends utils.Adapter {
   functionTemplates = {};
   nextDeviceNumber = 1;
   subscribed = /* @__PURE__ */ new Set();
+  notificationLevelSubscriptions = /* @__PURE__ */ new Set();
   invalidSources = /* @__PURE__ */ new Set();
   sourceUnits = /* @__PURE__ */ new Map();
   updateHistoryQueues = /* @__PURE__ */ new Map();
@@ -1308,6 +1319,13 @@ class DeviceMonitoring extends utils.Adapter {
     if (!state) {
       return;
     }
+    const notificationLevelStateId = this.getNotificationLevelStateRelativeId(id);
+    if (notificationLevelStateId) {
+      if (state.ack === false && isNotificationLevelValue(state.val)) {
+        await this.setStateAsync(notificationLevelStateId, { val: state.val, ack: true });
+      }
+      return;
+    }
     const affectedDevices = /* @__PURE__ */ new Set();
     for (const device of this.devices) {
       for (const watched of device.states) {
@@ -1326,6 +1344,23 @@ class DeviceMonitoring extends utils.Adapter {
     if (affectedDevices.size) {
       await this.updateDeviceInfo();
     }
+  }
+  getNotificationLevelStateRelativeId(id) {
+    const namespacePrefix = `${this.namespace}.`;
+    const relativeId = id.startsWith(namespacePrefix) ? id.slice(namespacePrefix.length) : id;
+    for (const device of this.devices) {
+      for (const watched of device.states) {
+        const prefix = `devices.${device.id}.${watched.id}.level.`;
+        if (!relativeId.startsWith(prefix)) {
+          continue;
+        }
+        const levelId = relativeId.slice(prefix.length);
+        if (Object.prototype.hasOwnProperty.call(NOTIFICATION_LEVEL_STATE_NAMES, levelId)) {
+          return relativeId;
+        }
+      }
+    }
+    return void 0;
   }
   async onObjectChange(id, object) {
     var _a;
@@ -1722,6 +1757,14 @@ class DeviceMonitoring extends utils.Adapter {
         );
         await this.ensureState(`${base}.sourceId`, t("Source state", "Quell-State"), "string", "text");
         await this.ensureState(`${base}.remark`, t("Remark", "Bemerkung"), "string", "text");
+        await this.setObjectAsync(`${base}.level`, {
+          type: "channel",
+          common: { name: t("Notification levels", "Meldungs-Level") },
+          native: {}
+        });
+        for (const [levelId, levelName] of Object.entries(NOTIFICATION_LEVEL_STATE_NAMES)) {
+          await this.ensureNotificationLevelState(`${base}.level.${levelId}`, levelName);
+        }
         await this.setObjectAsync(`${base}.data`, {
           type: "channel",
           common: { name: t("Monitoring data", "\xDCberwachungsdaten"), expert: true },
@@ -1879,15 +1922,57 @@ class DeviceMonitoring extends utils.Adapter {
       native: {}
     });
   }
+  async ensureNotificationLevelState(id, name) {
+    await this.setObjectAsync(id, {
+      type: "state",
+      common: {
+        name,
+        type: "number",
+        role: "value",
+        read: true,
+        write: true,
+        states: {
+          0: this.localize("Standard", "Standard"),
+          1: this.localize("Disabled", "Deaktiviert"),
+          2: "Info",
+          3: this.localize("Warning", "Warnung"),
+          4: "Alarm"
+        },
+        def: 0
+      },
+      native: {}
+    });
+    const current = await this.getStateAsync(id);
+    if (!isNotificationLevelValue(current == null ? void 0 : current.val)) {
+      await this.setStateAsync(id, 0, true);
+    } else if (current.ack === false) {
+      await this.setStateAsync(id, { val: current.val, ack: true });
+    }
+  }
   async refreshSubscriptions() {
     for (const id of this.subscribed) {
       this.unsubscribeForeignStates(id);
       this.unsubscribeForeignObjects(id);
     }
+    for (const id of this.notificationLevelSubscriptions) {
+      this.unsubscribeStates(id);
+    }
     this.subscribed = new Set(this.devices.flatMap((d) => d.states.map((s) => s.sourceId)).filter(Boolean));
+    this.notificationLevelSubscriptions = new Set(
+      this.devices.flatMap(
+        (device) => device.states.flatMap(
+          (watched) => Object.keys(NOTIFICATION_LEVEL_STATE_NAMES).map(
+            (levelId) => `devices.${device.id}.${watched.id}.level.${levelId}`
+          )
+        )
+      )
+    );
     for (const id of this.subscribed) {
       this.subscribeForeignStates(id);
       this.subscribeForeignObjects(id);
+    }
+    for (const id of this.notificationLevelSubscriptions) {
+      this.subscribeStates(id);
     }
     await this.refreshSourceValidity();
   }
@@ -2266,6 +2351,13 @@ class DeviceMonitoring extends utils.Adapter {
     if (category === "deviceTimeout" && !watched.staleWarning.enabled) {
       return;
     }
+    const base = `devices.${device.id}.${watched.id}`;
+    const levelStateId = (0, import_notifications.notificationLevelStateForCategory)(category);
+    const configuredLevel = await this.getStateAsync(`${base}.level.${levelStateId}`);
+    const outputCategory = (0, import_notifications.notificationCategoryForLevel)(configuredLevel == null ? void 0 : configuredLevel.val, category);
+    if (!outputCategory) {
+      return;
+    }
     const templateTypes = {
       deviceWarning: "warning",
       deviceAlarm: "alarm",
@@ -2290,7 +2382,7 @@ class DeviceMonitoring extends utils.Adapter {
     };
     const messageText = renderMessageTemplate(this.getMessageTemplate(templateType), messageValues);
     const notificationTitle = renderMessageTemplate(this.getNotificationTitleTemplate(templateType), messageValues);
-    const notificationKey = `${key}|${category}|${notificationTitle}|${messageText}`;
+    const notificationKey = `${key}|${outputCategory}|${notificationTitle}|${messageText}`;
     const lastSent = this.notificationLastSent.get(notificationKey);
     if (lastSent !== void 0 && now - lastSent < 1e4) {
       return;
@@ -2298,6 +2390,7 @@ class DeviceMonitoring extends utils.Adapter {
     this.notificationLastSent.set(notificationKey, now);
     const messageEvent = {
       type: templateType,
+      category: outputCategory,
       title: notificationTitle,
       deviceId: device.id,
       deviceName: device.name,
@@ -2321,9 +2414,9 @@ class DeviceMonitoring extends utils.Adapter {
       try {
         const notificationText = notificationTitle ? `${notificationTitle}
 ${messageText}` : messageText;
-        await this.registerNotification("device-monitoring", category, notificationText);
+        await this.registerNotification("device-monitoring", outputCategory, notificationText);
       } catch (error) {
-        this.log.warn(`Could not register notification ${category}: ${String(error)}`);
+        this.log.warn(`Could not register notification ${outputCategory}: ${String(error)}`);
       }
     }
   }
