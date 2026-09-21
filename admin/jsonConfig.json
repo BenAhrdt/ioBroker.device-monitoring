@@ -128,6 +128,10 @@
 			"text": "Warning notification template",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": { "backgroundColor": "#d6a500", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
 			"darkStyle": { "backgroundColor": "#d6a500", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
 		},
@@ -136,20 +140,32 @@
 			"label": "Title",
 			"default": "Warnung: {{device}} - {{state}}",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"warningMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
 			"default": "Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}})",
 			"newLine": true,
-			"xs": 12
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"warningPreviewCaption": {
 			"type": "staticText",
 			"text": "Example sent notification (with sample values):",
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"fontSize": 12,
 				"fontWeight": 600,
@@ -163,6 +179,10 @@
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
 			"style": {
 				"whiteSpace": "pre-line",
 				"fontSize": 14,

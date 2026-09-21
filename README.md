@@ -154,6 +154,9 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Fix responsive widths in the notification template settings.
+
 ### 0.0.22 (2026-09-21)
 * (BenAhrdt) Require Admin 8 or newer, complete adapter metadata and required language entries, and update repository checks and scheduled dependency updates
 * (BenAhrdt) Add a link from the instance configuration to the Device Manager tab

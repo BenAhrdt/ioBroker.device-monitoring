@@ -128,8 +128,7 @@
       "watch",
       "device",
       "warning",
-      "alert",
-      "ioBroker"
+      "alert"
     ],
     "licenseInformation": {
       "type": "free",
