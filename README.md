@@ -84,21 +84,23 @@ The `type` field remains the original event type when its notification category 
 ```
 
 {
-  "type": "alarm", 
-  "category": "deviceAlarm",
-  "title": "Alarm: MClimate PIR Mini - Batterie",
-  "deviceId": "device_001",
-  "deviceName": "MClimate PIR Mini",
-  "stateId": "batterie",
-  "stateName": "Batterie",
-  "sourceId": "lorawan.1.316cac7b-2bb0-4b11-aae1-41ea7448caec.devices.8c1f646ca3000066.uplink.decoded.BatteryPercent",
-  "remark": "Der PIR Mini wird als externer Temperatur Sensor für das Vicki im Wohnzimmer genutzt",
-  "value": 20,
-  "unit": "%",
-  "triggeredAt": 1790057552980,
-  "lastUpdate": 1790057552976,
-  "message": "Der State Batterie vom Gerät MClimate PIR Mini hat mit 20 % die konfigurierte Alarmgrenze (kleiner als 70 %) verletzt (Der PIR Mini wird als externer Temperatur Sensor für das Vicki im Wohnzimmer genutzt)"
+  "type": "timeout",
+  "category": "alarm",
+  "title": "Aktualisierungs-Timeout: Timmerflotte Schlafzimmer - Temperatur",
+  "deviceId": "device_002",
+  "deviceName": "Timmerflotte Schlafzimmer",
+  "stateId": "timmerflotte_schlafzimmer",
+  "stateName": "Temperatur",
+  "sourceId": "lorawan.0.bridge.devices.70c0cc1b11042a812825444dc65d04f5.sensor.schlafzimmer_timmerflotte_temperatur",
+  "remark": "",
+  "value": 21.39,
+  "unit": "°C",
+  "triggeredAt": 1790071578722,
+  "lastUpdate": 1790071509083,
+  "timeoutMinutes": 1,
+  "message": "Der State Temperatur vom Gerät Timmerflotte Schlafzimmer hat sich mindestens 1 Minuten nicht gemeldet. Letzte Aktualisierung: 2026-09-22 12:05:09.083"
 }
+
 ```
 ### Use Notify Levels in the Notification Manager
 
