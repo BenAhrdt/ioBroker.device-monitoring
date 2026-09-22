@@ -20,6 +20,7 @@ var notifications_exports = {};
 __export(notifications_exports, {
   GENERAL_NOTIFICATION_CATEGORIES: () => GENERAL_NOTIFICATION_CATEGORIES,
   NOTIFICATION_CATEGORIES: () => NOTIFICATION_CATEGORIES,
+  notificationCategoryForEvent: () => notificationCategoryForEvent,
   notificationCategoryForLevel: () => notificationCategoryForLevel,
   notificationCategoryForTransition: () => notificationCategoryForTransition,
   notificationLevelStateForCategory: () => notificationLevelStateForCategory
@@ -33,6 +34,16 @@ const NOTIFICATION_CATEGORIES = [
   "deviceRecovered"
 ];
 const GENERAL_NOTIFICATION_CATEGORIES = ["info", "warnung", "alarm"];
+const DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES = {
+  deviceWarning: "warnung",
+  deviceAlarm: "alarm",
+  deviceTimeout: "alarm",
+  invalidSource: "warnung",
+  deviceRecovered: "info"
+};
+function notificationCategoryForEvent(category) {
+  return DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES[category];
+}
 function notificationLevelStateForCategory(category) {
   switch (category) {
     case "deviceWarning":
@@ -86,6 +97,7 @@ function notificationCategoryForTransition(previous, current) {
 0 && (module.exports = {
   GENERAL_NOTIFICATION_CATEGORIES,
   NOTIFICATION_CATEGORIES,
+  notificationCategoryForEvent,
   notificationCategoryForLevel,
   notificationCategoryForTransition,
   notificationLevelStateForCategory

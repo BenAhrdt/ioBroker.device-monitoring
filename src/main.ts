@@ -14,6 +14,7 @@ import {
 import { configurationBackupNeedsUpdate } from './lib/configuration-backup';
 import type { MonitoringData } from './lib/monitoring-data';
 import {
+	notificationCategoryForEvent,
 	notificationCategoryForLevel,
 	notificationCategoryForTransition,
 	notificationLevelStateForCategory,
@@ -2602,7 +2603,10 @@ class DeviceMonitoring extends utils.Adapter {
 		const base = `devices.${device.id}.${watched.id}`;
 		const levelStateId = notificationLevelStateForCategory(category);
 		const configuredLevel = await this.getStateAsync(`${base}.level.${levelStateId}`);
-		const outputCategory = notificationCategoryForLevel(configuredLevel?.val, category);
+		const outputCategory = notificationCategoryForLevel(
+			configuredLevel?.val,
+			notificationCategoryForEvent(category),
+		);
 		if (!outputCategory) {
 			return;
 		}

@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import {
+	notificationCategoryForEvent,
 	notificationCategoryForLevel,
 	notificationCategoryForTransition,
 	notificationLevelStateForCategory,
@@ -31,12 +32,20 @@ describe('notification transitions', () => {
 		expect(notificationLevelStateForCategory('invalidSource')).to.equal('invalid');
 	});
 
-	it('applies level overrides and retains the original category at standard level', () => {
-		expect(notificationCategoryForLevel(0, 'deviceWarning')).to.equal('deviceWarning');
-		expect(notificationCategoryForLevel(1, 'deviceWarning')).to.equal(undefined);
-		expect(notificationCategoryForLevel(2, 'deviceWarning')).to.equal('info');
-		expect(notificationCategoryForLevel(3, 'deviceWarning')).to.equal('warnung');
-		expect(notificationCategoryForLevel(4, 'deviceWarning')).to.equal('alarm');
-		expect(notificationCategoryForLevel(undefined, 'deviceWarning')).to.equal('deviceWarning');
+	it('maps event categories to the configured general output categories', () => {
+		expect(notificationCategoryForEvent('deviceWarning')).to.equal('warnung');
+		expect(notificationCategoryForEvent('deviceAlarm')).to.equal('alarm');
+		expect(notificationCategoryForEvent('deviceTimeout')).to.equal('alarm');
+		expect(notificationCategoryForEvent('invalidSource')).to.equal('warnung');
+		expect(notificationCategoryForEvent('deviceRecovered')).to.equal('info');
+	});
+
+	it('applies level overrides while keeping standard output categories general', () => {
+		expect(notificationCategoryForLevel(0, 'warnung')).to.equal('warnung');
+		expect(notificationCategoryForLevel(1, 'warnung')).to.equal(undefined);
+		expect(notificationCategoryForLevel(2, 'warnung')).to.equal('info');
+		expect(notificationCategoryForLevel(3, 'warnung')).to.equal('warnung');
+		expect(notificationCategoryForLevel(4, 'warnung')).to.equal('alarm');
+		expect(notificationCategoryForLevel(undefined, 'warnung')).to.equal('warnung');
 	});
 });

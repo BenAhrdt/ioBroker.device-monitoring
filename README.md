@@ -38,6 +38,16 @@ Each level state accepts these values:
 
 The adapter acknowledges recognized values from `0` to `4` by writing the selected value back with `ack = true`.
 
+The standard output categories are mapped as follows:
+
+| Event | Category |
+| --- | --- |
+| Warning limit reached | `warnung` |
+| Alarm limit reached | `alarm` |
+| Source update timeout | `alarm` |
+| Source missing or invalid | `warnung` |
+| State returned to normal | `info` |
+
 ## `info.message` state
 
 The read-only `info.message` state contains a JSON string for the latest notification event. Each new event replaces the previous one; this state is not a history. Events are written here even when sending notifications via `notify` is disabled. A level set to `Disabled` suppresses the event entirely.
@@ -47,7 +57,7 @@ The JSON object contains these fields:
 | Field | Description |
 | --- | --- |
 | `type` | Original event type: `warning`, `alarm`, `timeout`, `invalidSource` or `recovered` |
-| `category` | Notification category after applying the level: `deviceWarning`, `deviceAlarm`, `deviceTimeout`, `invalidSource`, `deviceRecovered`, `info`, `warnung` or `alarm` |
+| `category` | Output notification category after applying the level: `info`, `warnung` or `alarm` |
 | `title` | Rendered notification title |
 | `message` | Rendered notification message |
 | `deviceId`, `deviceName` | Device identifier and display name |
@@ -156,6 +166,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 -->
 ### **WORK IN PROGRESS**
 * (BenAhrdt) Link the historical changelog from the README.
+* (BenAhrdt) Use only the general `info`, `warnung` and `alarm` categories for notification output while preserving the original event type in `info.message.type`.
 
 ### 0.0.25 (2026-09-21)
 * (BenAhrdt) Exclude the historical changelog from the npm package and link to it from the README.

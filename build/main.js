@@ -2354,7 +2354,10 @@ class DeviceMonitoring extends utils.Adapter {
     const base = `devices.${device.id}.${watched.id}`;
     const levelStateId = (0, import_notifications.notificationLevelStateForCategory)(category);
     const configuredLevel = await this.getStateAsync(`${base}.level.${levelStateId}`);
-    const outputCategory = (0, import_notifications.notificationCategoryForLevel)(configuredLevel == null ? void 0 : configuredLevel.val, category);
+    const outputCategory = (0, import_notifications.notificationCategoryForLevel)(
+      configuredLevel == null ? void 0 : configuredLevel.val,
+      (0, import_notifications.notificationCategoryForEvent)(category)
+    );
     if (!outputCategory) {
       return;
     }

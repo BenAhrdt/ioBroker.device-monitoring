@@ -11,8 +11,26 @@ export const NOTIFICATION_CATEGORIES = [
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 export const GENERAL_NOTIFICATION_CATEGORIES = ['info', 'warnung', 'alarm'] as const;
 export type GeneralNotificationCategory = (typeof GENERAL_NOTIFICATION_CATEGORIES)[number];
-export type OutputNotificationCategory = NotificationCategory | GeneralNotificationCategory;
+export type OutputNotificationCategory = GeneralNotificationCategory;
 export type NotificationLevelState = 'warning' | 'alarm' | 'timeout' | 'recovered' | 'invalid';
+
+const DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES: Record<NotificationCategory, GeneralNotificationCategory> = {
+	deviceWarning: 'warnung',
+	deviceAlarm: 'alarm',
+	deviceTimeout: 'alarm',
+	invalidSource: 'warnung',
+	deviceRecovered: 'info',
+};
+
+/**
+ * Maps an adapter event to the general ioBroker notification category used for output.
+ *
+ * @param category Internal event category.
+ * @returns General category used by notify and info.message.
+ */
+export function notificationCategoryForEvent(category: NotificationCategory): GeneralNotificationCategory {
+	return DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES[category];
+}
 
 /**
  * Maps a notification category to the corresponding configurable level state.
@@ -36,16 +54,16 @@ export function notificationLevelStateForCategory(category: NotificationCategory
 }
 
 /**
- * Applies a per-event notification level while retaining the original category as the default.
+ * Applies a per-event notification level while retaining the mapped output category as the default.
  * Unknown values fall back to the default so existing events continue to be delivered safely.
  *
  * @param level Configured level value.
- * @param defaultCategory Original notification category used for standard or unknown levels.
+ * @param defaultCategory Mapped output category used for standard or unknown levels.
  * @returns The selected output category, or undefined when the event is disabled.
  */
 export function notificationCategoryForLevel(
 	level: unknown,
-	defaultCategory: NotificationCategory,
+	defaultCategory: OutputNotificationCategory,
 ): OutputNotificationCategory | undefined {
 	switch (level) {
 		case 1:
