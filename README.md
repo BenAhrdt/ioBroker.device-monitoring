@@ -110,6 +110,9 @@ The `type` field remains the original event type when its notification category 
 
 <img width="1232" height="725" alt="image" src="https://github.com/user-attachments/assets/2d1229ec-ed2b-4974-9625-3be823a8f392" />
 
+### Result (Example)
+
+<img width="591" height="1280" alt="image" src="https://github.com/user-attachments/assets/f6c94e61-a233-4c17-8792-f898b34e80e3" />
 
 
 
