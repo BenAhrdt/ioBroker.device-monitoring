@@ -100,6 +100,11 @@ The `type` field remains the original event type when its notification category 
   "message": "Der State Batterie vom Gerät MClimate PIR Mini hat mit 20 % die konfigurierte Alarmgrenze (kleiner als 70 %) verletzt (Der PIR Mini wird als externer Temperatur Sensor für das Vicki im Wohnzimmer genutzt)"
 }
 ```
+### Use Notify Levels in the Notification Manager
+
+<img width="797" height="331" alt="image" src="https://github.com/user-attachments/assets/1772680b-68ab-45d3-947e-4d43610c92b4" />
+
+### Use Notify Levels in (Blockly) Scripts
 
 
 
