@@ -108,6 +108,9 @@ The `type` field remains the original event type when its notification category 
 
 ### Use Notify Levels in (Blockly) Scripts
 
+<img width="1232" height="725" alt="image" src="https://github.com/user-attachments/assets/2d1229ec-ed2b-4974-9625-3be823a8f392" />
+
+
 
 
 ### DISCLAIMER
