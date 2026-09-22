@@ -14,6 +14,18 @@
 
 Watches your defined device states and build warnings and alerts
 
+## Standard output categories
+
+The standard output categories are mapped as follows:
+
+| Event | Category |
+| --- | --- |
+| Warning limit reached | `warnung` |
+| Alarm limit reached | `alarm` |
+| Source update timeout | `alarm` |
+| Source missing or invalid | `warnung` |
+| State returned to normal | `info` |
+
 ## Per-state notification levels
 
 Each monitored state has five writable level states under `devices.<deviceId>.<stateId>.level`:
@@ -30,7 +42,7 @@ Each level state accepts these values:
 
 | Value | Meaning |
 | --- | --- |
-| `0` — Standard | Use the event's normal notification category |
+| `0` — Standard | Use the event's standard notification category |
 | `1` — Disabled | Suppress this event |
 | `2` — Info | Send the event with the `info` category |
 | `3` — Warning | Send the event with the `warnung` category |
@@ -38,15 +50,7 @@ Each level state accepts these values:
 
 The adapter acknowledges recognized values from `0` to `4` by writing the selected value back with `ack = true`.
 
-The standard output categories are mapped as follows:
 
-| Event | Category |
-| --- | --- |
-| Warning limit reached | `warnung` |
-| Alarm limit reached | `alarm` |
-| Source update timeout | `alarm` |
-| Source missing or invalid | `warnung` |
-| State returned to normal | `info` |
 
 ## `info.message` state
 
