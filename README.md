@@ -12,7 +12,7 @@
 
 ## device-monitoring adapter for ioBroker
 
-Watches your devined device states and build warnings and alerts
+Watches your defined device states and build warnings and alerts
 
 ## Per-state notification levels
 
