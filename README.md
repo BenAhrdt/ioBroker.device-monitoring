@@ -30,6 +30,7 @@ The standard output categories are mapped as follows:
 | State returned to normal | `info` |
 
 ## Per-state notification levels
+This offers the possibility to deviate from the standard notification (for example, temporarily)
 
 Each monitored state has five writable level states under `devices.<deviceId>.<stateId>.level`:
 
