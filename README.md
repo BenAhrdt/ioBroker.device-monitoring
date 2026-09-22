@@ -14,6 +14,9 @@
 
 Watches your defined device states and build warnings and alerts
 
+<img width="1037" height="899" alt="image" src="https://github.com/user-attachments/assets/8ae6d145-90eb-437f-89b5-ce823d63f210" />
+
+
 ## Standard output categories
 
 The standard output categories are mapped as follows:
