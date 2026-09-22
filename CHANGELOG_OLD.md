@@ -1,4 +1,7 @@
 # Older changelog entries
+## 0.0.21 (2026-09-21)
+* (BenAhrdt) Add per-state notification levels with acknowledgements and document their values and the `info.message` event format
+
 ## 0.0.20 (2026-09-20)
 * (BenAhrdt) Remove the separate Device Monitoring admin tab
 

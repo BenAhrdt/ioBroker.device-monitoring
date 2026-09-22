@@ -164,7 +164,7 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.26 (2026-09-22)
 * (BenAhrdt) Link the historical changelog from the README.
 * (BenAhrdt) Use only the general `info`, `warnung` and `alarm` categories for notification output while preserving the original event type in `info.message.type`.
 
@@ -180,9 +180,6 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 ### 0.0.22 (2026-09-21)
 * (BenAhrdt) Require Admin 8 or newer, complete adapter metadata and required language entries, and update repository checks and scheduled dependency updates
 * (BenAhrdt) Add a link from the instance configuration to the Device Manager tab
-
-### 0.0.21 (2026-09-21)
-* (BenAhrdt) Add per-state notification levels with acknowledgements and document their values and the `info.message` event format
 
 [Older changelog entries](CHANGELOG_OLD.md)
 
