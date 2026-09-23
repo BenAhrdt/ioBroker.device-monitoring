@@ -1888,7 +1888,7 @@ class DeviceMonitoring extends utils.Adapter {
 						`devices.${device.id}.${watched.id}.value`,
 						t('Current value', 'Aktueller Wert'),
 						sourceType,
-						'value',
+						sourceType === 'boolean' ? 'sensor' : 'value',
 						await this.getSourceUnit(id),
 					);
 					const state = await this.getForeignStateAsync(id);
@@ -2297,7 +2297,7 @@ class DeviceMonitoring extends utils.Adapter {
 					`${base}.value`,
 					t('Current value', 'Aktueller Wert'),
 					sourceType,
-					'value',
+					sourceType === 'boolean' ? 'sensor' : 'value',
 					unit,
 				);
 				await this.ensureState(`${base}.status`, t('Status', 'Status'), 'string', 'text');
