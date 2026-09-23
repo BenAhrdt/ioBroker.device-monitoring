@@ -56,9 +56,10 @@
 				{ "label": "Device alarm", "value": "deviceAlarm" },
 				{ "label": "Update timeout", "value": "deviceTimeout" },
 				{ "label": "Invalid or deleted source", "value": "invalidSource" },
+				{ "label": "Invalid value", "value": "invalidValue" },
 				{ "label": "Device recovered", "value": "deviceRecovered" }
 			],
-			"default": ["deviceWarning", "deviceAlarm", "deviceTimeout", "invalidSource", "deviceRecovered"],
+			"default": ["deviceWarning", "deviceAlarm", "deviceTimeout", "invalidSource", "invalidValue", "deviceRecovered"],
 			"newLine": true,
 			"xs": 12,
 			"sm": 6,
@@ -270,8 +271,8 @@
 			"md": 12,
 			"lg": 12,
 			"xl": 12,
-			"style": { "backgroundColor": "#1976d2", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
-			"darkStyle": { "backgroundColor": "#1976d2", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+			"style": { "backgroundColor": "#c62828", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#c62828", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
 		},
 		"timeoutTitleTemplate": {
 			"type": "text",
@@ -337,8 +338,8 @@
 			"md": 12,
 			"lg": 12,
 			"xl": 12,
-			"style": { "backgroundColor": "#6d4c41", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
-			"darkStyle": { "backgroundColor": "#6d4c41", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+			"style": { "backgroundColor": "#d6a500", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#d6a500", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
 		},
 		"invalidSourceTitleTemplate": {
 			"type": "text",
@@ -381,6 +382,73 @@
 		"invalidSourcePreview": {
 			"type": "staticText",
 			"text": "${(String(data.invalidSourceTitleTemplate || '') ? String(data.invalidSourceTitleTemplate || '') + String.fromCharCode(10) + String(data.invalidSourceMessageTemplate || '') : String(data.invalidSourceMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Alarmanlage\",\"Fensterkontakt\",\"zigbee.0.ab12cd34.contact\",\"false\",\"\",\"Quelle im Adapter gelöscht\",\"kleiner als 18 °C\",\"größer als 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"noTranslation": true,
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
+			"style": {
+				"whiteSpace": "pre-line",
+				"fontSize": 14,
+				"paddingLeft": 4,
+				"marginBottom": 10
+			}
+		},
+		"invalidValueTemplateHeader": {
+			"type": "staticText",
+			"text": "Invalid value notification template",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
+			"style": { "backgroundColor": "#d6a500", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#d6a500", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+		},
+		"invalidValueTitleTemplate": {
+			"type": "text",
+			"label": "Title",
+			"default": "Ungültigen Wert erkannt",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
+		},
+		"invalidValueMessageTemplate": {
+			"type": "text",
+			"label": "Notification",
+			"default": "Ungültiger Wert bei Gerät: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}})",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
+		},
+		"invalidValuePreviewCaption": {
+			"type": "staticText",
+			"text": "Example sent notification (with sample values):",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
+			"style": {
+				"fontSize": 12,
+				"fontWeight": 600,
+				"marginTop": 2,
+				"marginBottom": 0
+			}
+		},
+		"invalidValuePreview": {
+			"type": "staticText",
+			"text": "${(String(data.invalidValueTitleTemplate || '') ? String(data.invalidValueTitleTemplate || '') + String.fromCharCode(10) + String(data.invalidValueMessageTemplate || '') : String(data.invalidValueMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Rauchmelder Heizraum\",\"Rauch\",\"lorawan.1.bridge.devices.sensor.smoke\",\"unavailable\",\"\",\"Ungültiger Wert vom Sensor\",\"außerhalb 18 - 26\",\"größer als 30\",\"60\",\"23.09.2026 14:31:45\",\"23.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,

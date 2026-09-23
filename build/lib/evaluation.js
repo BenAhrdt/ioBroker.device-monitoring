@@ -57,7 +57,7 @@ function getWatchStatus(value, warning, alarm, stale = false) {
     return "timeout";
   }
   if ((typeof value !== "number" || !Number.isFinite(value)) && typeof value !== "boolean") {
-    return "unknown";
+    return "invalidValue";
   }
   if (evaluateLimit(value, alarm)) {
     return "alarm";

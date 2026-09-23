@@ -13,6 +13,8 @@
     "Example sent notification (with sample values):": "Ejemplo de notificación enviada (con valores de muestra):",
     "Invalid or deleted source": "Fuente no válida o eliminada",
     "Invalid source notification template": "Plantilla de notificación de fuente no válida",
+    "Invalid value": "Invalid value",
+    "Invalid value notification template": "Invalid value notification template",
     "No device configuration backup is available.": "No hay ninguna copia de seguridad de la configuración del dispositivo disponible.",
     "Notification": "Notificación",
     "Notification templates": "Plantillas de notificación",

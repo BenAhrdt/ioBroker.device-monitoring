@@ -40,7 +40,10 @@ describe('threshold evaluation', () => {
 	});
 	it('gives alarms priority and reports missing values', () => {
 		expect(getWatchStatus(90, limit('above', undefined, 70), limit('above', undefined, 80))).to.equal('alarm');
-		expect(getWatchStatus(null, limit('below', 5), limit('above', undefined, 80))).to.equal('unknown');
+		expect(getWatchStatus(null, limit('below', 5), limit('above', undefined, 80))).to.equal('invalidValue');
+		expect(getWatchStatus('unavailable', limit('below', 5), limit('above', undefined, 80))).to.equal(
+			'invalidValue',
+		);
 	});
 });
 

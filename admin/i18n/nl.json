@@ -13,6 +13,8 @@
     "Example sent notification (with sample values):": "Voorbeeld verzonden melding (met voorbeeldwaarden):",
     "Invalid or deleted source": "Ongeldige of verwijderde bron",
     "Invalid source notification template": "Ongeldige sjabloon voor bronmelding",
+    "Invalid value": "Invalid value",
+    "Invalid value notification template": "Invalid value notification template",
     "No device configuration backup is available.": "Er is geen back-up van de apparaatconfiguratie beschikbaar.",
     "Notification": "Kennisgeving",
     "Notification templates": "Meldingssjablonen",

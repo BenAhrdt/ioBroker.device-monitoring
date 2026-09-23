@@ -76,7 +76,7 @@ export function createFunctionTemplate(watched: WatchedStateConfiguration): Func
 	};
 }
 
-export type WatchStatus = 'ok' | 'warning' | 'alarm' | 'timeout' | 'invalid' | 'unknown';
+export type WatchStatus = 'ok' | 'warning' | 'alarm' | 'timeout' | 'invalid' | 'invalidValue' | 'unknown';
 
 /**
  * Checks whether a numeric state value violates a configured limit.
@@ -126,7 +126,7 @@ export function getWatchStatus(
 		return 'timeout';
 	}
 	if ((typeof value !== 'number' || !Number.isFinite(value)) && typeof value !== 'boolean') {
-		return 'unknown';
+		return 'invalidValue';
 	}
 	if (evaluateLimit(value, alarm)) {
 		return 'alarm';

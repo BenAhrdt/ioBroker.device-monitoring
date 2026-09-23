@@ -13,6 +13,8 @@
     "Example sent notification (with sample values):": "Пример отправленного уведомления (с примерами значений):",
     "Invalid or deleted source": "Неверный или удаленный источник",
     "Invalid source notification template": "Неверный шаблон уведомления источника",
+    "Invalid value": "Invalid value",
+    "Invalid value notification template": "Invalid value notification template",
     "No device configuration backup is available.": "Резервная копия конфигурации устройства недоступна.",
     "Notification": "Уведомление",
     "Notification templates": "Шаблоны уведомлений",

@@ -30,6 +30,7 @@ var import_update_history = require("./lib/update-history");
 const t = (en, de) => ({ en, de });
 const COLORS = {
   invalid: "#6d4c41",
+  invalidValue: "#ef6c00",
   timeout: "#1976d2",
   alarm: "#c62828",
   warning: "#d6a500",
@@ -40,6 +41,9 @@ const svgIcon = (content) => `data:image/svg+xml,${encodeURIComponent(content)}`
 const STATUS_ICONS = {
   invalid: svgIcon(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#6d4c41"/><path d="M8.2 8.2l7.6 7.6M9.2 14.8l-1.4 1.4a2.8 2.8 0 01-4-4l2.4-2.4a2.8 2.8 0 014 0M14.8 9.2l1.4-1.4a2.8 2.8 0 014 4l-2.4 2.4a2.8 2.8 0 01-4 0" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round"/></svg>'
+  ),
+  invalidValue: svgIcon(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ef6c00"/><path d="M12 6.4l6.1 10.7H5.9L12 6.4z" fill="white"/><path d="M12 9.3v4.2" stroke="#b44f00" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="15.6" r="1" fill="#b44f00"/></svg>'
   ),
   timeout: svgIcon(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#1976d2"/><circle cx="12" cy="12" r="5.7" fill="none" stroke="white" stroke-width="1.8"/><path d="M12 8.4v4l2.8 1.7" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
@@ -96,7 +100,8 @@ const NOTIFICATION_LEVEL_STATE_NAMES = {
   alarm: t("Alarm", "Alarm"),
   timeout: t("Timeout", "Timeout"),
   recovered: t("Recovered", "Wiederhergestellt"),
-  invalid: t("Invalid source", "Ung\xFCltige Quelle")
+  invalid: t("Invalid source", "Ung\xFCltige Quelle"),
+  invalidValue: t("Invalid value", "Ung\xFCltiger Wert")
 };
 function isNotificationLevelValue(value) {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 4;
@@ -118,6 +123,10 @@ const DEFAULT_MESSAGE_TEMPLATES = {
     en: "Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}})",
     de: "Ung\xFCltige oder gel\xF6schte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})"
   },
+  invalidValue: {
+    en: "Invalid value at device: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}})",
+    de: "Ung\xFCltiger Wert bei Ger\xE4t: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}})"
+  },
   recovered: {
     en: "{{device}} / {{state}} is back to normal: {{value}} {{unit}} ({{remark}})",
     de: "{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})"
@@ -131,6 +140,7 @@ const DEFAULT_NOTIFICATION_TITLE_TEMPLATES = {
     en: "Invalid or deleted source: {{device}} - {{state}}",
     de: "Ung\xFCltige oder gel\xF6schte Quelle: {{device}} - {{state}}"
   },
+  invalidValue: { en: "Invalid value detected", de: "Ung\xFCltigen Wert erkannt" },
   recovered: {
     en: "Device recovered: {{device}} - {{state}}",
     de: "Ger\xE4t wieder in Ordnung: {{device}} - {{state}}"
@@ -1158,6 +1168,7 @@ class DeviceMonitoring extends utils.Adapter {
   legacyRuntimeStatesRemoved = false;
   resetUpdateHistories = /* @__PURE__ */ new Set();
   displayLanguage = "en";
+  invalidValueNotificationsEnabledByMigration = false;
   deviceManagement;
   sortRefreshTimer;
   staleCheckTimer;
@@ -1246,9 +1257,27 @@ class DeviceMonitoring extends utils.Adapter {
       alarm: { message: "alarmMessageTemplate", title: "alarmTitleTemplate" },
       timeout: { message: "timeoutMessageTemplate", title: "timeoutTitleTemplate" },
       invalidSource: { message: "invalidSourceMessageTemplate", title: "invalidSourceTitleTemplate" },
+      invalidValue: { message: "invalidValueMessageTemplate", title: "invalidValueTitleTemplate" },
       recovered: { message: "recoveredMessageTemplate", title: "recoveredTitleTemplate" }
     };
     let changed = false;
+    const configuredEnabledNotifications = native.enabledNotifications;
+    const legacyDefaultEnabledNotifications = [
+      "deviceWarning",
+      "deviceAlarm",
+      "deviceTimeout",
+      "invalidSource",
+      "deviceRecovered"
+    ];
+    if (Array.isArray(configuredEnabledNotifications) && legacyDefaultEnabledNotifications.every((category) => configuredEnabledNotifications.includes(category)) && !configuredEnabledNotifications.includes("invalidValue")) {
+      const migratedEnabledNotifications = [
+        ...configuredEnabledNotifications,
+        "invalidValue"
+      ];
+      native.enabledNotifications = migratedEnabledNotifications;
+      this.invalidValueNotificationsEnabledByMigration = true;
+      changed = true;
+    }
     for (const type of Object.keys(configKeys)) {
       const { message, title } = configKeys[type];
       const configuredMessage = native[message];
@@ -1363,13 +1392,16 @@ class DeviceMonitoring extends utils.Adapter {
     return void 0;
   }
   async onObjectChange(id, object) {
-    var _a;
+    var _a, _b;
     if (!this.subscribed.has(id)) {
       return;
     }
-    if (this.isValidSourceObject(object)) {
+    if (object) {
       this.invalidSources.delete(id);
-      this.sourceUnits.set(id, typeof object.common.unit === "string" ? object.common.unit : "");
+      this.sourceUnits.set(
+        id,
+        object.type === "state" && typeof ((_a = object.common) == null ? void 0 : _a.unit) === "string" ? object.common.unit : ""
+      );
     } else {
       this.invalidSources.add(id);
       this.sourceUnits.delete(id);
@@ -1392,7 +1424,7 @@ class DeviceMonitoring extends utils.Adapter {
     }
     if (affectedDevices.size) {
       await this.updateDeviceInfo();
-      await ((_a = this.deviceManagement) == null ? void 0 : _a.refreshCards());
+      await ((_b = this.deviceManagement) == null ? void 0 : _b.refreshCards());
     }
   }
   getFunctionTemplates() {
@@ -1465,7 +1497,15 @@ class DeviceMonitoring extends utils.Adapter {
     return this.devices.find((device) => device.id === deviceId);
   }
   async getDevicesWithStatus() {
-    const rank = { invalid: 0, timeout: 1, alarm: 2, warning: 3, unknown: 4, ok: 5 };
+    const rank = {
+      invalid: 0,
+      invalidValue: 1,
+      timeout: 2,
+      alarm: 3,
+      warning: 4,
+      unknown: 5,
+      ok: 6
+    };
     const result = await Promise.all(
       this.devices.map(async (device) => ({ device, status: await this.getDeviceStatus(device) }))
     );
@@ -1976,10 +2016,6 @@ class DeviceMonitoring extends utils.Adapter {
     }
     await this.refreshSourceValidity();
   }
-  isValidSourceObject(object) {
-    var _a;
-    return (object == null ? void 0 : object.type) === "state" && !!supportedSourceType((_a = object.common) == null ? void 0 : _a.type);
-  }
   async getValidSourceTypes() {
     const objects = await this.getForeignObjectsAsync("*", "state");
     return Object.fromEntries(
@@ -1997,9 +2033,13 @@ class DeviceMonitoring extends utils.Adapter {
     this.sourceUnits.clear();
     await Promise.all(
       [...this.subscribed].map(async (id) => {
+        var _a;
         const object = await this.getForeignObjectAsync(id);
-        if (this.isValidSourceObject(object)) {
-          this.sourceUnits.set(id, typeof object.common.unit === "string" ? object.common.unit : "");
+        if (object) {
+          this.sourceUnits.set(
+            id,
+            object.type === "state" && typeof ((_a = object.common) == null ? void 0 : _a.unit) === "string" ? object.common.unit : ""
+          );
         } else {
           this.invalidSources.add(id);
         }
@@ -2007,11 +2047,12 @@ class DeviceMonitoring extends utils.Adapter {
     );
   }
   async getSourceUnit(sourceId) {
+    var _a;
     if (this.sourceUnits.has(sourceId)) {
       return this.sourceUnits.get(sourceId) || "";
     }
     const object = await this.getForeignObjectAsync(sourceId);
-    const unit = this.isValidSourceObject(object) && typeof object.common.unit === "string" ? object.common.unit : "";
+    const unit = (object == null ? void 0 : object.type) === "state" && typeof ((_a = object.common) == null ? void 0 : _a.unit) === "string" ? object.common.unit : "";
     this.sourceUnits.set(sourceId, unit);
     return unit;
   }
@@ -2168,7 +2209,15 @@ class DeviceMonitoring extends utils.Adapter {
     });
   }
   async getDeviceStatus(device) {
-    const rank = { invalid: 0, timeout: 1, alarm: 2, warning: 3, unknown: 4, ok: 5 };
+    const rank = {
+      invalid: 0,
+      invalidValue: 1,
+      timeout: 2,
+      alarm: 3,
+      warning: 4,
+      unknown: 5,
+      ok: 6
+    };
     let status = "ok";
     for (const watched of device.states) {
       const state = await this.getForeignStateAsync(watched.sourceId);
@@ -2254,6 +2303,8 @@ class DeviceMonitoring extends utils.Adapter {
   async updateValueNow(device, watched, sourceState) {
     var _a, _b, _c, _d;
     const base = `devices.${device.id}.${watched.id}`;
+    const value = (_a = sourceState == null ? void 0 : sourceState.val) != null ? _a : null;
+    await this.setStateChangedAsync(`${base}.value`, { val: value, ack: true });
     const previousData = await this.readMonitoringData(base, watched.sourceId);
     const sameSource = !this.resetUpdateHistories.has(base) && previousData.sourceId === watched.sourceId;
     let updateHistory = sameSource ? (0, import_update_history.parseUpdateHistory)(previousData.updateHistory) : [];
@@ -2265,7 +2316,6 @@ class DeviceMonitoring extends utils.Adapter {
     if (typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0 && (lastTimestamp === void 0 || timestamp > lastTimestamp)) {
       updateHistory = [...updateHistory, timestamp].slice(-import_update_history.UPDATE_HISTORY_SIZE);
     }
-    const value = (_a = sourceState == null ? void 0 : sourceState.val) != null ? _a : null;
     let valueHistory = sameSource ? (0, import_update_history.parseValueHistory)(previousData.valueHistory) : [];
     if (value !== null && typeof value !== "number") {
       valueHistory = [];
@@ -2305,7 +2355,6 @@ class DeviceMonitoring extends utils.Adapter {
       valueHistory
     };
     await Promise.all([
-      this.setStateChangedAsync(`${base}.value`, { val: data.value, ack: true }),
       this.setStateChangedAsync(`${base}.status`, { val: data.status, ack: true }),
       this.setStateChangedAsync(`${base}.warning`, { val: data.warning, ack: true }),
       this.setStateChangedAsync(`${base}.alarm`, { val: data.alarm, ack: true }),
@@ -2366,6 +2415,7 @@ class DeviceMonitoring extends utils.Adapter {
       deviceAlarm: "alarm",
       deviceTimeout: "timeout",
       invalidSource: "invalidSource",
+      invalidValue: "invalidValue",
       deviceRecovered: "recovered"
     };
     const templateType = templateTypes[category];
@@ -2399,6 +2449,7 @@ class DeviceMonitoring extends utils.Adapter {
       deviceName: device.name,
       stateId: watched.id,
       stateName: watched.name,
+      function: watched.function,
       sourceId: watched.sourceId,
       remark: ((_b = watched.remark) == null ? void 0 : _b.trim()) || "",
       value: data.value,
@@ -2455,6 +2506,7 @@ ${messageText}` : messageText;
       alarm: "alarmMessageTemplate",
       timeout: "timeoutMessageTemplate",
       invalidSource: "invalidSourceMessageTemplate",
+      invalidValue: "invalidValueMessageTemplate",
       recovered: "recoveredMessageTemplate"
     };
     const configKey = configKeys[type];
@@ -2468,6 +2520,7 @@ ${messageText}` : messageText;
       alarm: "alarmTitleTemplate",
       timeout: "timeoutTitleTemplate",
       invalidSource: "invalidSourceTitleTemplate",
+      invalidValue: "invalidValueTitleTemplate",
       recovered: "recoveredTitleTemplate"
     };
     const configKey = configKeys[type];
@@ -2478,6 +2531,9 @@ ${messageText}` : messageText;
     );
   }
   isNotificationEnabled(category) {
+    if (category === "invalidValue" && this.invalidValueNotificationsEnabledByMigration) {
+      return true;
+    }
     const configured = this.config.enabledNotifications;
     return !Array.isArray(configured) || configured.includes(category);
   }

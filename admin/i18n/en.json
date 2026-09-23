@@ -13,6 +13,8 @@
     "Example sent notification (with sample values):": "Example sent notification (with sample values):",
     "Invalid or deleted source": "Invalid or deleted source",
     "Invalid source notification template": "Invalid source notification template",
+    "Invalid value": "Invalid value",
+    "Invalid value notification template": "Invalid value notification template",
     "No device configuration backup is available.": "No device configuration backup is available.",
     "Notification": "Notification",
     "Notification templates": "Notification templates",

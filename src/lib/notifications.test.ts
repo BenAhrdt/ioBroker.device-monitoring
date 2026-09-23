@@ -13,10 +13,12 @@ describe('notification transitions', () => {
 		expect(notificationCategoryForTransition('warning', 'alarm')).to.equal('deviceAlarm');
 		expect(notificationCategoryForTransition('ok', 'timeout')).to.equal('deviceTimeout');
 		expect(notificationCategoryForTransition('ok', 'invalid')).to.equal('invalidSource');
+		expect(notificationCategoryForTransition('ok', 'invalidValue')).to.equal('invalidValue');
 	});
 
 	it('reports recovery only after a notified problem state', () => {
 		expect(notificationCategoryForTransition('alarm', 'ok')).to.equal('deviceRecovered');
+		expect(notificationCategoryForTransition('invalidValue', 'ok')).to.equal('deviceRecovered');
 		expect(notificationCategoryForTransition('unknown', 'ok')).to.equal(undefined);
 	});
 
@@ -30,6 +32,7 @@ describe('notification transitions', () => {
 		expect(notificationLevelStateForCategory('deviceTimeout')).to.equal('timeout');
 		expect(notificationLevelStateForCategory('deviceRecovered')).to.equal('recovered');
 		expect(notificationLevelStateForCategory('invalidSource')).to.equal('invalid');
+		expect(notificationLevelStateForCategory('invalidValue')).to.equal('invalidValue');
 	});
 
 	it('maps event categories to the configured general output categories', () => {
@@ -37,6 +40,7 @@ describe('notification transitions', () => {
 		expect(notificationCategoryForEvent('deviceAlarm')).to.equal('alarm');
 		expect(notificationCategoryForEvent('deviceTimeout')).to.equal('alarm');
 		expect(notificationCategoryForEvent('invalidSource')).to.equal('warnung');
+		expect(notificationCategoryForEvent('invalidValue')).to.equal('warnung');
 		expect(notificationCategoryForEvent('deviceRecovered')).to.equal('info');
 	});
 

@@ -31,6 +31,7 @@ const NOTIFICATION_CATEGORIES = [
   "deviceAlarm",
   "deviceTimeout",
   "invalidSource",
+  "invalidValue",
   "deviceRecovered"
 ];
 const GENERAL_NOTIFICATION_CATEGORIES = ["info", "warnung", "alarm"];
@@ -39,6 +40,7 @@ const DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES = {
   deviceAlarm: "alarm",
   deviceTimeout: "alarm",
   invalidSource: "warnung",
+  invalidValue: "warnung",
   deviceRecovered: "info"
 };
 function notificationCategoryForEvent(category) {
@@ -56,6 +58,8 @@ function notificationLevelStateForCategory(category) {
       return "recovered";
     case "invalidSource":
       return "invalid";
+    case "invalidValue":
+      return "invalidValue";
   }
 }
 function notificationCategoryForLevel(level, defaultCategory) {
@@ -88,7 +92,10 @@ function notificationCategoryForTransition(previous, current) {
   if (current === "invalid") {
     return "invalidSource";
   }
-  if (current === "ok" && ["warning", "alarm", "timeout", "invalid"].includes(previous)) {
+  if (current === "invalidValue") {
+    return "invalidValue";
+  }
+  if (current === "ok" && ["warning", "alarm", "timeout", "invalid", "invalidValue"].includes(previous)) {
     return "deviceRecovered";
   }
   return void 0;

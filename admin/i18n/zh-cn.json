@@ -13,6 +13,8 @@
     "Example sent notification (with sample values):": "发送通知示例（带有示例值）：",
     "Invalid or deleted source": "来源无效或已删除",
     "Invalid source notification template": "来源通知模板无效",
+    "Invalid value": "Invalid value",
+    "Invalid value notification template": "Invalid value notification template",
     "No device configuration backup is available.": "没有可用的设备配置备份。",
     "Notification": "通知",
     "Notification templates": "通知模板",

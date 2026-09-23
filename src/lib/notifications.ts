@@ -5,6 +5,7 @@ export const NOTIFICATION_CATEGORIES = [
 	'deviceAlarm',
 	'deviceTimeout',
 	'invalidSource',
+	'invalidValue',
 	'deviceRecovered',
 ] as const;
 
@@ -12,13 +13,14 @@ export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];
 export const GENERAL_NOTIFICATION_CATEGORIES = ['info', 'warnung', 'alarm'] as const;
 export type GeneralNotificationCategory = (typeof GENERAL_NOTIFICATION_CATEGORIES)[number];
 export type OutputNotificationCategory = GeneralNotificationCategory;
-export type NotificationLevelState = 'warning' | 'alarm' | 'timeout' | 'recovered' | 'invalid';
+export type NotificationLevelState = 'warning' | 'alarm' | 'timeout' | 'recovered' | 'invalid' | 'invalidValue';
 
 const DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES: Record<NotificationCategory, GeneralNotificationCategory> = {
 	deviceWarning: 'warnung',
 	deviceAlarm: 'alarm',
 	deviceTimeout: 'alarm',
 	invalidSource: 'warnung',
+	invalidValue: 'warnung',
 	deviceRecovered: 'info',
 };
 
@@ -50,6 +52,8 @@ export function notificationLevelStateForCategory(category: NotificationCategory
 			return 'recovered';
 		case 'invalidSource':
 			return 'invalid';
+		case 'invalidValue':
+			return 'invalidValue';
 	}
 }
 
@@ -105,7 +109,10 @@ export function notificationCategoryForTransition(
 	if (current === 'invalid') {
 		return 'invalidSource';
 	}
-	if (current === 'ok' && ['warning', 'alarm', 'timeout', 'invalid'].includes(previous)) {
+	if (current === 'invalidValue') {
+		return 'invalidValue';
+	}
+	if (current === 'ok' && ['warning', 'alarm', 'timeout', 'invalid', 'invalidValue'].includes(previous)) {
 		return 'deviceRecovered';
 	}
 	return undefined;

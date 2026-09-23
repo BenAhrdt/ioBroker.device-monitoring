@@ -16,14 +16,15 @@ Watches your devined device states and build warnings and alerts
 
 ## Per-state notification levels
 
-Each monitored state has five writable level states under `devices.<deviceId>.<stateId>.level`:
+Each monitored state has six writable level states under `devices.<deviceId>.<stateId>.level`:
 
 | State | Event |
 | --- | --- |
 | `warning` | Warning limit reached |
 | `alarm` | Alarm limit reached |
 | `timeout` | Source update timeout |
-| `invalid` | Source missing or invalid |
+| `invalid` | Source ID missing or deleted |
+| `invalidValue` | Source exists but provides an invalid value |
 | `recovered` | State returned to normal |
 
 Each level state accepts these values:
@@ -45,7 +46,8 @@ The standard output categories are mapped as follows:
 | Warning limit reached | `warnung` |
 | Alarm limit reached | `alarm` |
 | Source update timeout | `alarm` |
-| Source missing or invalid | `warnung` |
+| Source ID missing or deleted | `warnung` |
+| Invalid source value | `warnung` |
 | State returned to normal | `info` |
 
 ## `info.message` state
@@ -56,12 +58,13 @@ The JSON object contains these fields:
 
 | Field | Description |
 | --- | --- |
-| `type` | Original event type: `warning`, `alarm`, `timeout`, `invalidSource` or `recovered` |
+| `type` | Original event type: `warning`, `alarm`, `timeout`, `invalidSource`, `invalidValue` or `recovered` |
 | `category` | Output notification category after applying the level: `info`, `warnung` or `alarm` |
 | `title` | Rendered notification title |
 | `message` | Rendered notification message |
 | `deviceId`, `deviceName` | Device identifier and display name |
 | `stateId`, `stateName` | Monitored state identifier and display name |
+| `function` | Configured monitoring function name; empty when no function is assigned |
 | `sourceId` | Source state ID |
 | `remark` | Configured remark for the monitored state |
 | `value`, `unit` | Current source value and its unit |
@@ -164,6 +167,10 @@ Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Distinguish missing source IDs from invalid source values, add configurable invalid-value notifications, update the monitored value state first, and include the configured function in `info.message`.
+* (BenAhrdt) Match notification-template header colors to their standard output categories.
+
 ### 0.0.26 (2026-09-22)
 * (BenAhrdt) Link the historical changelog from the README.
 * (BenAhrdt) Use only the general `info`, `warnung` and `alarm` categories for notification output while preserving the original event type in `info.message.type`.

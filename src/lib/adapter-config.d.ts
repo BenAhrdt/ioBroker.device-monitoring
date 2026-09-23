@@ -29,6 +29,10 @@ declare global {
 			invalidSourceTitleTemplate?: string;
 			/** Template used for invalid-source notifications and info.message. */
 			invalidSourceMessageTemplate?: string;
+			/** Title template used for invalid-value notifications and info.message. */
+			invalidValueTitleTemplate?: string;
+			/** Template used for invalid-value notifications and info.message. */
+			invalidValueMessageTemplate?: string;
 			/** Title template used for recovery notifications and info.message. */
 			recoveredTitleTemplate?: string;
 			/** Template used for recovery notifications and info.message. */
