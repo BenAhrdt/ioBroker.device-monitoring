@@ -31,7 +31,320 @@ import {
 	UPDATE_HISTORY_SIZE,
 } from './lib/update-history';
 
-const t = (en: string, de: string): ioBroker.Translated => ({ en, de });
+type RecommendedLanguage = 'ru' | 'pt' | 'nl' | 'fr' | 'it' | 'es' | 'pl' | 'uk' | 'zh-cn';
+
+const recommendedTranslations: Record<string, Record<RecommendedLanguage, string>> = {
+	Warning: {
+		ru: 'Предупреждение',
+		pt: 'Aviso',
+		nl: 'Waarschuwing',
+		fr: 'Avertissement',
+		it: 'Avviso',
+		es: 'Advertencia',
+		pl: 'Ostrzeżenie',
+		uk: 'Попередження',
+		'zh-cn': '警告',
+	},
+	Alarm: {
+		ru: 'Тревога',
+		pt: 'Alarme',
+		nl: 'Alarm',
+		fr: 'Alarme',
+		it: 'Allarme',
+		es: 'Alarma',
+		pl: 'Alarm',
+		uk: 'Тривога',
+		'zh-cn': '报警',
+	},
+	Timeout: {
+		ru: 'Тайм-аут',
+		pt: 'Tempo limite',
+		nl: 'Time-out',
+		fr: "Délai d'attente",
+		it: 'Timeout',
+		es: 'Tiempo de espera',
+		pl: 'Limit czasu',
+		uk: 'Час очікування',
+		'zh-cn': '超时',
+	},
+	Recovered: {
+		ru: 'Восстановлено',
+		pt: 'Recuperado',
+		nl: 'Hersteld',
+		fr: 'Récupéré',
+		it: 'Ripristinato',
+		es: 'Recuperado',
+		pl: 'Przywrócono',
+		uk: 'Відновлено',
+		'zh-cn': '已恢复',
+	},
+	'Invalid source': {
+		ru: 'Недействительный источник',
+		pt: 'Fonte inválida',
+		nl: 'Ongeldige bron',
+		fr: 'Source invalide',
+		it: 'Sorgente non valida',
+		es: 'Fuente no válida',
+		pl: 'Nieprawidłowe źródło',
+		uk: 'Недійсне джерело',
+		'zh-cn': '无效来源',
+	},
+	'Invalid value': {
+		ru: 'Недействительное значение',
+		pt: 'Valor inválido',
+		nl: 'Ongeldige waarde',
+		fr: 'Valeur invalide',
+		it: 'Valore non valido',
+		es: 'Valor no válido',
+		pl: 'Nieprawidłowa wartość',
+		uk: 'Недійсне значення',
+		'zh-cn': '无效值',
+	},
+	'Device information': {
+		ru: 'Информация об устройстве',
+		pt: 'Informações do dispositivo',
+		nl: 'Apparaatinformatie',
+		fr: "Informations sur l'appareil",
+		it: 'Informazioni dispositivo',
+		es: 'Información del dispositivo',
+		pl: 'Informacje o urządzeniu',
+		uk: 'Інформація про пристрій',
+		'zh-cn': '设备信息',
+	},
+	'Notification message': {
+		ru: 'Сообщение уведомления',
+		pt: 'Mensagem de notificação',
+		nl: 'Meldingsbericht',
+		fr: 'Message de notification',
+		it: 'Messaggio di notifica',
+		es: 'Mensaje de notificación',
+		pl: 'Wiadomość powiadomienia',
+		uk: 'Повідомлення сповіщення',
+		'zh-cn': '通知消息',
+	},
+	Devices: {
+		ru: 'Устройства',
+		pt: 'Dispositivos',
+		nl: 'Apparaten',
+		fr: 'Appareils',
+		it: 'Dispositivi',
+		es: 'Dispositivos',
+		pl: 'Urządzenia',
+		uk: 'Пристрої',
+		'zh-cn': '设备',
+	},
+	'Card color': {
+		ru: 'Цвет карточки',
+		pt: 'Cor do cartão',
+		nl: 'Kaartkleur',
+		fr: 'Couleur de la carte',
+		it: 'Colore della scheda',
+		es: 'Color de tarjeta',
+		pl: 'Kolor karty',
+		uk: 'Колір картки',
+		'zh-cn': '卡片颜色',
+	},
+	'Card icon': {
+		ru: 'Значок карточки',
+		pt: 'Ícone do cartão',
+		nl: 'Kaartpictogram',
+		fr: 'Icône de la carte',
+		it: 'Icona della scheda',
+		es: 'Icono de tarjeta',
+		pl: 'Ikona karty',
+		uk: 'Значок картки',
+		'zh-cn': '卡片图标',
+	},
+	'Device Manager data': {
+		ru: 'Данные диспетчера устройств',
+		pt: 'Dados do Device Manager',
+		nl: 'Device Manager-gegevens',
+		fr: 'Données de Device Manager',
+		it: 'Dati di Device Manager',
+		es: 'Datos del Device Manager',
+		pl: 'Dane Device Managera',
+		uk: 'Дані Device Manager',
+		'zh-cn': 'Device Manager 数据',
+	},
+	'Device card details': {
+		ru: 'Сведения о карточке устройства',
+		pt: 'Detalhes do cartão do dispositivo',
+		nl: 'Details van apparaatkaart',
+		fr: "Détails de la carte de l'appareil",
+		it: 'Dettagli della scheda dispositivo',
+		es: 'Detalles de la tarjeta del dispositivo',
+		pl: 'Szczegóły karty urządzenia',
+		uk: 'Деталі картки пристрою',
+		'zh-cn': '设备卡片详情',
+	},
+	'Current value': {
+		ru: 'Текущее значение',
+		pt: 'Valor atual',
+		nl: 'Huidige waarde',
+		fr: 'Valeur actuelle',
+		it: 'Valore corrente',
+		es: 'Valor actual',
+		pl: 'Bieżąca wartość',
+		uk: 'Поточне значення',
+		'zh-cn': '当前值',
+	},
+	Status: {
+		ru: 'Состояние',
+		pt: 'Status',
+		nl: 'Status',
+		fr: 'État',
+		it: 'Stato',
+		es: 'Estado',
+		pl: 'Stan',
+		uk: 'Стан',
+		'zh-cn': '状态',
+	},
+	'Update timeout': {
+		ru: 'Тайм-аут обновления',
+		pt: 'Tempo limite de atualização',
+		nl: 'Update-time-out',
+		fr: 'Délai d’attente de mise à jour',
+		it: 'Timeout aggiornamento',
+		es: 'Tiempo de espera de actualización',
+		pl: 'Limit czasu aktualizacji',
+		uk: 'Час очікування оновлення',
+		'zh-cn': '更新超时',
+	},
+	'Source state': {
+		ru: 'Исходное состояние',
+		pt: 'Estado de origem',
+		nl: 'Bronstate',
+		fr: 'État source',
+		it: 'Stato sorgente',
+		es: 'Estado de origen',
+		pl: 'Stan źródłowy',
+		uk: 'Стан джерела',
+		'zh-cn': '来源状态',
+	},
+	Remark: {
+		ru: 'Примечание',
+		pt: 'Observação',
+		nl: 'Opmerking',
+		fr: 'Remarque',
+		it: 'Nota',
+		es: 'Observación',
+		pl: 'Uwaga',
+		uk: 'Примітка',
+		'zh-cn': '备注',
+	},
+	'Notification levels': {
+		ru: 'Уровни уведомлений',
+		pt: 'Níveis de notificação',
+		nl: 'Meldingsniveaus',
+		fr: 'Niveaux de notification',
+		it: 'Livelli di notifica',
+		es: 'Niveles de notificación',
+		pl: 'Poziomy powiadomień',
+		uk: 'Рівні сповіщень',
+		'zh-cn': '通知级别',
+	},
+	'Monitoring data': {
+		ru: 'Данные мониторинга',
+		pt: 'Dados de monitoramento',
+		nl: 'Monitoringgegevens',
+		fr: 'Données de surveillance',
+		it: 'Dati di monitoraggio',
+		es: 'Datos de monitorización',
+		pl: 'Dane monitorowania',
+		uk: 'Дані моніторингу',
+		'zh-cn': '监控数据',
+	},
+	'Last update': {
+		ru: 'Последнее обновление',
+		pt: 'Última atualização',
+		nl: 'Laatste update',
+		fr: 'Dernière mise à jour',
+		it: 'Ultimo aggiornamento',
+		es: 'Última actualización',
+		pl: 'Ostatnia aktualizacja',
+		uk: 'Останнє оновлення',
+		'zh-cn': '上次更新',
+	},
+	'Previous update': {
+		ru: 'Предыдущее обновление',
+		pt: 'Atualização anterior',
+		nl: 'Vorige update',
+		fr: 'Mise à jour précédente',
+		it: 'Aggiornamento precedente',
+		es: 'Actualización anterior',
+		pl: 'Poprzednia aktualizacja',
+		uk: 'Попереднє оновлення',
+		'zh-cn': '上次更新之前',
+	},
+	'Update interval': {
+		ru: 'Интервал обновления',
+		pt: 'Intervalo de atualização',
+		nl: 'Update-interval',
+		fr: 'Intervalle de mise à jour',
+		it: 'Intervallo di aggiornamento',
+		es: 'Intervalo de actualización',
+		pl: 'Interwał aktualizacji',
+		uk: 'Інтервал оновлення',
+		'zh-cn': '更新间隔',
+	},
+	'Average update interval': {
+		ru: 'Средний интервал обновления',
+		pt: 'Intervalo médio de atualização',
+		nl: 'Gemiddeld update-interval',
+		fr: 'Intervalle moyen de mise à jour',
+		it: 'Intervallo medio di aggiornamento',
+		es: 'Intervalo medio de actualización',
+		pl: 'Średni interwał aktualizacji',
+		uk: 'Середній інтервал оновлення',
+		'zh-cn': '平均更新间隔',
+	},
+	'Average value': {
+		ru: 'Среднее значение',
+		pt: 'Valor médio',
+		nl: 'Gemiddelde waarde',
+		fr: 'Valeur moyenne',
+		it: 'Valore medio',
+		es: 'Valor medio',
+		pl: 'Średnia wartość',
+		uk: 'Середнє значення',
+		'zh-cn': '平均值',
+	},
+	'Last update timestamps': {
+		ru: 'Последние временные метки обновления',
+		pt: 'Últimos carimbos de data/hora de atualização',
+		nl: 'Laatste update-tijdstempels',
+		fr: 'Derniers horodatages de mise à jour',
+		it: 'Ultimi timestamp di aggiornamento',
+		es: 'Últimas marcas de tiempo de actualización',
+		pl: 'Ostatnie znaczniki czasu aktualizacji',
+		uk: 'Останні часові позначки оновлення',
+		'zh-cn': '上次更新时间戳',
+	},
+	'Last numeric values': {
+		ru: 'Последние числовые значения',
+		pt: 'Últimos valores numéricos',
+		nl: 'Laatste numerieke waarden',
+		fr: 'Dernières valeurs numériques',
+		it: 'Ultimi valori numerici',
+		es: 'Últimos valores numéricos',
+		pl: 'Ostatnie wartości liczbowe',
+		uk: 'Останні числові значення',
+		'zh-cn': '最近数值',
+	},
+	'Monitoring details': {
+		ru: 'Подробности мониторинга',
+		pt: 'Detalhes do monitoramento',
+		nl: 'Monitoringdetails',
+		fr: 'Détails de la surveillance',
+		it: 'Dettagli monitoraggio',
+		es: 'Detalles de monitorización',
+		pl: 'Szczegóły monitorowania',
+		uk: 'Деталі моніторингу',
+		'zh-cn': '监控详情',
+	},
+};
+
+const t = (en: string, de: string): ioBroker.Translated => ({ en, de, ...(recommendedTranslations[en] || {}) });
 const COLORS: Record<WatchStatus, string> = {
 	invalid: '#6d4c41',
 	invalidValue: '#ef6c00',
@@ -1075,18 +1388,22 @@ function stateForm(
 	return {
 		type: 'panel',
 		items: {
-			[key('name')]: {
-				type: 'text',
-				label: t('Name', 'Name'),
-				newLine: true,
-				xs: 12,
-				validator: nameValidator,
-				validatorErrorText: t(
-					'Name is required and must be unique within the device',
-					'Der Name ist erforderlich und muss innerhalb des Geräts eindeutig sein',
-				),
-				validatorNoSaveOnError: true,
-			},
+			...(!stateId
+				? {
+						[key('name')]: {
+							type: 'text',
+							label: t('Name', 'Name'),
+							newLine: true,
+							xs: 12,
+							validator: nameValidator,
+							validatorErrorText: t(
+								'Name is required and must be unique within the device',
+								'Der Name ist erforderlich und muss innerhalb des Geräts eindeutig sein',
+							),
+							validatorNoSaveOnError: true,
+						},
+					}
+				: {}),
 			[key('sourceId')]: {
 				type: 'objectId',
 				label: t('ioBroker state', 'ioBroker-State'),
@@ -1566,6 +1883,14 @@ class DeviceMonitoring extends utils.Adapter {
 		for (const device of this.devices) {
 			for (const watched of device.states) {
 				if (watched.sourceId === id) {
+					const sourceType = await this.getSourceType(id);
+					await this.ensureState(
+						`devices.${device.id}.${watched.id}.value`,
+						t('Current value', 'Aktueller Wert'),
+						sourceType,
+						'value',
+						await this.getSourceUnit(id),
+					);
 					const state = await this.getForeignStateAsync(id);
 					await this.updateValue(device, watched, state);
 					affectedDevices.add(device.id);
@@ -1748,7 +2073,17 @@ class DeviceMonitoring extends utils.Adapter {
 		}
 		const states = device.states
 			.filter(watched => !data[watched.id]?._delete)
-			.map(watched => this.normalizeState(data[watched.id] || watched, watched.id));
+			.map(watched => {
+				const submitted = data[watched.id];
+				return this.normalizeState(
+					{
+						...watched,
+						...(submitted && typeof submitted === 'object' ? submitted : {}),
+						name: watched.name,
+					},
+					watched.id,
+				);
+			});
 		await this.saveDevices(
 			this.devices.map(entry => (entry.id === deviceId ? { ...entry, states } : entry)),
 			false,
@@ -1957,7 +2292,14 @@ class DeviceMonitoring extends utils.Adapter {
 					native: { sourceId: watched.sourceId, function: watched.function },
 				});
 				const unit = await this.getSourceUnit(watched.sourceId);
-				await this.ensureState(`${base}.value`, t('Current value', 'Aktueller Wert'), 'mixed', 'value', unit);
+				const sourceType = await this.getSourceType(watched.sourceId);
+				await this.ensureState(
+					`${base}.value`,
+					t('Current value', 'Aktueller Wert'),
+					sourceType,
+					'value',
+					unit,
+				);
 				await this.ensureState(`${base}.status`, t('Status', 'Status'), 'string', 'text');
 				await this.ensureState(`${base}.warning`, t('Warning', 'Warnung'), 'boolean', 'indicator');
 				await this.ensureState(`${base}.alarm`, t('Alarm', 'Alarm'), 'boolean', 'indicator.alarm');
@@ -2156,7 +2498,7 @@ class DeviceMonitoring extends utils.Adapter {
 			common: {
 				name,
 				type: 'number',
-				role: 'value',
+				role: 'level',
 				read: true,
 				write: true,
 				states: {
@@ -2240,6 +2582,10 @@ class DeviceMonitoring extends utils.Adapter {
 		const unit = object?.type === 'state' && typeof object.common?.unit === 'string' ? object.common.unit : '';
 		this.sourceUnits.set(sourceId, unit);
 		return unit;
+	}
+	private async getSourceType(sourceId: string): Promise<SupportedSourceType> {
+		const object = await this.getForeignObjectAsync(sourceId);
+		return supportedSourceType(object?.common?.type) || 'number';
 	}
 	private async readMonitoringData(base: string, sourceId: string): Promise<Partial<MonitoringData>> {
 		const [

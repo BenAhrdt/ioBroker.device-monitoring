@@ -125,6 +125,11 @@ The `type` field remains the original event type when its notification category 
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Keep monitored state names unchanged in the edit dialog and add the recommended translations to generated object names.
+* (BenAhrdt) Set generated monitored value states to the source state's `boolean` or `number` type.
+* (BenAhrdt) Use the writable `level` role for notification-level states.
+
 ### 0.0.27 (2026-09-23)
 * (BenAhrdt) Distinguish missing source IDs from invalid source values, add configurable invalid-value notifications, update the monitored value state first, and include the configured function in `info.message`.
 * (BenAhrdt) Match notification-template header colors to their standard output categories.

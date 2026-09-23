@@ -27,7 +27,317 @@ var import_evaluation = require("./lib/evaluation");
 var import_configuration_backup = require("./lib/configuration-backup");
 var import_notifications = require("./lib/notifications");
 var import_update_history = require("./lib/update-history");
-const t = (en, de) => ({ en, de });
+const recommendedTranslations = {
+  Warning: {
+    ru: "\u041F\u0440\u0435\u0434\u0443\u043F\u0440\u0435\u0436\u0434\u0435\u043D\u0438\u0435",
+    pt: "Aviso",
+    nl: "Waarschuwing",
+    fr: "Avertissement",
+    it: "Avviso",
+    es: "Advertencia",
+    pl: "Ostrze\u017Cenie",
+    uk: "\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u0436\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u8B66\u544A"
+  },
+  Alarm: {
+    ru: "\u0422\u0440\u0435\u0432\u043E\u0433\u0430",
+    pt: "Alarme",
+    nl: "Alarm",
+    fr: "Alarme",
+    it: "Allarme",
+    es: "Alarma",
+    pl: "Alarm",
+    uk: "\u0422\u0440\u0438\u0432\u043E\u0433\u0430",
+    "zh-cn": "\u62A5\u8B66"
+  },
+  Timeout: {
+    ru: "\u0422\u0430\u0439\u043C-\u0430\u0443\u0442",
+    pt: "Tempo limite",
+    nl: "Time-out",
+    fr: "D\xE9lai d'attente",
+    it: "Timeout",
+    es: "Tiempo de espera",
+    pl: "Limit czasu",
+    uk: "\u0427\u0430\u0441 \u043E\u0447\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F",
+    "zh-cn": "\u8D85\u65F6"
+  },
+  Recovered: {
+    ru: "\u0412\u043E\u0441\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E",
+    pt: "Recuperado",
+    nl: "Hersteld",
+    fr: "R\xE9cup\xE9r\xE9",
+    it: "Ripristinato",
+    es: "Recuperado",
+    pl: "Przywr\xF3cono",
+    uk: "\u0412\u0456\u0434\u043D\u043E\u0432\u043B\u0435\u043D\u043E",
+    "zh-cn": "\u5DF2\u6062\u590D"
+  },
+  "Invalid source": {
+    ru: "\u041D\u0435\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u044B\u0439 \u0438\u0441\u0442\u043E\u0447\u043D\u0438\u043A",
+    pt: "Fonte inv\xE1lida",
+    nl: "Ongeldige bron",
+    fr: "Source invalide",
+    it: "Sorgente non valida",
+    es: "Fuente no v\xE1lida",
+    pl: "Nieprawid\u0142owe \u017Ar\xF3d\u0142o",
+    uk: "\u041D\u0435\u0434\u0456\u0439\u0441\u043D\u0435 \u0434\u0436\u0435\u0440\u0435\u043B\u043E",
+    "zh-cn": "\u65E0\u6548\u6765\u6E90"
+  },
+  "Invalid value": {
+    ru: "\u041D\u0435\u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0442\u0435\u043B\u044C\u043D\u043E\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435",
+    pt: "Valor inv\xE1lido",
+    nl: "Ongeldige waarde",
+    fr: "Valeur invalide",
+    it: "Valore non valido",
+    es: "Valor no v\xE1lido",
+    pl: "Nieprawid\u0142owa warto\u015B\u0107",
+    uk: "\u041D\u0435\u0434\u0456\u0439\u0441\u043D\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u65E0\u6548\u503C"
+  },
+  "Device information": {
+    ru: "\u0418\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0438\u044F \u043E\u0431 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435",
+    pt: "Informa\xE7\xF5es do dispositivo",
+    nl: "Apparaatinformatie",
+    fr: "Informations sur l'appareil",
+    it: "Informazioni dispositivo",
+    es: "Informaci\xF3n del dispositivo",
+    pl: "Informacje o urz\u0105dzeniu",
+    uk: "\u0406\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F \u043F\u0440\u043E \u043F\u0440\u0438\u0441\u0442\u0440\u0456\u0439",
+    "zh-cn": "\u8BBE\u5907\u4FE1\u606F"
+  },
+  "Notification message": {
+    ru: "\u0421\u043E\u043E\u0431\u0449\u0435\u043D\u0438\u0435 \u0443\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u044F",
+    pt: "Mensagem de notifica\xE7\xE3o",
+    nl: "Meldingsbericht",
+    fr: "Message de notification",
+    it: "Messaggio di notifica",
+    es: "Mensaje de notificaci\xF3n",
+    pl: "Wiadomo\u015B\u0107 powiadomienia",
+    uk: "\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u901A\u77E5\u6D88\u606F"
+  },
+  Devices: {
+    ru: "\u0423\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0430",
+    pt: "Dispositivos",
+    nl: "Apparaten",
+    fr: "Appareils",
+    it: "Dispositivi",
+    es: "Dispositivos",
+    pl: "Urz\u0105dzenia",
+    uk: "\u041F\u0440\u0438\u0441\u0442\u0440\u043E\u0457",
+    "zh-cn": "\u8BBE\u5907"
+  },
+  "Card color": {
+    ru: "\u0426\u0432\u0435\u0442 \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0438",
+    pt: "Cor do cart\xE3o",
+    nl: "Kaartkleur",
+    fr: "Couleur de la carte",
+    it: "Colore della scheda",
+    es: "Color de tarjeta",
+    pl: "Kolor karty",
+    uk: "\u041A\u043E\u043B\u0456\u0440 \u043A\u0430\u0440\u0442\u043A\u0438",
+    "zh-cn": "\u5361\u7247\u989C\u8272"
+  },
+  "Card icon": {
+    ru: "\u0417\u043D\u0430\u0447\u043E\u043A \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0438",
+    pt: "\xCDcone do cart\xE3o",
+    nl: "Kaartpictogram",
+    fr: "Ic\xF4ne de la carte",
+    it: "Icona della scheda",
+    es: "Icono de tarjeta",
+    pl: "Ikona karty",
+    uk: "\u0417\u043D\u0430\u0447\u043E\u043A \u043A\u0430\u0440\u0442\u043A\u0438",
+    "zh-cn": "\u5361\u7247\u56FE\u6807"
+  },
+  "Device Manager data": {
+    ru: "\u0414\u0430\u043D\u043D\u044B\u0435 \u0434\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440\u0430 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432",
+    pt: "Dados do Device Manager",
+    nl: "Device Manager-gegevens",
+    fr: "Donn\xE9es de Device Manager",
+    it: "Dati di Device Manager",
+    es: "Datos del Device Manager",
+    pl: "Dane Device Managera",
+    uk: "\u0414\u0430\u043D\u0456 Device Manager",
+    "zh-cn": "Device Manager \u6570\u636E"
+  },
+  "Device card details": {
+    ru: "\u0421\u0432\u0435\u0434\u0435\u043D\u0438\u044F \u043E \u043A\u0430\u0440\u0442\u043E\u0447\u043A\u0435 \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0430",
+    pt: "Detalhes do cart\xE3o do dispositivo",
+    nl: "Details van apparaatkaart",
+    fr: "D\xE9tails de la carte de l'appareil",
+    it: "Dettagli della scheda dispositivo",
+    es: "Detalles de la tarjeta del dispositivo",
+    pl: "Szczeg\xF3\u0142y karty urz\u0105dzenia",
+    uk: "\u0414\u0435\u0442\u0430\u043B\u0456 \u043A\u0430\u0440\u0442\u043A\u0438 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u044E",
+    "zh-cn": "\u8BBE\u5907\u5361\u7247\u8BE6\u60C5"
+  },
+  "Current value": {
+    ru: "\u0422\u0435\u043A\u0443\u0449\u0435\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435",
+    pt: "Valor atual",
+    nl: "Huidige waarde",
+    fr: "Valeur actuelle",
+    it: "Valore corrente",
+    es: "Valor actual",
+    pl: "Bie\u017C\u0105ca warto\u015B\u0107",
+    uk: "\u041F\u043E\u0442\u043E\u0447\u043D\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u5F53\u524D\u503C"
+  },
+  Status: {
+    ru: "\u0421\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435",
+    pt: "Status",
+    nl: "Status",
+    fr: "\xC9tat",
+    it: "Stato",
+    es: "Estado",
+    pl: "Stan",
+    uk: "\u0421\u0442\u0430\u043D",
+    "zh-cn": "\u72B6\u6001"
+  },
+  "Update timeout": {
+    ru: "\u0422\u0430\u0439\u043C-\u0430\u0443\u0442 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F",
+    pt: "Tempo limite de atualiza\xE7\xE3o",
+    nl: "Update-time-out",
+    fr: "D\xE9lai d\u2019attente de mise \xE0 jour",
+    it: "Timeout aggiornamento",
+    es: "Tiempo de espera de actualizaci\xF3n",
+    pl: "Limit czasu aktualizacji",
+    uk: "\u0427\u0430\u0441 \u043E\u0447\u0456\u043A\u0443\u0432\u0430\u043D\u043D\u044F \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u66F4\u65B0\u8D85\u65F6"
+  },
+  "Source state": {
+    ru: "\u0418\u0441\u0445\u043E\u0434\u043D\u043E\u0435 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435",
+    pt: "Estado de origem",
+    nl: "Bronstate",
+    fr: "\xC9tat source",
+    it: "Stato sorgente",
+    es: "Estado de origen",
+    pl: "Stan \u017Ar\xF3d\u0142owy",
+    uk: "\u0421\u0442\u0430\u043D \u0434\u0436\u0435\u0440\u0435\u043B\u0430",
+    "zh-cn": "\u6765\u6E90\u72B6\u6001"
+  },
+  Remark: {
+    ru: "\u041F\u0440\u0438\u043C\u0435\u0447\u0430\u043D\u0438\u0435",
+    pt: "Observa\xE7\xE3o",
+    nl: "Opmerking",
+    fr: "Remarque",
+    it: "Nota",
+    es: "Observaci\xF3n",
+    pl: "Uwaga",
+    uk: "\u041F\u0440\u0438\u043C\u0456\u0442\u043A\u0430",
+    "zh-cn": "\u5907\u6CE8"
+  },
+  "Notification levels": {
+    ru: "\u0423\u0440\u043E\u0432\u043D\u0438 \u0443\u0432\u0435\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0439",
+    pt: "N\xEDveis de notifica\xE7\xE3o",
+    nl: "Meldingsniveaus",
+    fr: "Niveaux de notification",
+    it: "Livelli di notifica",
+    es: "Niveles de notificaci\xF3n",
+    pl: "Poziomy powiadomie\u0144",
+    uk: "\u0420\u0456\u0432\u043D\u0456 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u044C",
+    "zh-cn": "\u901A\u77E5\u7EA7\u522B"
+  },
+  "Monitoring data": {
+    ru: "\u0414\u0430\u043D\u043D\u044B\u0435 \u043C\u043E\u043D\u0438\u0442\u043E\u0440\u0438\u043D\u0433\u0430",
+    pt: "Dados de monitoramento",
+    nl: "Monitoringgegevens",
+    fr: "Donn\xE9es de surveillance",
+    it: "Dati di monitoraggio",
+    es: "Datos de monitorizaci\xF3n",
+    pl: "Dane monitorowania",
+    uk: "\u0414\u0430\u043D\u0456 \u043C\u043E\u043D\u0456\u0442\u043E\u0440\u0438\u043D\u0433\u0443",
+    "zh-cn": "\u76D1\u63A7\u6570\u636E"
+  },
+  "Last update": {
+    ru: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0435\u0435 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435",
+    pt: "\xDAltima atualiza\xE7\xE3o",
+    nl: "Laatste update",
+    fr: "Derni\xE8re mise \xE0 jour",
+    it: "Ultimo aggiornamento",
+    es: "\xDAltima actualizaci\xF3n",
+    pl: "Ostatnia aktualizacja",
+    uk: "\u041E\u0441\u0442\u0430\u043D\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u4E0A\u6B21\u66F4\u65B0"
+  },
+  "Previous update": {
+    ru: "\u041F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0435\u0435 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0435",
+    pt: "Atualiza\xE7\xE3o anterior",
+    nl: "Vorige update",
+    fr: "Mise \xE0 jour pr\xE9c\xE9dente",
+    it: "Aggiornamento precedente",
+    es: "Actualizaci\xF3n anterior",
+    pl: "Poprzednia aktualizacja",
+    uk: "\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0454 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u4E0A\u6B21\u66F4\u65B0\u4E4B\u524D"
+  },
+  "Update interval": {
+    ru: "\u0418\u043D\u0442\u0435\u0440\u0432\u0430\u043B \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F",
+    pt: "Intervalo de atualiza\xE7\xE3o",
+    nl: "Update-interval",
+    fr: "Intervalle de mise \xE0 jour",
+    it: "Intervallo di aggiornamento",
+    es: "Intervalo de actualizaci\xF3n",
+    pl: "Interwa\u0142 aktualizacji",
+    uk: "\u0406\u043D\u0442\u0435\u0440\u0432\u0430\u043B \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u66F4\u65B0\u95F4\u9694"
+  },
+  "Average update interval": {
+    ru: "\u0421\u0440\u0435\u0434\u043D\u0438\u0439 \u0438\u043D\u0442\u0435\u0440\u0432\u0430\u043B \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F",
+    pt: "Intervalo m\xE9dio de atualiza\xE7\xE3o",
+    nl: "Gemiddeld update-interval",
+    fr: "Intervalle moyen de mise \xE0 jour",
+    it: "Intervallo medio di aggiornamento",
+    es: "Intervalo medio de actualizaci\xF3n",
+    pl: "\u015Aredni interwa\u0142 aktualizacji",
+    uk: "\u0421\u0435\u0440\u0435\u0434\u043D\u0456\u0439 \u0456\u043D\u0442\u0435\u0440\u0432\u0430\u043B \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u5E73\u5747\u66F4\u65B0\u95F4\u9694"
+  },
+  "Average value": {
+    ru: "\u0421\u0440\u0435\u0434\u043D\u0435\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u0435",
+    pt: "Valor m\xE9dio",
+    nl: "Gemiddelde waarde",
+    fr: "Valeur moyenne",
+    it: "Valore medio",
+    es: "Valor medio",
+    pl: "\u015Arednia warto\u015B\u0107",
+    uk: "\u0421\u0435\u0440\u0435\u0434\u043D\u0454 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u5E73\u5747\u503C"
+  },
+  "Last update timestamps": {
+    ru: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u044B\u0435 \u043C\u0435\u0442\u043A\u0438 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u044F",
+    pt: "\xDAltimos carimbos de data/hora de atualiza\xE7\xE3o",
+    nl: "Laatste update-tijdstempels",
+    fr: "Derniers horodatages de mise \xE0 jour",
+    it: "Ultimi timestamp di aggiornamento",
+    es: "\xDAltimas marcas de tiempo de actualizaci\xF3n",
+    pl: "Ostatnie znaczniki czasu aktualizacji",
+    uk: "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0447\u0430\u0441\u043E\u0432\u0456 \u043F\u043E\u0437\u043D\u0430\u0447\u043A\u0438 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u4E0A\u6B21\u66F4\u65B0\u65F6\u95F4\u6233"
+  },
+  "Last numeric values": {
+    ru: "\u041F\u043E\u0441\u043B\u0435\u0434\u043D\u0438\u0435 \u0447\u0438\u0441\u043B\u043E\u0432\u044B\u0435 \u0437\u043D\u0430\u0447\u0435\u043D\u0438\u044F",
+    pt: "\xDAltimos valores num\xE9ricos",
+    nl: "Laatste numerieke waarden",
+    fr: "Derni\xE8res valeurs num\xE9riques",
+    it: "Ultimi valori numerici",
+    es: "\xDAltimos valores num\xE9ricos",
+    pl: "Ostatnie warto\u015Bci liczbowe",
+    uk: "\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0447\u0438\u0441\u043B\u043E\u0432\u0456 \u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044F",
+    "zh-cn": "\u6700\u8FD1\u6570\u503C"
+  },
+  "Monitoring details": {
+    ru: "\u041F\u043E\u0434\u0440\u043E\u0431\u043D\u043E\u0441\u0442\u0438 \u043C\u043E\u043D\u0438\u0442\u043E\u0440\u0438\u043D\u0433\u0430",
+    pt: "Detalhes do monitoramento",
+    nl: "Monitoringdetails",
+    fr: "D\xE9tails de la surveillance",
+    it: "Dettagli monitoraggio",
+    es: "Detalles de monitorizaci\xF3n",
+    pl: "Szczeg\xF3\u0142y monitorowania",
+    uk: "\u0414\u0435\u0442\u0430\u043B\u0456 \u043C\u043E\u043D\u0456\u0442\u043E\u0440\u0438\u043D\u0433\u0443",
+    "zh-cn": "\u76D1\u63A7\u8BE6\u60C5"
+  }
+};
+const t = (en, de) => ({ en, de, ...recommendedTranslations[en] || {} });
 const COLORS = {
   invalid: "#6d4c41",
   invalidValue: "#ef6c00",
@@ -950,18 +1260,20 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
   return {
     type: "panel",
     items: {
-      [key("name")]: {
-        type: "text",
-        label: t("Name", "Name"),
-        newLine: true,
-        xs: 12,
-        validator: nameValidator,
-        validatorErrorText: t(
-          "Name is required and must be unique within the device",
-          "Der Name ist erforderlich und muss innerhalb des Ger\xE4ts eindeutig sein"
-        ),
-        validatorNoSaveOnError: true
-      },
+      ...!stateId ? {
+        [key("name")]: {
+          type: "text",
+          label: t("Name", "Name"),
+          newLine: true,
+          xs: 12,
+          validator: nameValidator,
+          validatorErrorText: t(
+            "Name is required and must be unique within the device",
+            "Der Name ist erforderlich und muss innerhalb des Ger\xE4ts eindeutig sein"
+          ),
+          validatorNoSaveOnError: true
+        }
+      } : {},
       [key("sourceId")]: {
         type: "objectId",
         label: t("ioBroker state", "ioBroker-State"),
@@ -1410,6 +1722,14 @@ class DeviceMonitoring extends utils.Adapter {
     for (const device of this.devices) {
       for (const watched of device.states) {
         if (watched.sourceId === id) {
+          const sourceType = await this.getSourceType(id);
+          await this.ensureState(
+            `devices.${device.id}.${watched.id}.value`,
+            t("Current value", "Aktueller Wert"),
+            sourceType,
+            "value",
+            await this.getSourceUnit(id)
+          );
           const state = await this.getForeignStateAsync(id);
           await this.updateValue(device, watched, state);
           affectedDevices.add(device.id);
@@ -1585,7 +1905,17 @@ class DeviceMonitoring extends utils.Adapter {
     const states = device.states.filter((watched) => {
       var _a;
       return !((_a = data[watched.id]) == null ? void 0 : _a._delete);
-    }).map((watched) => this.normalizeState(data[watched.id] || watched, watched.id));
+    }).map((watched) => {
+      const submitted = data[watched.id];
+      return this.normalizeState(
+        {
+          ...watched,
+          ...submitted && typeof submitted === "object" ? submitted : {},
+          name: watched.name
+        },
+        watched.id
+      );
+    });
     await this.saveDevices(
       this.devices.map((entry) => entry.id === deviceId ? { ...entry, states } : entry),
       false
@@ -1785,7 +2115,14 @@ class DeviceMonitoring extends utils.Adapter {
           native: { sourceId: watched.sourceId, function: watched.function }
         });
         const unit = await this.getSourceUnit(watched.sourceId);
-        await this.ensureState(`${base}.value`, t("Current value", "Aktueller Wert"), "mixed", "value", unit);
+        const sourceType = await this.getSourceType(watched.sourceId);
+        await this.ensureState(
+          `${base}.value`,
+          t("Current value", "Aktueller Wert"),
+          sourceType,
+          "value",
+          unit
+        );
         await this.ensureState(`${base}.status`, t("Status", "Status"), "string", "text");
         await this.ensureState(`${base}.warning`, t("Warning", "Warnung"), "boolean", "indicator");
         await this.ensureState(`${base}.alarm`, t("Alarm", "Alarm"), "boolean", "indicator.alarm");
@@ -1968,7 +2305,7 @@ class DeviceMonitoring extends utils.Adapter {
       common: {
         name,
         type: "number",
-        role: "value",
+        role: "level",
         read: true,
         write: true,
         states: {
@@ -2055,6 +2392,11 @@ class DeviceMonitoring extends utils.Adapter {
     const unit = (object == null ? void 0 : object.type) === "state" && typeof ((_a = object.common) == null ? void 0 : _a.unit) === "string" ? object.common.unit : "";
     this.sourceUnits.set(sourceId, unit);
     return unit;
+  }
+  async getSourceType(sourceId) {
+    var _a;
+    const object = await this.getForeignObjectAsync(sourceId);
+    return supportedSourceType((_a = object == null ? void 0 : object.common) == null ? void 0 : _a.type) || "number";
   }
   async readMonitoringData(base, sourceId) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i;
