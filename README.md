@@ -12,9 +12,25 @@
 
 ## device-monitoring adapter for ioBroker
 
-Watches your devined device states and build warnings and alerts
+Watches your defined device states and build warnings and alerts
+
+<img width="1037" height="899" alt="image" src="https://github.com/user-attachments/assets/8ae6d145-90eb-437f-89b5-ce823d63f210" />
+
+
+## Standard output categories
+
+The standard output categories are mapped as follows:
+
+| Event | Category |
+| --- | --- |
+| Warning limit reached | `warnung` |
+| Alarm limit reached | `alarm` |
+| Source update timeout | `alarm` |
+| Source missing or invalid | `warnung` |
+| State returned to normal | `info` |
 
 ## Per-state notification levels
+This offers the possibility to deviate from the standard notification (for example, temporarily)
 
 Each monitored state has six writable level states under `devices.<deviceId>.<stateId>.level`:
 
@@ -31,7 +47,7 @@ Each level state accepts these values:
 
 | Value | Meaning |
 | --- | --- |
-| `0` — Standard | Use the event's normal notification category |
+| `0` — Standard | Use the event's standard notification category |
 | `1` — Disabled | Suppress this event |
 | `2` — Info | Send the event with the `info` category |
 | `3` — Warning | Send the event with the `warnung` category |
@@ -39,16 +55,7 @@ Each level state accepts these values:
 
 The adapter acknowledges recognized values from `0` to `4` by writing the selected value back with `ack = true`.
 
-The standard output categories are mapped as follows:
 
-| Event | Category |
-| --- | --- |
-| Warning limit reached | `warnung` |
-| Alarm limit reached | `alarm` |
-| Source update timeout | `alarm` |
-| Source ID missing or deleted | `warnung` |
-| Invalid source value | `warnung` |
-| State returned to normal | `info` |
 
 ## `info.message` state
 
@@ -73,94 +80,45 @@ The JSON object contains these fields:
 | `timeoutMinutes` | Configured timeout duration; present for timeout events only |
 
 The `type` field remains the original event type when its notification category is changed by a level. The `info.message` state is acknowledged (`ack = true`) by the adapter.
+### Example
+`http://192.168.0.222:8081/#tab-objects/select/device-monitoring.0.info.message`
 
-## Developer manual
-This section is intended for the developer. It can be deleted later.
+```
+
+{
+  "type": "timeout",
+  "category": "alarm",
+  "title": "Aktualisierungs-Timeout: Timmerflotte Schlafzimmer - Temperatur",
+  "deviceId": "device_002",
+  "deviceName": "Timmerflotte Schlafzimmer",
+  "stateId": "timmerflotte_schlafzimmer",
+  "stateName": "Temperatur",
+  "sourceId": "lorawan.0.bridge.devices.70c0cc1b11042a812825444dc65d04f5.sensor.schlafzimmer_timmerflotte_temperatur",
+  "remark": "",
+  "value": 21.39,
+  "unit": "°C",
+  "triggeredAt": 1790071578722,
+  "lastUpdate": 1790071509083,
+  "timeoutMinutes": 1,
+  "message": "Der State Temperatur vom Gerät Timmerflotte Schlafzimmer hat sich mindestens 1 Minuten nicht gemeldet. Letzte Aktualisierung: 2026-09-22 12:05:09.083"
+}
+
+```
+### Use Notify Levels in the Notification Manager
+
+<img width="797" height="331" alt="image" src="https://github.com/user-attachments/assets/1772680b-68ab-45d3-947e-4d43610c92b4" />
+
+### Use Notify Levels in (Blockly) Scripts
+
+<img width="1232" height="725" alt="image" src="https://github.com/user-attachments/assets/2d1229ec-ed2b-4974-9625-3be823a8f392" />
+
+### Result (Example)
+
+<img width="591" height="1280" alt="image" src="https://github.com/user-attachments/assets/f6c94e61-a233-4c17-8792-f898b34e80e3" />
+
+
 
 ### DISCLAIMER
-
-Please make sure that you consider copyrights and trademarks when you use names or logos of a company and add a disclaimer to your README.
-You can check other adapters for examples or ask in the developer community. Using a name or logo of a company without permission may cause legal problems for you.
-
-### Getting started
-
-You are almost done, only a few steps left:
-1. Create a new repository on GitHub with the name `ioBroker.device-monitoring`
-
-1. Push all files to the GitHub repo. The creator has already set up the local repository for you:  
-	```bash
-	git push origin main
-	```
-1. Dependabot pull requests use the repository's `GITHUB_TOKEN` for auto-merge; a personal access token is not required.
-
-1. Head over to [src/main.ts](src/main.ts) and start programming!
-
-### Best Practices
-We've collected some [best practices](https://github.com/ioBroker/ioBroker.repositories#development-and-coding-best-practices) regarding ioBroker development and coding in general. If you're new to ioBroker or Node.js, you should
-check them out. If you're already experienced, you should also take a look at them - you might learn something new :)
-
-### State Roles
-When creating state objects, it is important to use the correct role for the state. The role defines how the state should be interpreted by visualizations and other adapters. For a list of available roles and their meanings, please refer to the [state roles documentation](https://www.iobroker.net/#en/documentation/dev/stateroles.md).
-
-**Important:** Do not invent your own custom role names. If you need a role that is not part of the official list, please contact the ioBroker developer community for guidance and discussion about adding new roles.
-
-### Scripts in `package.json`
-Several npm scripts are predefined for your convenience. You can run them using `npm run <scriptname>`
-| Script name | Description |
-|-------------|-------------|
-| `build` | Compile the TypeScript sources. |
-| `watch` | Compile the TypeScript sources and watch for changes. |
-| `test:ts` | Executes the tests you defined in `*.test.ts` files. |
-| `test:package` | Ensures your `package.json` and `io-package.json` are valid. |
-| `test:integration` | Tests the adapter startup with an actual instance of ioBroker. |
-| `test` | Performs a minimal test run on package files and your tests. |
-| `check` | Performs a type-check on your code (without compiling anything). |
-| `lint` | Runs `ESLint` to check your code for formatting errors and potential bugs. |
-| `translate` | Translates texts in your adapter to all required languages, see [`@iobroker/adapter-dev`](https://github.com/ioBroker/adapter-dev#manage-translations) for more details. |
-| `release` | Creates a new release, see [`@alcalzone/release-script`](https://github.com/AlCalzone/release-script#usage) for more details. |
-
-### Configuring the compilation
-The adapter template uses [esbuild](https://esbuild.github.io/) to compile TypeScript and/or React code. You can configure many compilation settings 
-either in `tsconfig.json` or by changing options for the build tasks. These options are described in detail in the
-[`@iobroker/adapter-dev` documentation](https://github.com/ioBroker/adapter-dev#compile-adapter-files).
-
-### Writing tests
-When done right, testing code is invaluable, because it gives you the 
-confidence to change your code while knowing exactly if and when 
-something breaks. A good read on the topic of test-driven development 
-is https://hackernoon.com/introduction-to-test-driven-development-tdd-61a13bc92d92. 
-Although writing tests before the code might seem strange at first, but it has very 
-clear upsides.
-
-The template provides you with basic tests for the adapter startup and package files.
-It is recommended that you add your own tests into the mix.
-
-### Publishing the adapter
-Using GitHub Actions, you can enable automatic releases on npm whenever you push a new git tag that matches the form 
-`v<major>.<minor>.<patch>`. We **strongly recommend** that you do. The necessary steps are described in `.github/workflows/test-and-release.yml`.
-
-Since you installed the release script, you can create a new
-release simply by calling:
-```bash
-npm run release
-```
-Additional command line options for the release script are explained in the
-[release-script documentation](https://github.com/AlCalzone/release-script#command-line).
-
-To get your adapter released in ioBroker, please refer to the documentation 
-of [ioBroker.repositories](https://github.com/ioBroker/ioBroker.repositories#requirements-for-adapter-to-get-added-to-the-latest-repository).
-
-### Test the adapter manually with dev-server
-Since you set up `dev-server`, you can use it to run, test and debug your adapter.
-
-You may start `dev-server` by calling from your dev directory:
-```bash
-dev-server watch
-```
-
-The ioBroker.admin interface will then be available at http://localhost:undefined/
-
-Please refer to the [`dev-server` documentation](https://github.com/ioBroker/dev-server#command-line) for more details.
 
 ## Changelog
 <!--
