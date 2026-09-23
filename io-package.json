@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.27",
+    "version": "0.0.28",
     "news": {
+      "0.0.28": {
+        "en": "Keep monitored state names unchanged in the edit dialog and add the recommended translations to generated object names.\nSet generated monitored value states to the source state's `boolean` or `number` type.\nUse the writable `level` role for notification-level states.\nUse the `sensor` role for boolean monitored value states while keeping `value` for numeric states.",
+        "de": "Behalten Sie die Namen der überwachten Staaten im Bearbeitungsdialog bei und fügen Sie generierte Objekte um.\nSetzt generierte Werte auf den Typ `Boolean` oder `Zahl` des Quellstatus.\nVerwenden Sie die beschreibbare Level-Rolle für Meldestatus.\nVerwenden Sie die Rolle „Sensor“ für boolesche Werte und „Wert“ für Zahlen.",
+        "ru": "Сохраните имена отслеживаемых состояний без изменений в диалоговом окне редактирования и добавьте рекомендуемые переводы к созданным именам объектов.\nЗадайте для сгенерированных состояний отслеживаемых значений тип исходного состояния «логический» или «числовой».\nИспользуйте доступную для записи роль `level` для состояний уровня уведомлений.\nИспользуйте роль «сенсор» для состояний булевых контролируемых значений, сохраняя «значение» для числовых состояний.",
+        "pt": "Não altere os nomes dos estados na caixa de edição e adicione as traduções recomendadas aos objetos gerados.\nDefina os valores monitorados gerados para o tipo `booleano` ou `número` da fonte.\nUse a função “nível” gravável para estados de notificação.\nUse a função `sensor` para valores booleanos monitorados e mantenha `valor` para números.",
+        "nl": "Houd de namen van gecontroleerde staten ongewijzigd in het bewerkingsvenster en voeg de aanbevolen vertalingen toe aan de gegenereerde objectnamen.\nStel de gegenereerde gecontroleerde waardestatussen in op het type `boolean` of `nummer` van de bronstatus.\nGebruik de schrijfbare rol 'niveau' voor statussen op meldingsniveau.\nGebruik de rol `sensor` voor booleaanse gecontroleerde waardestatussen en behoud de `waarde` voor numerieke toestanden.",
+        "fr": "Conservez les noms des états surveillés dans la boîte de dialogue et ajoutez les traductions recommandées aux noms d'objets générés.\nDéfinissez les valeurs surveillées générées sur le type « booléen » ou « numérique » de l'état source.\nUtilisez le rôle « level » en écriture pour les états de notification.\nUtilisez le rôle « capteur » pour les états booléens surveillés et conservez « valeur » pour les états numériques.",
+        "it": "Mantieni invariati i nomi di stato monitorati e aggiungi le traduzioni consigliate ai nomi degli oggetti generati.\nImposta i valori monitorati generati sul tipo «booleano» o «numero» dello stato sorgente.\nUsa il ruolo scrivibile «level» per gli stati di notifica.\nUsa il ruolo «sensore» per i valori booleani monitorati mantenendo «valore» per i numeri.",
+        "es": "Mantenga los nombres de los estados monitorizados en el cuadro de edición y añada las traducciones recomendadas a los nombres de objetos generados.\nDefina los estados de valores monitorizados generados en el tipo «booleano» o «número» del estado fuente.\nUtilice el rol de «nivel» escribible para los estados de notificación.\nUtilice la función «sensor» para los estados de valor monitorizados booleanos y mantenga «valor» para los numéricos.",
+        "pl": "Zachowaj niezmienione nazwy monitorowanych stanów w oknie dialogowym edycji i dodaj zalecane tłumaczenia do wygenerowanych nazw obiektów.\nUstaw wygenerowane monitorowane stany wartości na typ „boolean” lub „number” stanu źródłowego.\nUżyj zapisywalnej roli „poziom” dla stanów na poziomie powiadomień.\nUżyj roli „czujnik” dla logicznych stanów wartości monitorowanych, zachowując „wartość” dla stanów liczbowych.",
+        "uk": "Зберігайте назви станів, що контролюються, незмінними у діалоговому вікні редагування та додайте рекомендовані переклади до згенерованих імен об'єктів.\nВстановіть згенеровані стани контрольованих значень на тип «булевий» або «номер» стану джерела.\nВикористовуйте роль `level`, яку можна записувати, для станів рівня сповіщень.\nВикористовуйте роль `sensor` для булевих станів контрольованих значень, зберігаючи `значення` для числових станів.",
+        "zh-cn": "在编辑对话框中保持监控状态名称不变，并将推荐的翻译添加到生成的对象名称中。\n将生成的监控值状态设置为源状态的 “布尔值” 或 “数字” 类型。\n对通知级别的状态使用可写的 “级别” 角色。\n对布尔值监控状态使用 “传感器” 角色，同时为数字状态保留 “值”。"
+      },
       "0.0.27": {
         "en": "Distinguish missing source IDs from invalid source values, add configurable invalid-value notifications, update the monitored value state first, and include the configured function in `info.message`.\nMatch notification-template header colors to their standard output categories.",
         "de": "Unterscheide fehlende und ungültige Quellwerte, füge konfigurierbare Meldungen hinzu, aktualisiere zuerst den Status der überwachten Werte und füge die Funktion in `info.message` ein.\nOrdne die Kopfzeilenfarben der Vorlagen ihren Standardausgabekategorien zu.",
@@ -80,19 +93,6 @@
         "pl": "Wymagaj administratora 8 lub nowszego, kompletnych metadanych adaptera i wymaganych wpisów językowych oraz sprawdzania repozytorium aktualizacji i zaplanowanych aktualizacji zależności\nDodawanie łącza z konfiguracji instancji do zakładki Menedżer urządzeń",
         "uk": "Вимагати від Admin 8 або новішої версії, повних метаданих адаптера та необхідних мовних записів, а також перевірки сховища оновлень та запланованих оновлень залежностей\nДодавання посилання з конфігурації екземпляра на вкладку Диспетчер пристроїв",
         "zh-cn": "需要 Admin 8 或更高版本、完整的适配器元数据和所需的语言条目，并更新存储库检查和预定的依赖项更新\n将实例配置中的链接添加到 “设备管理器” 选项卡"
-      },
-      "0.0.21": {
-        "en": "Add per-state notification levels with acknowledgements and document their values and the `info.message` event format",
-        "de": "Meldestufen mit Bestätigungen pro Staat hinzufügen und deren Werte und das Format `info.message` dokumentieren",
-        "ru": "Добавьте уровни уведомлений для каждого штата с подтверждениями и задокументируйте их значения и формат событий `info.message`",
-        "pt": "Adicione níveis de notificação por estado com confirmações e documente seus valores e o formato de evento `info.message`",
-        "nl": "Voeg meldingsniveaus per staat toe met bevestigingen en documenteer hun waarden en het formaat van de gebeurtenis „info.message”",
-        "fr": "Ajoutez des niveaux de notification par État avec des accusés de réception et documentez leurs valeurs et le format d'événement « info.message »",
-        "it": "Aggiungere livelli di notifica per stato con conferme e documentarne i valori e il formato evento `info.message`",
-        "es": "Añada niveles de notificación por estado con acuses de recibo y documente sus valores y el formato de evento «info.message»",
-        "pl": "Dodaj poziomy powiadomień dla poszczególnych stanów z potwierdzeniami i dokumentuj ich wartości oraz format zdarzenia `info.message`",
-        "uk": "Додайте рівні сповіщень для кожного штату з підтвердженнями та документуйте їх значення та формат події `info.message`",
-        "zh-cn": "添加带有确认的每个州的通知级别，并记录其值和 `info.message`事件格式"
       }
     },
     "titleLang": {

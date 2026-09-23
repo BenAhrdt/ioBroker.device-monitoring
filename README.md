@@ -125,7 +125,7 @@ The `type` field remains the original event type when its notification category 
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.28 (2026-09-23)
 * (BenAhrdt) Keep monitored state names unchanged in the edit dialog and add the recommended translations to generated object names.
 * (BenAhrdt) Set generated monitored value states to the source state's `boolean` or `number` type.
 * (BenAhrdt) Use the writable `level` role for notification-level states.
@@ -144,9 +144,6 @@ The `type` field remains the original event type when its notification category 
 
 ### 0.0.24 (2026-09-21)
 * (BenAhrdt) Complete responsive widths for all Admin configuration fields.
-
-### 0.0.23 (2026-09-21)
-* (BenAhrdt) Fix responsive widths in the notification template settings.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 
