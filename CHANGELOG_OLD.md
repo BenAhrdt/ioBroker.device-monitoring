@@ -1,4 +1,8 @@
 # Older changelog entries
+## 0.0.22 (2026-09-21)
+* (BenAhrdt) Require Admin 8 or newer, complete adapter metadata and required language entries, and update repository checks and scheduled dependency updates
+* (BenAhrdt) Add a link from the instance configuration to the Device Manager tab
+
 ## 0.0.21 (2026-09-21)
 * (BenAhrdt) Add per-state notification levels with acknowledgements and document their values and the `info.message` event format
 

@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.26",
+    "version": "0.0.27",
     "news": {
+      "0.0.27": {
+        "en": "Distinguish missing source IDs from invalid source values, add configurable invalid-value notifications, update the monitored value state first, and include the configured function in `info.message`.\nMatch notification-template header colors to their standard output categories.",
+        "de": "Unterscheide fehlende und ungültige Quellwerte, füge konfigurierbare Meldungen hinzu, aktualisiere zuerst den Status der überwachten Werte und füge die Funktion in `info.message` ein.\nOrdne die Kopfzeilenfarben der Vorlagen ihren Standardausgabekategorien zu.",
+        "ru": "Отличите отсутствующие идентификаторы источников от неправильных исходных значений, добавьте настраиваемые уведомления о недействительных значениях, сначала обновите состояние отслеживаемых значений и включите настроенную функцию в `info.message`.\nСопоставьте цвета заголовков шаблонов уведомлений со стандартными категориями вывода.",
+        "pt": "Distinga IDs de origem ausentes de valores inválidos, adicione notificações configuráveis, atualize primeiro o estado do valor monitorado e inclua a função configurada em `info.message`.\nCombine as cores do cabeçalho do modelo de notificação com a saída padrão.",
+        "nl": "Onderscheid ontbrekende bron-ID's van ongeldige bronwaarden, voeg configureerbare meldingen voor ongeldige waarden toe, werk eerst de status van de bewaakte waarde bij en neem de geconfigureerde functie op in `info.message`.\nKoppel de kopkleuren van het meldingssjabloon aan de standaarduitvoercategorieën.",
+        "fr": "Distinguez les ID sources manquants des valeurs sources invalides, ajoutez des notifications configurables, mettez d'abord à jour l'état des valeurs surveillées et incluez la fonction configurée dans « info.message ».\nAssociez la couleur d'en-tête du modèle de notification à sa catégorie de sortie standard.",
+        "it": "Distingua gli ID sorgente mancanti da quelli non validi, aggiunge notifiche configurabili, aggiorna prima lo stato dei valori monitorati e include la funzione configurata in `info.message`.\nAbbina i colori dell'header del modello di notifica alle categorie standard.",
+        "es": "Distinga los ID de origen que faltan de los valores de origen no válidos, añada notificaciones de valores no válidos configurables, actualice primero el estado de valores supervisado e incluya la función configurada en `info.message`.\nHaga coincidir los colores de las cabeceras de las plantillas de notificación",
+        "pl": "Odróżnij brakujące identyfikatory źródeł od nieprawidłowych wartości źródłowych, dodaj konfigurowalne powiadomienia o wartościach nieważnych, najpierw zaktualizuj stan monitorowanej wartości i uwzględnij skonfigurowaną funkcję w `info.message`.\nDopasuj kolory nagłówka szablonu powiadomień do ich standardowych kategorii wyjściowych.",
+        "uk": "Відрізняйте відсутні ідентифікатори джерела від недійсних значень джерела, додайте сповіщення про недійсні значення, спочатку оновіть стан контрольованого значення та включіть налаштовану функцію в `info.message`.\nЗіставте кольори заголовків шаблонів сповіщень зі стандартними категоріями виводу.",
+        "zh-cn": "区分缺失的来源 ID 和无效的源值，添加可配置的无效值通知，首先更新监控值状态，并将配置的函数包含在 `info.message`中。\n将通知模板标题颜色与其标准输出类别相匹配。"
+      },
       "0.0.26": {
         "en": "Link the historical changelog from the README.\nUse only the general `info`, `warnung` and `alarm` categories for notification output while preserving the original event type in `info.message.type`.",
         "de": "Link zum Historischen Changelog in der README.\nVerwenden Sie nur die allgemeinen Kategorien „Info“, „Warnung“ und „Alarm“, behalten Sie den ursprünglichen Ereignistyp in „info.message.type“ bei.",
@@ -80,19 +93,6 @@
         "pl": "Dodaj poziomy powiadomień dla poszczególnych stanów z potwierdzeniami i dokumentuj ich wartości oraz format zdarzenia `info.message`",
         "uk": "Додайте рівні сповіщень для кожного штату з підтвердженнями та документуйте їх значення та формат події `info.message`",
         "zh-cn": "添加带有确认的每个州的通知级别，并记录其值和 `info.message`事件格式"
-      },
-      "0.0.20": {
-        "en": "Remove the separate Device Monitoring admin tab",
-        "de": "Den separaten Admin-Tab „Geräteüberwachung“ entfernen",
-        "ru": "Удалите отдельную вкладку администратора мониторинга устройств",
-        "pt": "Remova a guia Admin separada do Device Monitoring",
-        "nl": "Verwijder het aparte beheerderstabblad Device Monitoring",
-        "fr": "Supprimer l'onglet admin Device Monitoring séparé",
-        "it": "Rimuovi la scheda separata di Device Monitoring",
-        "es": "Eliminar la pestaña de administrador de Device Monitoring",
-        "pl": "Usuń oddzielną kartę administratora monitorowania urządzeń",
-        "uk": "Видаліть окрему вкладку адміністратора «Моніторинг пристроїв»",
-        "zh-cn": "移除单独的 “设备监控” 管理员选项卡"
       }
     },
     "titleLang": {

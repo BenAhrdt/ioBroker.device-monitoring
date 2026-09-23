@@ -125,7 +125,7 @@ The `type` field remains the original event type when its notification category 
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.27 (2026-09-23)
 * (BenAhrdt) Distinguish missing source IDs from invalid source values, add configurable invalid-value notifications, update the monitored value state first, and include the configured function in `info.message`.
 * (BenAhrdt) Match notification-template header colors to their standard output categories.
 
@@ -141,10 +141,6 @@ The `type` field remains the original event type when its notification category 
 
 ### 0.0.23 (2026-09-21)
 * (BenAhrdt) Fix responsive widths in the notification template settings.
-
-### 0.0.22 (2026-09-21)
-* (BenAhrdt) Require Admin 8 or newer, complete adapter metadata and required language entries, and update repository checks and scheduled dependency updates
-* (BenAhrdt) Add a link from the instance configuration to the Device Manager tab
 
 [Older changelog entries](CHANGELOG_OLD.md)
 
