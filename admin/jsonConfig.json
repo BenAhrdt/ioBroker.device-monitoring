@@ -79,6 +79,61 @@
 			"lg": 6,
 			"xl": 6
 		},
+		"summaryReminderHeader": {
+			"type": "header",
+			"text": "Reminders",
+			"size": 2,
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
+		},
+		"summaryReminderEnabled": {
+			"type": "checkbox",
+			"label": "Enable recurring reminders",
+			"help": "At the configured times, summarize all monitored states that are currently not normal.",
+			"default": false,
+			"newLine": true,
+			"xs": 12,
+			"sm": 6,
+			"md": 6,
+			"lg": 6,
+			"xl": 6
+		},
+		"summaryReminderCron": {
+			"type": "cron",
+			"complex": true,
+			"label": "Reminder schedule",
+			"help": "Choose when the current non-normal states should be summarized.",
+			"default": "0 * * * *",
+			"hidden": "data.summaryReminderEnabled !== true",
+			"newLine": true,
+			"xs": 12,
+			"sm": 6,
+			"md": 6,
+			"lg": 6,
+			"xl": 6
+		},
+		"summaryReminderCategory": {
+			"type": "select",
+			"label": "Reminder category",
+			"help": "Select the ioBroker category used for recurring summaries.",
+			"options": [
+				{ "label": "Info", "value": "info" },
+				{ "label": "Warning", "value": "warnung" },
+				{ "label": "Alarm", "value": "alarm" }
+			],
+			"default": "warnung",
+			"hidden": "data.summaryReminderEnabled !== true",
+			"newLine": false,
+			"xs": 12,
+			"sm": 6,
+			"md": 6,
+			"lg": 6,
+			"xl": 6
+		},
 		"messageTemplateHeader": {
 			"type": "header",
 			"text": "Notification templates",

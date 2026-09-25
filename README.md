@@ -65,7 +65,7 @@ The JSON object contains these fields:
 
 | Field | Description |
 | --- | --- |
-| `type` | Original event type: `warning`, `alarm`, `timeout`, `invalidSource`, `invalidValue` or `recovered` |
+| `type` | Original event type: `warning`, `alarm`, `timeout`, `invalidSource`, `invalidValue` or `recovered`; recurring summaries use `summary` |
 | `category` | Output notification category after applying the level: `info`, `warnung` or `alarm` |
 | `title` | Rendered notification title |
 | `message` | Rendered notification message |
@@ -80,6 +80,11 @@ The JSON object contains these fields:
 | `timeoutMinutes` | Configured timeout duration; present for timeout events only |
 
 The `type` field remains the original event type when its notification category is changed by a level. The `info.message` state is acknowledged (`ack = true`) by the adapter.
+
+## Recurring reminders
+
+The Notifications section can enable recurring reminders. The schedule is configured with a Cron selector, and the selected `info`, `warnung` or `alarm` category is used for the summary. At each scheduled time, the adapter checks all monitored states and sends one summary for every currently non-normal state (`warning`, `alarm`, `timeout`, `invalid` or `invalidValue`). If all states are normal, no reminder is sent. The summary stored in `info.message` contains only `type`, `category`, `title` and `message`.
+
 ### Example
 `http://192.168.0.222:8081/#tab-objects/select/device-monitoring.0.info.message`
 
@@ -125,6 +130,9 @@ The `type` field remains the original event type when its notification category 
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Add configurable Cron-based reminders with a summary of all currently non-normal monitored states.
+
 ### 0.0.28 (2026-09-23)
 * (BenAhrdt) Keep monitored state names unchanged in the edit dialog and add the recommended translations to generated object names.
 * (BenAhrdt) Set generated monitored value states to the source state's `boolean` or `number` type.

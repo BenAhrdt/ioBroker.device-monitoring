@@ -13,6 +13,12 @@ declare global {
 			enabledNotifications?: NotificationCategory[];
 			/** Whether enabled notification categories are also sent to ioBroker's notification system. Defaults to true. */
 			sendNotificationsViaNotify?: boolean;
+			/** Whether recurring summaries of currently non-normal states are enabled. */
+			summaryReminderEnabled?: boolean;
+			/** Cron expression used for recurring state summaries. */
+			summaryReminderCron?: string;
+			/** Output category used for recurring state summaries. */
+			summaryReminderCategory?: 'info' | 'warnung' | 'alarm';
 			/** Title template used for warning notifications and info.message. */
 			warningTitleTemplate?: string;
 			/** Template used for warning notifications and info.message. */

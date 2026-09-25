@@ -23,8 +23,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var utils = __toESM(require("@iobroker/adapter-core"));
 var import_dm_utils = require("@iobroker/dm-utils");
+var schedule = __toESM(require("node-schedule"));
 var import_evaluation = require("./lib/evaluation");
 var import_configuration_backup = require("./lib/configuration-backup");
+var import_reminders = require("./lib/reminders");
 var import_notifications = require("./lib/notifications");
 var import_update_history = require("./lib/update-history");
 const recommendedTranslations = {
@@ -1485,6 +1487,7 @@ class DeviceMonitoring extends utils.Adapter {
   sortRefreshTimer;
   staleCheckTimer;
   configurationBackupTimer;
+  summaryReminderJob;
   bulkSelectionSessions = /* @__PURE__ */ new Map();
   constructor(options = {}) {
     super({ ...options, name: "device-monitoring" });
@@ -1501,6 +1504,10 @@ class DeviceMonitoring extends utils.Adapter {
       }
       if (this.configurationBackupTimer) {
         this.clearTimeout(this.configurationBackupTimer);
+      }
+      if (this.summaryReminderJob) {
+        this.summaryReminderJob.cancel();
+        this.summaryReminderJob = void 0;
       }
       callback();
     });
@@ -1540,6 +1547,7 @@ class DeviceMonitoring extends utils.Adapter {
     this.staleCheckTimer = this.setInterval(() => {
       void this.updateAll();
     }, 6e4);
+    this.scheduleSummaryReminder();
     this.scheduleConfigurationBackup();
   }
   async clearLegacyMessageState() {
@@ -2510,6 +2518,87 @@ class DeviceMonitoring extends utils.Adapter {
     }
     await this.updateDeviceInfo();
     await this.removeLegacyRuntimeStates();
+  }
+  scheduleSummaryReminder() {
+    if (this.summaryReminderJob) {
+      this.summaryReminderJob.cancel();
+      this.summaryReminderJob = void 0;
+    }
+    if (this.config.summaryReminderEnabled !== true) {
+      return;
+    }
+    const cron = typeof this.config.summaryReminderCron === "string" ? this.config.summaryReminderCron.trim() : "";
+    if (!cron) {
+      this.log.warn("Summary reminders are enabled, but no cron schedule is configured");
+      return;
+    }
+    try {
+      this.summaryReminderJob = schedule.scheduleJob("device-monitoring-summary-reminder", cron, () => {
+        void this.sendSummaryReminder();
+      });
+    } catch (error) {
+      this.log.warn(`Could not schedule summary reminders for cron expression "${cron}": ${String(error)}`);
+    }
+  }
+  async sendSummaryReminder() {
+    var _a;
+    try {
+      await this.refreshSourceValidity();
+      const items = [];
+      for (const device of this.devices) {
+        for (const watched of device.states) {
+          const sourceState = await this.getForeignStateAsync(watched.sourceId);
+          const updateTimeout = (0, import_evaluation.isUpdateTimedOut)(sourceState, watched.staleWarning);
+          const status = this.getWatchedStatus(watched, sourceState, updateTimeout);
+          if (status === "ok") {
+            continue;
+          }
+          items.push({
+            deviceName: device.name,
+            stateName: watched.name,
+            status,
+            sourceId: watched.sourceId,
+            value: (_a = sourceState == null ? void 0 : sourceState.val) != null ? _a : null,
+            unit: await this.getSourceUnit(watched.sourceId),
+            lastUpdate: typeof (sourceState == null ? void 0 : sourceState.ts) === "number" ? sourceState.ts : null
+          });
+        }
+      }
+      const summary = (0, import_reminders.createSummaryReminderMessage)(items, this.displayLanguage);
+      if (!summary) {
+        return;
+      }
+      const category = this.getSummaryReminderCategory();
+      const messageEvent = {
+        type: "summary",
+        category,
+        title: summary.title,
+        message: summary.message
+      };
+      try {
+        await this.queueMessageEvent(messageEvent);
+      } catch (error) {
+        this.log.warn(`Could not write summary reminder message state: ${String(error)}`);
+      }
+      if (this.config.sendNotificationsViaNotify !== false) {
+        try {
+          await this.registerNotification(
+            "device-monitoring",
+            category,
+            `${summary.title}
+${summary.message}`
+          );
+        } catch (error) {
+          this.log.warn(`Could not register summary reminder ${category}: ${String(error)}`);
+        }
+      }
+    } catch (error) {
+      this.log.warn(`Could not create summary reminder: ${String(error)}`);
+    }
+  }
+  getSummaryReminderCategory() {
+    const configured = this.config.summaryReminderCategory;
+    return import_notifications.GENERAL_NOTIFICATION_CATEGORIES.includes(configured) ? configured : "warnung";
   }
   async queueMessageEvent(event) {
     const write = this.messageWriteQueue.catch(() => void 0).then(async () => {

@@ -1,5 +1,7 @@
 import * as utils from '@iobroker/adapter-core';
 import { DeviceManagement } from '@iobroker/dm-utils';
+import * as schedule from 'node-schedule';
+import type { Job } from 'node-schedule';
 import {
 	createFunctionTemplate,
 	getWatchStatus,
@@ -13,7 +15,9 @@ import {
 } from './lib/evaluation';
 import { configurationBackupNeedsUpdate } from './lib/configuration-backup';
 import type { MonitoringData } from './lib/monitoring-data';
+import { createSummaryReminderMessage, type SummaryReminderItem } from './lib/reminders';
 import {
+	GENERAL_NOTIFICATION_CATEGORIES,
 	notificationCategoryForEvent,
 	notificationCategoryForLevel,
 	notificationCategoryForTransition,
@@ -422,7 +426,7 @@ const NOTIFICATION_LEVEL_STATE_NAMES: Record<NotificationLevelState, ioBroker.Tr
 };
 type MessageTemplateType = 'warning' | 'alarm' | 'timeout' | 'invalidSource' | 'invalidValue' | 'recovered';
 
-interface MessageTrigger {
+interface NotificationMessage {
 	type: MessageTemplateType;
 	category: OutputNotificationCategory;
 	title: string;
@@ -440,6 +444,15 @@ interface MessageTrigger {
 	timeoutMinutes?: number;
 	message: string;
 }
+
+interface SummaryMessage {
+	type: 'summary';
+	category: OutputNotificationCategory;
+	title: string;
+	message: string;
+}
+
+type MessageTrigger = NotificationMessage | SummaryMessage;
 
 function isNotificationLevelValue(value: unknown): value is number {
 	return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 4;
@@ -1635,6 +1648,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private sortRefreshTimer: ioBroker.Interval | undefined;
 	private staleCheckTimer: ioBroker.Interval | undefined;
 	private configurationBackupTimer: ioBroker.Timeout | undefined;
+	private summaryReminderJob: Job | undefined;
 	private bulkSelectionSessions = new Map<string, any>();
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({ ...options, name: 'device-monitoring' });
@@ -1651,6 +1665,10 @@ class DeviceMonitoring extends utils.Adapter {
 			}
 			if (this.configurationBackupTimer) {
 				this.clearTimeout(this.configurationBackupTimer);
+			}
+			if (this.summaryReminderJob) {
+				this.summaryReminderJob.cancel();
+				this.summaryReminderJob = undefined;
 			}
 			callback();
 		});
@@ -1688,6 +1706,7 @@ class DeviceMonitoring extends utils.Adapter {
 		this.staleCheckTimer = this.setInterval(() => {
 			void this.updateAll();
 		}, 60_000);
+		this.scheduleSummaryReminder();
 		this.scheduleConfigurationBackup();
 	}
 	private async clearLegacyMessageState(): Promise<void> {
@@ -2710,6 +2729,87 @@ class DeviceMonitoring extends utils.Adapter {
 		}
 		await this.updateDeviceInfo();
 		await this.removeLegacyRuntimeStates();
+	}
+	private scheduleSummaryReminder(): void {
+		if (this.summaryReminderJob) {
+			this.summaryReminderJob.cancel();
+			this.summaryReminderJob = undefined;
+		}
+		if (this.config.summaryReminderEnabled !== true) {
+			return;
+		}
+		const cron = typeof this.config.summaryReminderCron === 'string' ? this.config.summaryReminderCron.trim() : '';
+		if (!cron) {
+			this.log.warn('Summary reminders are enabled, but no cron schedule is configured');
+			return;
+		}
+		try {
+			this.summaryReminderJob = schedule.scheduleJob('device-monitoring-summary-reminder', cron, () => {
+				void this.sendSummaryReminder();
+			});
+		} catch (error) {
+			this.log.warn(`Could not schedule summary reminders for cron expression "${cron}": ${String(error)}`);
+		}
+	}
+	private async sendSummaryReminder(): Promise<void> {
+		try {
+			await this.refreshSourceValidity();
+			const items: SummaryReminderItem[] = [];
+			for (const device of this.devices) {
+				for (const watched of device.states) {
+					const sourceState = await this.getForeignStateAsync(watched.sourceId);
+					const updateTimeout = isUpdateTimedOut(sourceState, watched.staleWarning);
+					const status = this.getWatchedStatus(watched, sourceState, updateTimeout);
+					if (status === 'ok') {
+						continue;
+					}
+					items.push({
+						deviceName: device.name,
+						stateName: watched.name,
+						status,
+						sourceId: watched.sourceId,
+						value: sourceState?.val ?? null,
+						unit: await this.getSourceUnit(watched.sourceId),
+						lastUpdate: typeof sourceState?.ts === 'number' ? sourceState.ts : null,
+					});
+				}
+			}
+			const summary = createSummaryReminderMessage(items, this.displayLanguage);
+			if (!summary) {
+				return;
+			}
+			const category = this.getSummaryReminderCategory();
+			const messageEvent: SummaryMessage = {
+				type: 'summary',
+				category,
+				title: summary.title,
+				message: summary.message,
+			};
+			try {
+				await this.queueMessageEvent(messageEvent);
+			} catch (error) {
+				this.log.warn(`Could not write summary reminder message state: ${String(error)}`);
+			}
+			if (this.config.sendNotificationsViaNotify !== false) {
+				try {
+					await this.registerNotification(
+						'device-monitoring',
+						category,
+						`${summary.title}\n${summary.message}`,
+					);
+				} catch (error) {
+					this.log.warn(`Could not register summary reminder ${category}: ${String(error)}`);
+				}
+			}
+		} catch (error) {
+			this.log.warn(`Could not create summary reminder: ${String(error)}`);
+		}
+	}
+	private getSummaryReminderCategory(): OutputNotificationCategory {
+		const configured = this.config.summaryReminderCategory;
+		return GENERAL_NOTIFICATION_CATEGORIES.includes(configured as OutputNotificationCategory)
+			? (configured as OutputNotificationCategory)
+			: 'warnung';
 	}
 	private async queueMessageEvent(event: MessageTrigger): Promise<void> {
 		const write = this.messageWriteQueue
