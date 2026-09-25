@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.28",
+    "version": "0.0.29",
     "news": {
+      "0.0.29": {
+        "en": "Add configurable Cron-based reminders with a summary of all currently non-normal monitored states.",
+        "de": "Fügen Sie CRON-basierte Erinnerungen mit allen derzeit unnormalen Überwachungszuständen hinzu.",
+        "ru": "Добавьте настраиваемые напоминания на основе CRON со сводкой всех отслеживаемых состояний, которые в настоящее время не являются нормальными.",
+        "pt": "Adicione lembretes configuráveis em Cron com um resumo dos estados não normais monitorados.",
+        "nl": "Voeg configureerbare herinneringen op basis van Cron toe met een samenvatting van alle staten die momenteel niet normaal worden bewaakt.",
+        "fr": "Ajoutez des rappels configurables basés sur CRON avec un résumé de tous les états surveillés anormaux actuels.",
+        "it": "Aggiunga promemoria configurabili basati su CON con un riepilogo di tutti gli stati non normali.",
+        "es": "Añada recordatorios configurables basados en CRON con un resumen de los estados monitorizados no normales.",
+        "pl": "Dodaj konfigurowalne przypomnienia oparte na CRON z podsumowaniem wszystkich aktualnie nienaturalnych monitorowanych stanów.",
+        "uk": "Додайте настроювані нагадування на основі CRON із резюме всіх станів, які зараз не є нормальними, що відстежуються.",
+        "zh-cn": "添加基于 Cron 的可配置提醒，其中包含所有当前非正常监控状态的摘要。"
+      },
       "0.0.28": {
         "en": "Keep monitored state names unchanged in the edit dialog and add the recommended translations to generated object names.\nSet generated monitored value states to the source state's `boolean` or `number` type.\nUse the writable `level` role for notification-level states.\nUse the `sensor` role for boolean monitored value states while keeping `value` for numeric states.",
         "de": "Behalten Sie die Namen der überwachten Staaten im Bearbeitungsdialog bei und fügen Sie generierte Objekte um.\nSetzt generierte Werte auf den Typ `Boolean` oder `Zahl` des Quellstatus.\nVerwenden Sie die beschreibbare Level-Rolle für Meldestatus.\nVerwenden Sie die Rolle „Sensor“ für boolesche Werte und „Wert“ für Zahlen.",
@@ -80,19 +93,6 @@
         "pl": "Napraw responsywne szerokości w ustawieniach szablonu powiadomień.",
         "uk": "Виправте адаптивну ширину в налаштуваннях шаблону сповіщень.",
         "zh-cn": "修复通知模板设置中的响应宽度。"
-      },
-      "0.0.22": {
-        "en": "Require Admin 8 or newer, complete adapter metadata and required language entries, and update repository checks and scheduled dependency updates\nAdd a link from the instance configuration to the Device Manager tab",
-        "de": "Admin 8 oder neuer, vollständige Adaptermetadaten und Spracheingaben sowie Repository-Checks und geplante Abhängigkeitsupdates\nLink von der Instanzkonfiguration zum Tab Gerätemanager hinzufügen",
-        "ru": "Требуйте Admin 8 или более поздней версии, полные метаданные адаптера и необходимые языковые записи, а также проверки репозитория обновлений и запланированные обновления зависимостей\nДобавьте ссылку из конфигурации экземпляра на вкладку «Диспетчер устройств»",
-        "pt": "Exija Admin 8 ou mais recente, preencha os metadados do adaptador e as entradas de idioma exigidas e atualize o repositório\nAdicione um link da configuração da instância à aba Device Manager",
-        "nl": "Admin 8 of nieuwer vereisen, de metagegevens van de adapter en de vereiste taalgegevens invullen, en de repository-controles en geplande afhankelijkheidsupdates bijwerken\nVoeg een link toe van de instantieconfiguratie naar het tabblad Apparaatbeheer",
-        "fr": "Exiger Admin 8 ou une version ultérieure, les métadonnées complètes de l'adaptateur et les entrées de langue requises, ainsi que la vérification des dépôts et des dépendances\nAjouter un lien depuis la configuration de l'instance vers l'onglet Device Manager",
-        "it": "Richiede Admin 8 o più recente, completi i metadati dell'adattatore e le voci di lingua richieste e aggiorna i controlli del repository\nAggiunga un link dall'istanza alla scheda Device Manager",
-        "es": "Requerir Admin 8 o más, completar los metadatos del adaptador y las entradas de idioma necesarias y actualizar las comprobaciones del repositorio y las dependencias\nAñada un enlace de la configuración de instancias a la pestaña Device Manager",
-        "pl": "Wymagaj administratora 8 lub nowszego, kompletnych metadanych adaptera i wymaganych wpisów językowych oraz sprawdzania repozytorium aktualizacji i zaplanowanych aktualizacji zależności\nDodawanie łącza z konfiguracji instancji do zakładki Menedżer urządzeń",
-        "uk": "Вимагати від Admin 8 або новішої версії, повних метаданих адаптера та необхідних мовних записів, а також перевірки сховища оновлень та запланованих оновлень залежностей\nДодавання посилання з конфігурації екземпляра на вкладку Диспетчер пристроїв",
-        "zh-cn": "需要 Admin 8 或更高版本、完整的适配器元数据和所需的语言条目，并更新存储库检查和预定的依赖项更新\n将实例配置中的链接添加到 “设备管理器” 选项卡"
       }
     },
     "titleLang": {

@@ -130,7 +130,7 @@ The Notifications section can enable recurring reminders. The schedule is config
 	Placeholder for the next version (at the beginning of the line):
 	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.29 (2026-09-25)
 * (BenAhrdt) Add configurable Cron-based reminders with a summary of all currently non-normal monitored states.
 
 ### 0.0.28 (2026-09-23)
@@ -149,9 +149,6 @@ The Notifications section can enable recurring reminders. The schedule is config
 
 ### 0.0.25 (2026-09-21)
 * (BenAhrdt) Exclude the historical changelog from the npm package and link to it from the README.
-
-### 0.0.24 (2026-09-21)
-* (BenAhrdt) Complete responsive widths for all Admin configuration fields.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 

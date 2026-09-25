@@ -1,4 +1,7 @@
 # Older changelog entries
+## 0.0.24 (2026-09-21)
+* (BenAhrdt) Complete responsive widths for all Admin configuration fields.
+
 ## 0.0.23 (2026-09-21)
 * (BenAhrdt) Fix responsive widths in the notification template settings.
 
