@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.29",
+    "version": "0.0.30",
     "news": {
+      "0.0.30": {
+        "en": "Add cause-specific recovery templates for limit violations, timeouts, and invalid source/value states.\nAdd configurable notification collection periods with priority-based summaries.\nAdd the `{{function}}` placeholder to notification templates.",
+        "de": "Füge ursachenspezifische Vorlagen für Limitverstöße, Timeouts und Quell- und Wertstatus hinzu.\nFügen Sie konfigurierbare Meldezeiträume mit prioritären Zusammenfassungen hinzu.\nFügen Sie den Platzhalter `{{function}}` zu Meldevorlagen hinzu.",
+        "ru": "Добавьте шаблоны восстановления с учетом причин нарушений лимитов, тайм-аутов и неверных состояний источника и значения.\nДобавьте настраиваемые периоды сбора уведомлений со сводками на основе приоритетов.\nДобавьте заполнитель `{{function}}` в шаблоны уведомлений.",
+        "pt": "Adicione modelos de recuperação por causa específica para limites, tempos limite e origem/valor inválidos.\nAdicione períodos de coleta de notificações configuráveis com resumos prioritários.\nAdicione o espaço `{{function}}` aos modelos de notificação.",
+        "nl": "Voeg doelspecifieke herstelsjablonen toe voor limietoverschrijdingen, time-outs en ongeldige bron-/waardestatussen.\nVoeg configureerbare verzamelperioden voor meldingen toe met samenvattingen op basis van prioriteiten.\nVoeg de tijdelijke aanduiding `{{function}}` toe aan meldingssjablonen.",
+        "fr": "Ajoutez des modèles de restauration par cause pour les limites, les délais et les états source/valeur non valides.\nAjoutez des périodes de collecte de notifications configurables avec des résumés prioritaires.\nAjoutez l'espace « {{function}} » aux modèles de notifications.",
+        "it": "Aggiunga modelli di ripristino specifici per violazioni dei limiti, timeout e fonte/valore non validi.\nAggiungi periodi di raccolta notifiche configurabili con riepiloghi per priorità.\nAggiunga il segnaposto {{function}} ai modelli di notifica.",
+        "es": "Añada plantillas de recuperación por causa para infracciones de límites, tiempos de espera y estados de origen/valor no válidos\nAñada períodos de recogida de notificaciones configurables con resúmenes por prioridad.\nAñada el marcador de posición {{function}} a las plantillas de notificaciones.",
+        "pl": "Dodaj szablony odzyskiwania specyficzne dla przyczyny dla naruszeń limitu, limitu czasu i nieprawidłowych stanów źródło/wartości.\nDodaj konfigurowalne okresy zbierania powiadomień za pomocą podsumowań opartych na priorytetach.\nDodaj symbol zastępczy `{{function}}` do szablonów powiadomień.",
+        "uk": "Додайте шаблони відновлення для конкретних причин для порушень лімітів, тайм-аутів та недійсних станів джерела/значення.\nДодайте настроювані періоди збору сповіщень із зведеннями на основі пріоритетів.\nДодайте заповнювач `{{function}}` до шаблонів сповіщень.",
+        "zh-cn": "为违反限制、超时和无效的源/值状态添加特定原因的恢复模板。\n使用基于优先级的摘要添加可配置的通知收集周期。\n将 {{function}} 占位符添加到通知模板中。"
+      },
       "0.0.29": {
         "en": "Add configurable Cron-based reminders with a summary of all currently non-normal monitored states.",
         "de": "Fügen Sie CRON-basierte Erinnerungen mit allen derzeit unnormalen Überwachungszuständen hinzu.",
@@ -80,19 +93,6 @@
         "pl": "Uzupełnij responsywne szerokości dla wszystkich pól konfiguracji administratora.",
         "uk": "Повна адаптивна ширина для всіх полів конфігурації адміністратора.",
         "zh-cn": "所有管理员配置字段的完整响应宽度。"
-      },
-      "0.0.23": {
-        "en": "Fix responsive widths in the notification template settings.",
-        "de": "Korrigieren Sie die Antwortbreiten in den Meldevorlagen.",
-        "ru": "Исправьте адаптивную ширину в настройках шаблона уведомлений.",
-        "pt": "Corrija larguras responsivas no modelo de notificação.",
-        "nl": "Repareer responsieve breedtes in de instellingen van het meldingssjabloon.",
-        "fr": "Corrigez la largeur réactive des modèles de notifications.",
-        "it": "Correggi le larghezze reattive nel modello di notifica.",
-        "es": "Corregir el ancho de respuesta en la plantilla de notificaciones.",
-        "pl": "Napraw responsywne szerokości w ustawieniach szablonu powiadomień.",
-        "uk": "Виправте адаптивну ширину в налаштуваннях шаблону сповіщень.",
-        "zh-cn": "修复通知模板设置中的响应宽度。"
       }
     },
     "titleLang": {

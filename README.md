@@ -129,7 +129,7 @@ The Notifications section can enable recurring reminders. The schedule is config
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.30 (2026-09-26)
 * Add cause-specific recovery templates for limit violations, timeouts, and invalid source/value states.
 * Add configurable notification collection periods with priority-based summaries.
 * Add the `{{function}}` placeholder to notification templates.
@@ -150,9 +150,6 @@ The Notifications section can enable recurring reminders. The schedule is config
 ### 0.0.26 (2026-09-22)
 * (BenAhrdt) Link the historical changelog from the README.
 * (BenAhrdt) Use only the general `info`, `warnung` and `alarm` categories for notification output while preserving the original event type in `info.message.type`.
-
-### 0.0.25 (2026-09-21)
-* (BenAhrdt) Exclude the historical changelog from the npm package and link to it from the README.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 

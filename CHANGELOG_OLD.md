@@ -1,4 +1,7 @@
 # Older changelog entries
+## 0.0.25 (2026-09-21)
+* (BenAhrdt) Exclude the historical changelog from the npm package and link to it from the README.
+
 ## 0.0.24 (2026-09-21)
 * (BenAhrdt) Complete responsive widths for all Admin configuration fields.
 
