@@ -127,11 +127,13 @@ The Notifications section can enable recurring reminders. The schedule is config
 
 ## Changelog
 <!--
-	Placeholder for the next version (at the beginning of the line):
-	### **WORK IN PROGRESS**
-	* Add cause-specific recovery templates for limit violations, timeouts, and invalid source/value states.
-	* Add configurable notification collection periods with priority-based summaries.
+	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* Add cause-specific recovery templates for limit violations, timeouts, and invalid source/value states.
+* Add configurable notification collection periods with priority-based summaries.
+* Add the `{{function}}` placeholder to notification templates.
+
 ### 0.0.29 (2026-09-25)
 * (BenAhrdt) Add configurable Cron-based reminders with a summary of all currently non-normal monitored states.
 
