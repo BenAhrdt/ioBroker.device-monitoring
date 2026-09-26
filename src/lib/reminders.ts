@@ -1,4 +1,9 @@
 import type { WatchStatus } from './evaluation';
+import {
+	highestNotificationCategory,
+	notificationCategoryForStatus,
+	type OutputNotificationCategory,
+} from './notifications';
 
 /** One monitored state included in a recurring summary. */
 export interface SummaryReminderItem {
@@ -24,6 +29,22 @@ export interface SummaryReminderMessage {
 	title: string;
 	/** Summary notification body. */
 	message: string;
+}
+
+/** One notification captured during a notification collection period. */
+export interface NotificationSummaryItem {
+	/** Display name of the monitored device. */
+	deviceName: string;
+	/** Display name of the monitored state. */
+	stateName: string;
+	/** Effective output category of the captured event. */
+	category: OutputNotificationCategory;
+	/** Rendered notification title. */
+	title: string;
+	/** Rendered notification message. */
+	message: string;
+	/** Timestamp when the event was created. */
+	triggeredAt: number;
 }
 
 /**
@@ -110,6 +131,66 @@ export function createSummaryReminderMessage(
 			detail = `${statusLabel(item.status, language)}: ${item.sourceId}`;
 		}
 		return `- ${item.deviceName} / ${item.stateName}: ${detail}`;
+	});
+	return { title, message: `${heading}\n${lines.join('\n')}` };
+}
+
+/**
+ * Determines the category for a current-state summary from its highest status.
+ *
+ * @param items Current non-normal monitored states.
+ */
+export function summaryCategoryForItems(items: readonly SummaryReminderItem[]): OutputNotificationCategory {
+	return highestNotificationCategory(items.map(item => notificationCategoryForStatus(item.status)));
+}
+
+function categoryLabel(category: OutputNotificationCategory, language: 'de' | 'en'): string {
+	if (language === 'de') {
+		switch (category) {
+			case 'alarm':
+				return 'Alarm';
+			case 'warnung':
+				return 'Warnung';
+			case 'info':
+				return 'Info';
+		}
+	}
+	switch (category) {
+		case 'alarm':
+			return 'Alarm';
+		case 'warnung':
+			return 'Warning';
+		case 'info':
+			return 'Info';
+	}
+}
+
+/**
+ * Builds a summary of all notifications captured during a collection period.
+ *
+ * @param items Captured notification events.
+ * @param language Adapter display language.
+ * @param startedAt Start timestamp of the collection period.
+ * @param endedAt End timestamp of the collection period.
+ */
+export function createNotificationCollectionSummaryMessage(
+	items: readonly NotificationSummaryItem[],
+	language: 'de' | 'en',
+	startedAt: number,
+	endedAt: number,
+): SummaryReminderMessage | undefined {
+	if (!items.length) {
+		return undefined;
+	}
+
+	const title = language === 'de' ? 'Sammelbericht: Benachrichtigungen' : 'Collected notification summary';
+	const heading =
+		language === 'de'
+			? `Im Zeitraum ${timestampDisplay(startedAt)} bis ${timestampDisplay(endedAt)} traten folgende Ereignisse auf:`
+			: `The following events occurred between ${timestampDisplay(startedAt)} and ${timestampDisplay(endedAt)}:`;
+	const lines = items.map(item => {
+		const message = item.message.replace(/\s*\n\s*/g, ' ').trim();
+		return `- [${categoryLabel(item.category, language)}] ${timestampDisplay(item.triggeredAt)} ${item.deviceName} / ${item.stateName}: ${message}`;
 	});
 	return { title, message: `${heading}\n${lines.join('\n')}` };
 }

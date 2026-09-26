@@ -1,10 +1,13 @@
 import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import {
+	highestNotificationCategory,
+	notificationCategoryForStatus,
 	notificationCategoryForEvent,
 	notificationCategoryForLevel,
 	notificationCategoryForTransition,
 	notificationLevelStateForCategory,
+	notificationTransitionsForSnapshots,
 } from './notifications';
 
 describe('notification transitions', () => {
@@ -51,5 +54,42 @@ describe('notification transitions', () => {
 		expect(notificationCategoryForLevel(3, 'warnung')).to.equal('warnung');
 		expect(notificationCategoryForLevel(4, 'warnung')).to.equal('alarm');
 		expect(notificationCategoryForLevel(undefined, 'warnung')).to.equal('warnung');
+	});
+
+	it('ends a timeout before re-emitting an underlying limit violation', () => {
+		expect(
+			notificationTransitionsForSnapshots(
+				{ status: 'timeout', underlyingStatus: 'warning', timedOut: true },
+				{ status: 'warning', underlyingStatus: 'warning', timedOut: false },
+			),
+		).to.deep.equal([{ category: 'deviceRecovered', recoveryCause: 'timeout' }, { category: 'deviceWarning' }]);
+	});
+
+	it('keeps the underlying recovery when a timeout ends at a normal value', () => {
+		expect(
+			notificationTransitionsForSnapshots(
+				{ status: 'timeout', underlyingStatus: 'warning', timedOut: true },
+				{ status: 'ok', underlyingStatus: 'ok', timedOut: false },
+			),
+		).to.deep.equal([
+			{ category: 'deviceRecovered', recoveryCause: 'timeout' },
+			{ category: 'deviceRecovered', recoveryCause: 'limit' },
+		]);
+	});
+
+	it('reports invalid data recovery before a newly valid limit violation', () => {
+		expect(
+			notificationTransitionsForSnapshots(
+				{ status: 'invalidValue', underlyingStatus: 'invalidValue', timedOut: false },
+				{ status: 'warning', underlyingStatus: 'warning', timedOut: false },
+			),
+		).to.deep.equal([{ category: 'deviceRecovered', recoveryCause: 'invalid' }, { category: 'deviceWarning' }]);
+	});
+
+	it('calculates summary priority from monitored statuses', () => {
+		expect(notificationCategoryForStatus('timeout')).to.equal('alarm');
+		expect(notificationCategoryForStatus('invalidValue')).to.equal('warnung');
+		expect(highestNotificationCategory(['warnung', 'alarm', 'info'])).to.equal('alarm');
+		expect(highestNotificationCategory(['info', 'warnung'])).to.equal('warnung');
 	});
 });

@@ -14,6 +14,25 @@ export const GENERAL_NOTIFICATION_CATEGORIES = ['info', 'warnung', 'alarm'] as c
 export type GeneralNotificationCategory = (typeof GENERAL_NOTIFICATION_CATEGORIES)[number];
 export type OutputNotificationCategory = GeneralNotificationCategory;
 export type NotificationLevelState = 'warning' | 'alarm' | 'timeout' | 'recovered' | 'invalid' | 'invalidValue';
+export type RecoveryCause = 'limit' | 'timeout' | 'invalid';
+
+/** Status information needed to distinguish timeout overlays from value problems. */
+export interface NotificationStatusSnapshot {
+	/** Effective status shown by the adapter, with timeout taking precedence. */
+	status: WatchStatus;
+	/** Status calculated without the timeout overlay. */
+	underlyingStatus: WatchStatus;
+	/** Whether the timeout overlay is currently active. */
+	timedOut: boolean;
+}
+
+/** Notification transition generated from two snapshots. */
+export interface NotificationTransition {
+	/** Internal event category. */
+	category: NotificationCategory;
+	/** Cause used to choose a recovery template. */
+	recoveryCause?: RecoveryCause;
+}
 
 const DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES: Record<NotificationCategory, GeneralNotificationCategory> = {
 	deviceWarning: 'warnung',
@@ -32,6 +51,142 @@ const DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES: Record<NotificationCategory, Gener
  */
 export function notificationCategoryForEvent(category: NotificationCategory): GeneralNotificationCategory {
 	return DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES[category];
+}
+
+/**
+ * Maps an evaluated monitored status to the default output category used by summaries.
+ * Unknown and normal states do not carry an alert severity.
+ *
+ * @param status Evaluated monitored status.
+ */
+export function notificationCategoryForStatus(status: WatchStatus): OutputNotificationCategory {
+	switch (status) {
+		case 'alarm':
+		case 'timeout':
+			return 'alarm';
+		case 'warning':
+		case 'invalid':
+		case 'invalidValue':
+			return 'warnung';
+		default:
+			return 'info';
+	}
+}
+
+/**
+ * Returns the highest category from a set of output categories.
+ *
+ * @param categories Categories to compare.
+ */
+export function highestNotificationCategory(
+	categories: readonly OutputNotificationCategory[],
+): OutputNotificationCategory {
+	return categories.reduce<OutputNotificationCategory>(
+		(highest, category) => (categoryPriority(category) > categoryPriority(highest) ? category : highest),
+		'info',
+	);
+}
+
+function categoryPriority(category: OutputNotificationCategory): number {
+	switch (category) {
+		case 'alarm':
+			return 3;
+		case 'warnung':
+			return 2;
+		case 'info':
+			return 1;
+	}
+}
+
+function problemCategoryForStatus(status: WatchStatus): NotificationCategory | undefined {
+	switch (status) {
+		case 'warning':
+			return 'deviceWarning';
+		case 'alarm':
+			return 'deviceAlarm';
+		case 'timeout':
+			return 'deviceTimeout';
+		case 'invalid':
+			return 'invalidSource';
+		case 'invalidValue':
+			return 'invalidValue';
+		default:
+			return undefined;
+	}
+}
+
+function recoveryCauseForStatus(status: WatchStatus): RecoveryCause | undefined {
+	if (status === 'warning' || status === 'alarm') {
+		return 'limit';
+	}
+	if (status === 'invalid' || status === 'invalidValue') {
+		return 'invalid';
+	}
+	return undefined;
+}
+
+/**
+ * Maps a status change to one or more notification events.
+ *
+ * A timeout overlays the underlying value status. When the source reports again,
+ * the timeout recovery is emitted first and the current underlying problem is
+ * emitted again so users can see both transitions in their actual order.
+ *
+ * @param previous Previous status snapshot.
+ * @param current Current status snapshot.
+ */
+export function notificationTransitionsForSnapshots(
+	previous: NotificationStatusSnapshot,
+	current: NotificationStatusSnapshot,
+): NotificationTransition[] {
+	const transitions: NotificationTransition[] = [];
+	const timeoutStarted = !previous.timedOut && current.timedOut;
+	const timeoutEnded = previous.timedOut && !current.timedOut;
+
+	if (timeoutStarted) {
+		transitions.push({ category: 'deviceTimeout' });
+		return transitions;
+	}
+
+	if (timeoutEnded) {
+		transitions.push({ category: 'deviceRecovered', recoveryCause: 'timeout' });
+		const currentProblem = problemCategoryForStatus(current.underlyingStatus);
+		if (currentProblem && currentProblem !== 'deviceTimeout') {
+			transitions.push({ category: currentProblem });
+			return transitions;
+		}
+		const previousRecoveryCause = recoveryCauseForStatus(previous.underlyingStatus);
+		if (previousRecoveryCause) {
+			transitions.push({ category: 'deviceRecovered', recoveryCause: previousRecoveryCause });
+		}
+		return transitions;
+	}
+
+	if (current.timedOut) {
+		return transitions;
+	}
+
+	if (previous.underlyingStatus === current.underlyingStatus && previous.status === current.status) {
+		return transitions;
+	}
+
+	const currentProblem = problemCategoryForStatus(current.underlyingStatus);
+	if (currentProblem) {
+		if (
+			recoveryCauseForStatus(previous.underlyingStatus) === 'invalid' &&
+			(currentProblem === 'deviceWarning' || currentProblem === 'deviceAlarm')
+		) {
+			transitions.push({ category: 'deviceRecovered', recoveryCause: 'invalid' });
+		}
+		transitions.push({ category: currentProblem });
+		return transitions;
+	}
+
+	const previousRecoveryCause = recoveryCauseForStatus(previous.underlyingStatus);
+	if (previousRecoveryCause) {
+		transitions.push({ category: 'deviceRecovered', recoveryCause: previousRecoveryCause });
+	}
+	return transitions;
 }
 
 /**

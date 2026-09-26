@@ -20,10 +20,13 @@ var notifications_exports = {};
 __export(notifications_exports, {
   GENERAL_NOTIFICATION_CATEGORIES: () => GENERAL_NOTIFICATION_CATEGORIES,
   NOTIFICATION_CATEGORIES: () => NOTIFICATION_CATEGORIES,
+  highestNotificationCategory: () => highestNotificationCategory,
   notificationCategoryForEvent: () => notificationCategoryForEvent,
   notificationCategoryForLevel: () => notificationCategoryForLevel,
+  notificationCategoryForStatus: () => notificationCategoryForStatus,
   notificationCategoryForTransition: () => notificationCategoryForTransition,
-  notificationLevelStateForCategory: () => notificationLevelStateForCategory
+  notificationLevelStateForCategory: () => notificationLevelStateForCategory,
+  notificationTransitionsForSnapshots: () => notificationTransitionsForSnapshots
 });
 module.exports = __toCommonJS(notifications_exports);
 const NOTIFICATION_CATEGORIES = [
@@ -45,6 +48,101 @@ const DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES = {
 };
 function notificationCategoryForEvent(category) {
   return DEFAULT_OUTPUT_NOTIFICATION_CATEGORIES[category];
+}
+function notificationCategoryForStatus(status) {
+  switch (status) {
+    case "alarm":
+    case "timeout":
+      return "alarm";
+    case "warning":
+    case "invalid":
+    case "invalidValue":
+      return "warnung";
+    default:
+      return "info";
+  }
+}
+function highestNotificationCategory(categories) {
+  return categories.reduce(
+    (highest, category) => categoryPriority(category) > categoryPriority(highest) ? category : highest,
+    "info"
+  );
+}
+function categoryPriority(category) {
+  switch (category) {
+    case "alarm":
+      return 3;
+    case "warnung":
+      return 2;
+    case "info":
+      return 1;
+  }
+}
+function problemCategoryForStatus(status) {
+  switch (status) {
+    case "warning":
+      return "deviceWarning";
+    case "alarm":
+      return "deviceAlarm";
+    case "timeout":
+      return "deviceTimeout";
+    case "invalid":
+      return "invalidSource";
+    case "invalidValue":
+      return "invalidValue";
+    default:
+      return void 0;
+  }
+}
+function recoveryCauseForStatus(status) {
+  if (status === "warning" || status === "alarm") {
+    return "limit";
+  }
+  if (status === "invalid" || status === "invalidValue") {
+    return "invalid";
+  }
+  return void 0;
+}
+function notificationTransitionsForSnapshots(previous, current) {
+  const transitions = [];
+  const timeoutStarted = !previous.timedOut && current.timedOut;
+  const timeoutEnded = previous.timedOut && !current.timedOut;
+  if (timeoutStarted) {
+    transitions.push({ category: "deviceTimeout" });
+    return transitions;
+  }
+  if (timeoutEnded) {
+    transitions.push({ category: "deviceRecovered", recoveryCause: "timeout" });
+    const currentProblem2 = problemCategoryForStatus(current.underlyingStatus);
+    if (currentProblem2 && currentProblem2 !== "deviceTimeout") {
+      transitions.push({ category: currentProblem2 });
+      return transitions;
+    }
+    const previousRecoveryCause2 = recoveryCauseForStatus(previous.underlyingStatus);
+    if (previousRecoveryCause2) {
+      transitions.push({ category: "deviceRecovered", recoveryCause: previousRecoveryCause2 });
+    }
+    return transitions;
+  }
+  if (current.timedOut) {
+    return transitions;
+  }
+  if (previous.underlyingStatus === current.underlyingStatus && previous.status === current.status) {
+    return transitions;
+  }
+  const currentProblem = problemCategoryForStatus(current.underlyingStatus);
+  if (currentProblem) {
+    if (recoveryCauseForStatus(previous.underlyingStatus) === "invalid" && (currentProblem === "deviceWarning" || currentProblem === "deviceAlarm")) {
+      transitions.push({ category: "deviceRecovered", recoveryCause: "invalid" });
+    }
+    transitions.push({ category: currentProblem });
+    return transitions;
+  }
+  const previousRecoveryCause = recoveryCauseForStatus(previous.underlyingStatus);
+  if (previousRecoveryCause) {
+    transitions.push({ category: "deviceRecovered", recoveryCause: previousRecoveryCause });
+  }
+  return transitions;
 }
 function notificationLevelStateForCategory(category) {
   switch (category) {
@@ -104,9 +202,12 @@ function notificationCategoryForTransition(previous, current) {
 0 && (module.exports = {
   GENERAL_NOTIFICATION_CATEGORIES,
   NOTIFICATION_CATEGORIES,
+  highestNotificationCategory,
   notificationCategoryForEvent,
   notificationCategoryForLevel,
+  notificationCategoryForStatus,
   notificationCategoryForTransition,
-  notificationLevelStateForCategory
+  notificationLevelStateForCategory,
+  notificationTransitionsForSnapshots
 });
 //# sourceMappingURL=notifications.js.map

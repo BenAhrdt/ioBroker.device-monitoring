@@ -49,7 +49,17 @@
     "Use placeholders in double curly braces. Their meanings are grouped below:": "Use placeholders in double curly braces. Their meanings are grouped below:",
     "Warning notification template": "Warning notification template",
     "device-monitoring adapter settings": "Device Monitoring settings",
-    "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID.": "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID.",
+    "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID; {{function}} configured function name.": "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID; {{function}} configured function name.",
     "{{value}} current or last value; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.": "{{value}} current or last value; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.",
-    "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.": "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update."
+    "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.": "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.",
+    "Collection duration in minutes": "Collection duration in minutes",
+    "Collection start": "Collection start",
+    "Collect notifications during a quiet period": "Collect notifications during a quiet period",
+    "Individual notifications are suppressed for this many minutes, then one summary is sent.": "Individual notifications are suppressed for this many minutes, then one summary is sent.",
+    "Notification collection period": "Notification collection period",
+    "Choose when the notification collection period starts.": "Choose when the notification collection period starts.",
+    "Suppress individual notifications during the configured period and send one summary at the end.": "Suppress individual notifications during the configured period and send one summary at the end.",
+    "Recovered after limit violation": "Recovered after limit violation",
+    "Recovered after update timeout": "Recovered after update timeout",
+    "Recovered after invalid source or value": "Recovered after invalid source or value"
 }

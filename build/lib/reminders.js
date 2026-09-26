@@ -18,9 +18,12 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var reminders_exports = {};
 __export(reminders_exports, {
-  createSummaryReminderMessage: () => createSummaryReminderMessage
+  createNotificationCollectionSummaryMessage: () => createNotificationCollectionSummaryMessage,
+  createSummaryReminderMessage: () => createSummaryReminderMessage,
+  summaryCategoryForItems: () => summaryCategoryForItems
 });
 module.exports = __toCommonJS(reminders_exports);
+var import_notifications = require("./notifications");
 function timestampDisplay(timestamp) {
   if (timestamp === null) {
     return "\u2014";
@@ -86,8 +89,46 @@ function createSummaryReminderMessage(items, language) {
   return { title, message: `${heading}
 ${lines.join("\n")}` };
 }
+function summaryCategoryForItems(items) {
+  return (0, import_notifications.highestNotificationCategory)(items.map((item) => (0, import_notifications.notificationCategoryForStatus)(item.status)));
+}
+function categoryLabel(category, language) {
+  if (language === "de") {
+    switch (category) {
+      case "alarm":
+        return "Alarm";
+      case "warnung":
+        return "Warnung";
+      case "info":
+        return "Info";
+    }
+  }
+  switch (category) {
+    case "alarm":
+      return "Alarm";
+    case "warnung":
+      return "Warning";
+    case "info":
+      return "Info";
+  }
+}
+function createNotificationCollectionSummaryMessage(items, language, startedAt, endedAt) {
+  if (!items.length) {
+    return void 0;
+  }
+  const title = language === "de" ? "Sammelbericht: Benachrichtigungen" : "Collected notification summary";
+  const heading = language === "de" ? `Im Zeitraum ${timestampDisplay(startedAt)} bis ${timestampDisplay(endedAt)} traten folgende Ereignisse auf:` : `The following events occurred between ${timestampDisplay(startedAt)} and ${timestampDisplay(endedAt)}:`;
+  const lines = items.map((item) => {
+    const message = item.message.replace(/\s*\n\s*/g, " ").trim();
+    return `- [${categoryLabel(item.category, language)}] ${timestampDisplay(item.triggeredAt)} ${item.deviceName} / ${item.stateName}: ${message}`;
+  });
+  return { title, message: `${heading}
+${lines.join("\n")}` };
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  createSummaryReminderMessage
+  createNotificationCollectionSummaryMessage,
+  createSummaryReminderMessage,
+  summaryCategoryForItems
 });
 //# sourceMappingURL=reminders.js.map

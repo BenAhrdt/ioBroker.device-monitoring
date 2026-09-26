@@ -116,17 +116,52 @@
 			"lg": 6,
 			"xl": 6
 		},
-		"summaryReminderCategory": {
-			"type": "select",
-			"label": "Reminder category",
-			"help": "Select the ioBroker category used for recurring summaries.",
-			"options": [
-				{ "label": "Info", "value": "info" },
-				{ "label": "Warning", "value": "warnung" },
-				{ "label": "Alarm", "value": "alarm" }
-			],
-			"default": "warnung",
-			"hidden": "data.summaryReminderEnabled !== true",
+		"notificationCollectionHeader": {
+			"type": "header",
+			"text": "Notification collection period",
+			"size": 3,
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
+		},
+		"notificationCollectionEnabled": {
+			"type": "checkbox",
+			"label": "Collect notifications during a quiet period",
+			"help": "Suppress individual notifications during the configured period and send one summary at the end.",
+			"default": false,
+			"newLine": true,
+			"xs": 12,
+			"sm": 6,
+			"md": 6,
+			"lg": 6,
+			"xl": 6
+		},
+		"notificationCollectionCron": {
+			"type": "cron",
+			"complex": true,
+			"label": "Collection start",
+			"help": "Choose when the notification collection period starts.",
+			"default": "0 22 * * *",
+			"hidden": "data.notificationCollectionEnabled !== true",
+			"newLine": true,
+			"xs": 12,
+			"sm": 6,
+			"md": 6,
+			"lg": 6,
+			"xl": 6
+		},
+		"notificationCollectionDurationMinutes": {
+			"type": "number",
+			"label": "Collection duration in minutes",
+			"help": "Individual notifications are suppressed for this many minutes, then one summary is sent.",
+			"min": 1,
+			"max": 35791,
+			"step": 1,
+			"default": 600,
+			"hidden": "data.notificationCollectionEnabled !== true",
 			"newLine": false,
 			"xs": 12,
 			"sm": 6,
@@ -157,7 +192,7 @@
 		},
 		"messageTemplateHelpIdentity": {
 			"type": "staticText",
-			"text": "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID.",
+			"text": "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID; {{function}} configured function name.",
 			"xs": 12,
 			"sm": 12,
 			"md": 12,
@@ -520,7 +555,7 @@
 		},
 		"recoveredTemplateHeader": {
 			"type": "staticText",
-			"text": "Recovered device notification template",
+			"text": "Recovered after limit violation",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -533,7 +568,7 @@
 		"recoveredTitleTemplate": {
 			"type": "text",
 			"label": "Title",
-			"default": "Gerät wieder in Ordnung: {{device}} - {{state}}",
+			"default": "Grenzwertverletzung behoben: {{device}} - {{state}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -544,7 +579,7 @@
 		"recoveredMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "Der State {{state}} vom Gerät {{device}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})",
+			"default": "Der State {{state}} vom Gerät {{device}} ist nach einer Grenzwertverletzung wieder in Ordnung: {{value}} {{unit}} ({{remark}})",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -584,6 +619,74 @@
 				"paddingLeft": 4,
 				"marginBottom": 10
 			}
+		},
+		"timeoutRecoveredTemplateHeader": {
+			"type": "staticText",
+			"text": "Recovered after update timeout",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
+			"style": { "backgroundColor": "#3f7d45", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#3f7d45", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+		},
+		"timeoutRecoveredTitleTemplate": {
+			"type": "text",
+			"label": "Title",
+			"default": "Aktualisierungs-Timeout beendet: {{device}} - {{state}}",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
+		},
+		"timeoutRecoveredMessageTemplate": {
+			"type": "text",
+			"label": "Notification",
+			"default": "Der State {{state}} vom Gerät {{device}} meldet sich nach dem Timeout wieder: {{value}} {{unit}} ({{remark}})",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
+		},
+		"invalidRecoveredTemplateHeader": {
+			"type": "staticText",
+			"text": "Recovered after invalid source or value",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12,
+			"style": { "backgroundColor": "#3f7d45", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 },
+			"darkStyle": { "backgroundColor": "#3f7d45", "color": "#ffffff", "fontSize": 13, "fontWeight": 600, "display": "block", "width": "100%", "boxSizing": "border-box", "padding": "8px", "borderRadius": 4, "marginTop": 10, "marginBottom": 0 }
+		},
+		"invalidRecoveredTitleTemplate": {
+			"type": "text",
+			"label": "Title",
+			"default": "Gültige Daten empfangen: {{device}} - {{state}}",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
+		},
+		"invalidRecoveredMessageTemplate": {
+			"type": "text",
+			"label": "Notification",
+			"default": "{{device}} / {{state}} liefert wieder gültige Daten: {{value}} {{unit}} ({{remark}})",
+			"newLine": true,
+			"xs": 12,
+			"sm": 12,
+			"md": 12,
+			"lg": 12,
+			"xl": 12
 		},
 		"backupHeader": {
 			"type": "header",

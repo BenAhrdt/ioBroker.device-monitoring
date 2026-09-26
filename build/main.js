@@ -440,8 +440,16 @@ const DEFAULT_MESSAGE_TEMPLATES = {
     de: "Ung\xFCltiger Wert bei Ger\xE4t: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}})"
   },
   recovered: {
-    en: "{{device}} / {{state}} is back to normal: {{value}} {{unit}} ({{remark}})",
-    de: "{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}} ({{remark}})"
+    en: "The limit violation at {{device}} / {{state}} is cleared: {{value}} {{unit}} ({{remark}})",
+    de: "Der State {{state}} vom Ger\xE4t {{device}} ist nach einer Grenzwertverletzung wieder in Ordnung: {{value}} {{unit}} ({{remark}})"
+  },
+  timeoutRecovered: {
+    en: "{{device}} / {{state}} is reporting again after the update timeout: {{value}} {{unit}} ({{remark}})",
+    de: "Der State {{state}} vom Ger\xE4t {{device}} meldet sich nach dem Timeout wieder: {{value}} {{unit}} ({{remark}})"
+  },
+  invalidRecovered: {
+    en: "{{device}} / {{state}} is providing valid data again: {{value}} {{unit}} ({{remark}})",
+    de: "{{device}} / {{state}} liefert wieder g\xFCltige Daten: {{value}} {{unit}} ({{remark}})"
   }
 };
 const DEFAULT_NOTIFICATION_TITLE_TEMPLATES = {
@@ -454,8 +462,16 @@ const DEFAULT_NOTIFICATION_TITLE_TEMPLATES = {
   },
   invalidValue: { en: "Invalid value detected", de: "Ung\xFCltigen Wert erkannt" },
   recovered: {
-    en: "Device recovered: {{device}} - {{state}}",
-    de: "Ger\xE4t wieder in Ordnung: {{device}} - {{state}}"
+    en: "Limit violation cleared: {{device}} - {{state}}",
+    de: "Grenzwertverletzung behoben: {{device}} - {{state}}"
+  },
+  timeoutRecovered: {
+    en: "Update timeout ended: {{device}} - {{state}}",
+    de: "Aktualisierungs-Timeout beendet: {{device}} - {{state}}"
+  },
+  invalidRecovered: {
+    en: "Valid data received again: {{device}} - {{state}}",
+    de: "G\xFCltige Daten empfangen: {{device}} - {{state}}"
   }
 };
 const LEGACY_DEFAULT_MESSAGE_TEMPLATES = {
@@ -1476,6 +1492,7 @@ class DeviceMonitoring extends utils.Adapter {
   updateHistoryQueues = /* @__PURE__ */ new Map();
   notificationStatuses = /* @__PURE__ */ new Map();
   notificationLastSent = /* @__PURE__ */ new Map();
+  bufferedNotificationEvents = [];
   messageWriteQueue = Promise.resolve();
   cardDetails = /* @__PURE__ */ new Map();
   cardDetailsQueues = /* @__PURE__ */ new Map();
@@ -1488,6 +1505,10 @@ class DeviceMonitoring extends utils.Adapter {
   staleCheckTimer;
   configurationBackupTimer;
   summaryReminderJob;
+  notificationCollectionJob;
+  notificationCollectionEndTimer;
+  notificationCollectionUntil = 0;
+  notificationCollectionStartedAt = 0;
   bulkSelectionSessions = /* @__PURE__ */ new Map();
   constructor(options = {}) {
     super({ ...options, name: "device-monitoring" });
@@ -1508,6 +1529,14 @@ class DeviceMonitoring extends utils.Adapter {
       if (this.summaryReminderJob) {
         this.summaryReminderJob.cancel();
         this.summaryReminderJob = void 0;
+      }
+      if (this.notificationCollectionJob) {
+        this.notificationCollectionJob.cancel();
+        this.notificationCollectionJob = void 0;
+      }
+      if (this.notificationCollectionEndTimer) {
+        this.clearTimeout(this.notificationCollectionEndTimer);
+        this.notificationCollectionEndTimer = void 0;
       }
       callback();
     });
@@ -1548,6 +1577,7 @@ class DeviceMonitoring extends utils.Adapter {
       void this.updateAll();
     }, 6e4);
     this.scheduleSummaryReminder();
+    this.scheduleNotificationCollection();
     this.scheduleConfigurationBackup();
   }
   async clearLegacyMessageState() {
@@ -1578,7 +1608,15 @@ class DeviceMonitoring extends utils.Adapter {
       timeout: { message: "timeoutMessageTemplate", title: "timeoutTitleTemplate" },
       invalidSource: { message: "invalidSourceMessageTemplate", title: "invalidSourceTitleTemplate" },
       invalidValue: { message: "invalidValueMessageTemplate", title: "invalidValueTitleTemplate" },
-      recovered: { message: "recoveredMessageTemplate", title: "recoveredTitleTemplate" }
+      recovered: { message: "recoveredMessageTemplate", title: "recoveredTitleTemplate" },
+      timeoutRecovered: {
+        message: "timeoutRecoveredMessageTemplate",
+        title: "timeoutRecoveredTitleTemplate"
+      },
+      invalidRecovered: {
+        message: "invalidRecoveredMessageTemplate",
+        title: "invalidRecoveredTitleTemplate"
+      }
     };
     let changed = false;
     const configuredEnabledNotifications = native.enabledNotifications;
@@ -2543,6 +2581,9 @@ class DeviceMonitoring extends utils.Adapter {
   async sendSummaryReminder() {
     var _a;
     try {
+      if (this.notificationCollectionUntil > Date.now()) {
+        return;
+      }
       await this.refreshSourceValidity();
       const items = [];
       for (const device of this.devices) {
@@ -2568,37 +2609,105 @@ class DeviceMonitoring extends utils.Adapter {
       if (!summary) {
         return;
       }
-      const category = this.getSummaryReminderCategory();
+      const category = (0, import_reminders.summaryCategoryForItems)(items);
       const messageEvent = {
         type: "summary",
+        summaryKind: "current",
         category,
         title: summary.title,
         message: summary.message
       };
-      try {
-        await this.queueMessageEvent(messageEvent);
-      } catch (error) {
-        this.log.warn(`Could not write summary reminder message state: ${String(error)}`);
-      }
-      if (this.config.sendNotificationsViaNotify !== false) {
-        try {
-          await this.registerNotification(
-            "device-monitoring",
-            category,
-            `${summary.title}
-${summary.message}`
-          );
-        } catch (error) {
-          this.log.warn(`Could not register summary reminder ${category}: ${String(error)}`);
-        }
-      }
+      await this.deliverMessageEvent(messageEvent, "summary reminder");
     } catch (error) {
       this.log.warn(`Could not create summary reminder: ${String(error)}`);
     }
   }
-  getSummaryReminderCategory() {
-    const configured = this.config.summaryReminderCategory;
-    return import_notifications.GENERAL_NOTIFICATION_CATEGORIES.includes(configured) ? configured : "warnung";
+  scheduleNotificationCollection() {
+    if (this.notificationCollectionJob) {
+      this.notificationCollectionJob.cancel();
+      this.notificationCollectionJob = void 0;
+    }
+    if (this.config.notificationCollectionEnabled !== true) {
+      return;
+    }
+    const cron = typeof this.config.notificationCollectionCron === "string" ? this.config.notificationCollectionCron.trim() : "";
+    const duration = Number(this.config.notificationCollectionDurationMinutes);
+    if (!cron || !Number.isFinite(duration) || duration <= 0) {
+      this.log.warn("Notification collection is enabled, but no valid cron schedule or duration is configured");
+      return;
+    }
+    try {
+      this.notificationCollectionJob = schedule.scheduleJob(
+        "device-monitoring-notification-collection",
+        cron,
+        () => this.startNotificationCollection(duration)
+      );
+    } catch (error) {
+      this.log.warn(`Could not schedule notification collection for cron expression "${cron}": ${String(error)}`);
+    }
+  }
+  startNotificationCollection(durationMinutes) {
+    const now = Date.now();
+    if (this.notificationCollectionUntil > now) {
+      this.log.warn("Notification collection is already active; keeping the existing collection period");
+      return;
+    }
+    if (this.notificationCollectionEndTimer) {
+      this.clearTimeout(this.notificationCollectionEndTimer);
+      this.notificationCollectionEndTimer = void 0;
+    }
+    this.bufferedNotificationEvents = [];
+    this.notificationCollectionStartedAt = now;
+    this.notificationCollectionUntil = now + durationMinutes * 6e4;
+    this.notificationCollectionEndTimer = this.setTimeout(() => {
+      this.notificationCollectionEndTimer = void 0;
+      void this.finishNotificationCollection();
+    }, durationMinutes * 6e4);
+  }
+  async finishNotificationCollection() {
+    const startedAt = this.notificationCollectionStartedAt;
+    const endedAt = Date.now();
+    const events = this.bufferedNotificationEvents;
+    this.bufferedNotificationEvents = [];
+    this.notificationCollectionStartedAt = 0;
+    this.notificationCollectionUntil = 0;
+    const summary = (0, import_reminders.createNotificationCollectionSummaryMessage)(events, this.displayLanguage, startedAt, endedAt);
+    if (!summary) {
+      return;
+    }
+    const category = (0, import_notifications.highestNotificationCategory)(events.map((event) => event.category));
+    const messageEvent = {
+      type: "summary",
+      summaryKind: "collected",
+      category,
+      title: summary.title,
+      message: summary.message
+    };
+    await this.deliverMessageEvent(messageEvent, "notification collection summary");
+  }
+  async publishMessageEvent(event) {
+    if (this.notificationCollectionUntil > Date.now()) {
+      this.bufferedNotificationEvents.push(event);
+      return;
+    }
+    await this.deliverMessageEvent(event, "notification");
+  }
+  async deliverMessageEvent(event, context) {
+    try {
+      await this.queueMessageEvent(event);
+    } catch (error) {
+      this.log.warn(`Could not write ${context} message state: ${String(error)}`);
+    }
+    if (this.config.sendNotificationsViaNotify === false) {
+      return;
+    }
+    try {
+      const notificationText = event.title ? `${event.title}
+${event.message}` : event.message;
+      await this.registerNotification("device-monitoring", event.category, notificationText);
+    } catch (error) {
+      this.log.warn(`Could not register ${context} ${event.category}: ${String(error)}`);
+    }
   }
   async queueMessageEvent(event) {
     const write = this.messageWriteQueue.catch(() => void 0).then(async () => {
@@ -2767,6 +2876,7 @@ ${summary.message}`
       watched.staleWarning.enabled ? watched.staleWarning.minutes * 6e4 : void 0
     );
     const status = this.getWatchedStatus(watched, sourceState, updateTimedOut);
+    const underlyingStatus = this.getWatchedStatus(watched, sourceState, false);
     const unit = await this.getSourceUnit(watched.sourceId);
     const display = status === "invalid" ? `${watched.name}: \u26A0 ${watched.sourceId}` : `${watched.name}: ${value === null ? "\u2014" : `${String(value)}${unit ? ` ${unit}` : ""}`}`;
     const data = {
@@ -2810,21 +2920,35 @@ ${summary.message}`
       })
     ]);
     this.resetUpdateHistories.delete(base);
-    await this.notifyStatusTransition(device, watched, status, data);
+    await this.notifyStatusTransition(device, watched, status, underlyingStatus, data);
     await this.updateDetailsDisplay(device, watched, status, display, unit, data);
   }
-  async notifyStatusTransition(device, watched, status, data) {
-    var _a, _b;
+  async notifyStatusTransition(device, watched, status, underlyingStatus, data) {
     const key = `${device.id}.${watched.id}`;
+    const current = {
+      status,
+      underlyingStatus,
+      timedOut: status === "timeout"
+    };
     const previous = this.notificationStatuses.get(key);
-    this.notificationStatuses.set(key, status);
+    this.notificationStatuses.set(key, current);
     if (!previous) {
       return;
     }
-    const category = (0, import_notifications.notificationCategoryForTransition)(previous, status);
-    if (!category) {
-      return;
+    const transitions = (0, import_notifications.notificationTransitionsForSnapshots)(previous, current);
+    for (const transition of transitions) {
+      await this.publishStatusTransition(
+        device,
+        watched,
+        key,
+        data,
+        transition.category,
+        transition.recoveryCause
+      );
     }
+  }
+  async publishStatusTransition(device, watched, key, data, category, recoveryCause) {
+    var _a, _b;
     if (!this.isNotificationEnabled(category)) {
       return;
     }
@@ -2841,20 +2965,13 @@ ${summary.message}`
     if (!outputCategory) {
       return;
     }
-    const templateTypes = {
-      deviceWarning: "warning",
-      deviceAlarm: "alarm",
-      deviceTimeout: "timeout",
-      invalidSource: "invalidSource",
-      invalidValue: "invalidValue",
-      deviceRecovered: "recovered"
-    };
-    const templateType = templateTypes[category];
+    const templateType = this.getMessageTemplateType(category, recoveryCause);
     const now = Date.now();
     const messageValues = {
       device: device.name,
       state: watched.name,
       sourceId: watched.sourceId,
+      function: watched.function,
       value: data.value === null ? "\u2014" : String(data.value),
       unit: data.unit,
       remark: ((_a = watched.remark) == null ? void 0 : _a.trim()) || "",
@@ -2890,20 +3007,27 @@ ${summary.message}`
       ...category === "deviceTimeout" ? { timeoutMinutes: watched.staleWarning.minutes } : {},
       message: messageText
     };
-    try {
-      await this.queueMessageEvent(messageEvent);
-    } catch (error) {
-      this.log.warn(`Could not write notification message state: ${String(error)}`);
-    }
-    if (this.config.sendNotificationsViaNotify !== false) {
-      try {
-        const notificationText = notificationTitle ? `${notificationTitle}
-${messageText}` : messageText;
-        await this.registerNotification("device-monitoring", outputCategory, notificationText);
-      } catch (error) {
-        this.log.warn(`Could not register notification ${outputCategory}: ${String(error)}`);
+    await this.publishMessageEvent(messageEvent);
+  }
+  getMessageTemplateType(category, recoveryCause) {
+    if (category === "deviceRecovered") {
+      switch (recoveryCause) {
+        case "timeout":
+          return "timeoutRecovered";
+        case "invalid":
+          return "invalidRecovered";
+        default:
+          return "recovered";
       }
     }
+    const templateTypes = {
+      deviceWarning: "warning",
+      deviceAlarm: "alarm",
+      deviceTimeout: "timeout",
+      invalidSource: "invalidSource",
+      invalidValue: "invalidValue"
+    };
+    return templateTypes[category];
   }
   formatLimitDescription(limit, value, unit) {
     if (!limit.enabled) {
@@ -2938,7 +3062,9 @@ ${messageText}` : messageText;
       timeout: "timeoutMessageTemplate",
       invalidSource: "invalidSourceMessageTemplate",
       invalidValue: "invalidValueMessageTemplate",
-      recovered: "recoveredMessageTemplate"
+      recovered: "recoveredMessageTemplate",
+      timeoutRecovered: "timeoutRecoveredMessageTemplate",
+      invalidRecovered: "invalidRecoveredMessageTemplate"
     };
     const configKey = configKeys[type];
     const configured = this.config[configKey];
@@ -2952,7 +3078,9 @@ ${messageText}` : messageText;
       timeout: "timeoutTitleTemplate",
       invalidSource: "invalidSourceTitleTemplate",
       invalidValue: "invalidValueTitleTemplate",
-      recovered: "recoveredTitleTemplate"
+      recovered: "recoveredTitleTemplate",
+      timeoutRecovered: "timeoutRecoveredTitleTemplate",
+      invalidRecovered: "invalidRecoveredTitleTemplate"
     };
     const configKey = configKeys[type];
     const configured = this.config[configKey];

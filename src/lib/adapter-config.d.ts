@@ -17,8 +17,12 @@ declare global {
 			summaryReminderEnabled?: boolean;
 			/** Cron expression used for recurring state summaries. */
 			summaryReminderCron?: string;
-			/** Output category used for recurring state summaries. */
-			summaryReminderCategory?: 'info' | 'warnung' | 'alarm';
+			/** Whether notification collection periods are enabled. */
+			notificationCollectionEnabled?: boolean;
+			/** Cron expression that starts a notification collection period. */
+			notificationCollectionCron?: string;
+			/** Duration of a notification collection period in minutes. */
+			notificationCollectionDurationMinutes?: number;
 			/** Title template used for warning notifications and info.message. */
 			warningTitleTemplate?: string;
 			/** Template used for warning notifications and info.message. */
@@ -43,6 +47,14 @@ declare global {
 			recoveredTitleTemplate?: string;
 			/** Template used for recovery notifications and info.message. */
 			recoveredMessageTemplate?: string;
+			/** Title template used when an update timeout ends. */
+			timeoutRecoveredTitleTemplate?: string;
+			/** Template used when an update timeout ends. */
+			timeoutRecoveredMessageTemplate?: string;
+			/** Title template used when an invalid source or value becomes valid again. */
+			invalidRecoveredTitleTemplate?: string;
+			/** Template used when an invalid source or value becomes valid again. */
+			invalidRecoveredMessageTemplate?: string;
 		}
 	}
 }
