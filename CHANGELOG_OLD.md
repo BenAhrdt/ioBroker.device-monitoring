@@ -1,4 +1,8 @@
 # Older changelog entries
+## 0.0.26 (2026-09-22)
+* (BenAhrdt) Link the historical changelog from the README.
+* (BenAhrdt) Use only the general `info`, `warnung` and `alarm` categories for notification output while preserving the original event type in `info.message.type`.
+
 ## 0.0.25 (2026-09-21)
 * (BenAhrdt) Exclude the historical changelog from the npm package and link to it from the README.
 

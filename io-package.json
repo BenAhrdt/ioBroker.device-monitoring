@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.30",
+    "version": "0.0.31",
     "news": {
+      "0.0.31": {
+        "en": "Persist the notification collection period and its buffered events so an adapter restart continues the active pause and completes its summary.\nRecreate recurring reminder schedules on adapter startup so future reminder times continue after a restart.\nAdd optional response times to warning and alarm limits and persist pending limit violations across adapter restarts.\nInfer bulk state target devices from matching source paths and report the affected state and reason for bulk-add validation conflicts.",
+        "de": "Behalten Sie den Meldezeitraum und die gepufferten Ereignisse bei, sodass ein Adapter-Neustart die Pause beendet.\nWiederkehrende Erinnerungspläne beim Adapter-Start erstellen, damit auch nach dem Neustart wieder erinnert wird.\nOptionale Reaktionszeiten auf Warn- und Alarmlimits hinzufügen und bei Adapter-Neustarts andauern.\nErmitteln Sie Massenzustandszielgeräte anhand der Quellpfade und melden Sie den betroffenen Zustand und Grund.",
+        "ru": "Сохраните период сбора уведомлений и его буферизованные события, чтобы перезапуск адаптера продлил активную паузу и завершил сводку.\nВоссоздайте расписание повторяющихся напоминаний при запуске адаптера, чтобы после перезапуска в будущем напоминания сохранялись.\nДобавьте дополнительное время отклика на ограничения предупреждений и аварийных сигналов и сохраняйте ожидаемые нарушения лимита при перезапуске адаптера.\nВыведите групповое состояние целевых устройств на основе совпадающих исходных путей и сообщите об уязвимом состоянии и причинах конфликтов при проверке при массовом добавлении.",
+        "pt": "Persista o período de coleta de notificações e seus eventos em buffer para que o adaptador reinicie a pausa ativa e conclua o resumo.\nRecrie lembretes recorrentes na inicialização do adaptador para que os lembretes continuem após a reinicialização.\nAdicione tempos de resposta opcionais aos limites de aviso e alarme e persista nas reinicializações do adaptador.\nDeduza dispositivos de destino em massa a partir de caminhos de origem e relate o estado afetado e o motivo dos conflitos.",
+        "nl": "Houd de periode voor het verzamelen van meldingen en de gebufferde gebeurtenissen aan, zodat de actieve pauze wordt voortgezet wanneer de adapter opnieuw wordt opgestart en de samenvatting wordt voltooid.\nMaak terugkerende herinneringsschema's opnieuw bij het opstarten van de adapter, zodat toekomstige herinneringen na een herstart worden voortgezet.\nVoeg optionele responstijden toe aan waarschuwings- en alarmlimieten en blijf wachten op overschrijdingen van de limiet bij het opnieuw opstarten van de adapter.\nAfleiden van bulkstatusdoelapparaten uit overeenkomende bronpaden en rapporteer de betreffende status en de reden voor validatieconflicten bij het toevoegen van bulk.",
+        "fr": "Maintenez la période de collecte des notifications et ses événements en mémoire tampon afin que le redémarrage de l'adaptateur prolonge la pause.\nRecréez les programmes de rappels récurrents au démarrage de l'adaptateur afin de continuer après le redémarrage.\nAjoutez des temps de réponse facultatifs aux limites d'alerte et persistez en cas de dépassement des limites au redémarrage de l'adaptateur.\nDéduisez les machines cibles à partir des chemins source correspondants et signalez l'état concerné et la raison des conflits de validation.",
+        "it": "Persista il periodo di raccolta delle notifiche e gli eventi bufferizzati in modo che il riavvio dell'adattatore continui la pausa.\nRicrea i promemoria ricorrenti all'avvio dell'adattatore in modo che i promemoria futuri continuino\nAggiunga tempi di risposta opzionali ai limiti di avviso e allarme e continui a violare i limiti al riavvio dell'adattatore.\nDeduce i dispositivi target in blocco dai percorsi di origine corrispondenti e segnala lo stato e il motivo dei conflitti.",
+        "es": "Persistir el período de recopilación de notificaciones y sus eventos en búfer para que el adaptador reinicie la pausa activa y complete su resumen.\nRecree horarios de recordatorios recurrentes al iniciar el adaptador para que los futuros recordatorios continúen tras un reinicio.\nAñada tiempos de respuesta opcionales a los límites de avisos y alarmas y persista sin infringir el límite al reiniciarse el adaptador.\nDeduzca los dispositivos de destino masivos a partir de las rutas de origen coincidentes e informe el estado afectado y el motivo de los conflictos de validación",
+        "pl": "Utrzymuj okres zbierania powiadomień i jego zdarzenia buforowane, aby ponowne uruchomienie adaptera kontynuowało aktywną pauzę i zakończyło jej podsumowanie.\nOdtwórz powtarzające się harmonogramy przypomnień podczas uruchamiania adaptera, aby przyszłe czasy przypomnień były kontynuowane po ponownym uruchomieniu.\nDodaj opcjonalne czasy reakcji do limitów ostrzeżeń i alarmów i utrzymuj oczekiwane naruszenia limitu podczas ponownego uruchamiania adaptera.\nWywnioskować urządzenia docelowe stanu zbiorczego na podstawie pasujących ścieżek źródłowych i zgłaszaj stan, którego dotyczy problem i powód konfliktów sprawdzania poprawności dodawania zbiorczego.",
+        "uk": "Зберігайте період збору сповіщень та його буферизовані події, щоб перезапуск адаптера продовжив активну паузу та завершив підсумок.\nВідтворіть повторювані графіки нагадувань під час запуску адаптера, щоб майбутні нагадування тривали після перезапуску.\nДодайте необов'язковий час відгуку до лімітів попереджень та тривог та зберігайте очікуючі порушення лімітів під час перезапуску адаптера.\nВиводити цільові пристрої масового стану з відповідних шляхів джерела та повідомити про стан впливу та причину конфліктів перевірки масового додавання.",
+        "zh-cn": "保留通知收集期限及其缓冲事件，以便适配器重新启动会继续处于活动暂停状态并完成其摘要。\n在适配器启动时重新创建定期提醒计划，以便将来的提醒时间在重新启动后继续。\n为警告和警报限制添加可选响应时间，并在适配器重新启动后持续等待违反限制的情况。\n根据匹配的源路径推断目标设备的批量状态，并报告受影响的状态和批量添加验证冲突的原因。"
+      },
       "0.0.30": {
         "en": "Add cause-specific recovery templates for limit violations, timeouts, and invalid source/value states.\nAdd configurable notification collection periods with priority-based summaries.\nAdd the `{{function}}` placeholder to notification templates.",
         "de": "Füge ursachenspezifische Vorlagen für Limitverstöße, Timeouts und Quell- und Wertstatus hinzu.\nFügen Sie konfigurierbare Meldezeiträume mit prioritären Zusammenfassungen hinzu.\nFügen Sie den Platzhalter `{{function}}` zu Meldevorlagen hinzu.",
@@ -80,19 +93,6 @@
         "pl": "Wyklucz historyczny dziennik zmian z pakietu npm i połącz do niego z README.",
         "uk": "Виключити історичний журнал змін з пакета npm та посилатися на нього з README.",
         "zh-cn": "从 npm 包中排除历史变更日志，并从 README 中链接到该日志。"
-      },
-      "0.0.24": {
-        "en": "Complete responsive widths for all Admin configuration fields.",
-        "de": "Vollständige Breite für alle Admin-Felder.",
-        "ru": "Полная адаптивная ширина всех полей конфигурации администратора.",
-        "pt": "Totalmente responsivo em todos os campos de configuração do Admin.",
-        "nl": "Volledig responsieve breedtes voor alle configuratievelden voor beheerders.",
-        "fr": "Largeur réactive complète pour tous les champs de configuration Admin.",
-        "it": "Ampiezze reattive complete per tutti i campi Admin.",
-        "es": "Anchos completos para todos los campos de configuración administrativa.",
-        "pl": "Uzupełnij responsywne szerokości dla wszystkich pól konfiguracji administratora.",
-        "uk": "Повна адаптивна ширина для всіх полів конфігурації адміністратора.",
-        "zh-cn": "所有管理员配置字段的完整响应宽度。"
       }
     },
     "titleLang": {
