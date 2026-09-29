@@ -52,20 +52,30 @@ function evaluateLimit(value, limit) {
   }
   return limit.mode === "outside" ? value < limit.min || value > limit.max : value >= limit.min && value <= limit.max;
 }
-function getWatchStatus(value, warning, alarm, stale = false) {
+function getWatchStatus(value, warning, alarm, stale = false, activation, now = Date.now()) {
   if (stale) {
     return "timeout";
   }
   if ((typeof value !== "number" || !Number.isFinite(value)) && typeof value !== "boolean") {
     return "invalidValue";
   }
-  if (evaluateLimit(value, alarm)) {
+  if (isLimitActive(value, alarm, activation == null ? void 0 : activation.alarmSince, now)) {
     return "alarm";
   }
-  if (evaluateLimit(value, warning)) {
+  if (isLimitActive(value, warning, activation == null ? void 0 : activation.warningSince, now)) {
     return "warning";
   }
   return "ok";
+}
+function isLimitActive(value, limit, since, now) {
+  if (!evaluateLimit(value, limit)) {
+    return false;
+  }
+  const responseDelayMinutes = limit.responseDelayMinutes;
+  if (typeof responseDelayMinutes !== "number" || !Number.isFinite(responseDelayMinutes) || responseDelayMinutes <= 0) {
+    return true;
+  }
+  return typeof since === "number" && now - since >= responseDelayMinutes * 6e4;
 }
 function isUpdateTimedOut(state, configuration, now = Date.now()) {
   return Boolean(

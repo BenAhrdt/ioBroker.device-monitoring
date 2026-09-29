@@ -45,6 +45,27 @@ describe('threshold evaluation', () => {
 			'invalidValue',
 		);
 	});
+	it('waits for the configured response time before activating a limit', () => {
+		const now = 1_000_000;
+		const warning = { ...limit('below', 40), responseDelayMinutes: 41 };
+		const activation = { warningSince: now - 40 * 60_000, alarmSince: null };
+
+		const alarm = { enabled: false, mode: 'below' as const };
+		expect(getWatchStatus(0, warning, alarm, false, activation, now)).to.equal('ok');
+		expect(
+			getWatchStatus(
+				0,
+				warning,
+				alarm,
+				false,
+				{
+					...activation,
+					warningSince: now - 41 * 60_000,
+				},
+				now,
+			),
+		).to.equal('warning');
+	});
 });
 
 describe('function template', () => {
@@ -60,11 +81,12 @@ describe('function template', () => {
 
 	it('stores the complete monitoring configuration', () => {
 		const configured = state('state', 'temperature', 20);
+		configured.warning.responseDelayMinutes = 41;
 		configured.staleWarning = { enabled: true, minutes: 45 };
 		const template = createFunctionTemplate(configured);
 
 		expect(template).to.deep.equal({
-			warning: { enabled: true, mode: 'above', min: undefined, max: 20 },
+			warning: { enabled: true, mode: 'above', min: undefined, max: 20, responseDelayMinutes: 41 },
 			alarm: { enabled: true, mode: 'above', min: undefined, max: 30 },
 			staleWarning: { enabled: true, minutes: 45 },
 		});

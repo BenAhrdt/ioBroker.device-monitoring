@@ -23,6 +23,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var utils = __toESM(require("@iobroker/adapter-core"));
 var import_dm_utils = require("@iobroker/dm-utils");
+var import_cron_parser = require("cron-parser");
 var schedule = __toESM(require("node-schedule"));
 var import_evaluation = require("./lib/evaluation");
 var import_configuration_backup = require("./lib/configuration-backup");
@@ -600,7 +601,7 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
           variant: "contained",
           style: { backgroundColor: "#455a64", color: "#fff", marginLeft: "8px" },
           handler: async (context) => {
-            var _a;
+            var _a, _b;
             const candidates = await this.adapter.getStateCandidates();
             const filter = await context.showForm(stateSearchForm(candidates), {
               title: t("Search states", "States suchen"),
@@ -620,8 +621,9 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
               );
               return { refresh: false };
             }
-            const devices = this.adapter.getDeviceOptions();
-            const defaultData = defaultBulkStateForm(matching, devices);
+            const deviceConfigurations = this.adapter.getDeviceConfigurations();
+            const devices = deviceConfigurations.map(({ id, name }) => ({ id, name }));
+            const defaultData = defaultBulkStateForm(matching, deviceConfigurations);
             const selectionToken = this.adapter.createBulkSelectionSession(defaultData);
             let data;
             try {
@@ -629,6 +631,7 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
                 bulkStateForm(
                   matching,
                   devices,
+                  deviceConfigurations,
                   this.adapter.getFunctionTemplates(),
                   this.adapter.getFunctionNames(),
                   selectionToken
@@ -707,20 +710,38 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
               group.entries.push(entry);
               targetGroups.set(key, group);
             }
+            const conflictMessages = [];
             for (const group of targetGroups.values()) {
               const names = group.entries.map((entry) => String(entry.name).trim().toLocaleLowerCase());
+              const displayTarget = ((_a = devices.find((device) => device.id === group.targetId)) == null ? void 0 : _a.name) || group.target;
               const existingNames = new Set(
-                (group.targetId ? ((_a = this.adapter.getDeviceConfiguration(group.targetId)) == null ? void 0 : _a.states) || [] : []).map((state) => state.name.trim().toLocaleLowerCase())
+                (group.targetId ? ((_b = this.adapter.getDeviceConfiguration(group.targetId)) == null ? void 0 : _b.states) || [] : []).map((state) => state.name.trim().toLocaleLowerCase())
               );
-              if (names.some((name) => !name) || names.some((name, index) => names.indexOf(name) !== index) || names.some((name) => existingNames.has(name))) {
-                await context.showMessage(
-                  t(
-                    "Display names must be unique within each target device.",
-                    "Die Anzeigenamen m\xFCssen innerhalb jedes Zielger\xE4ts eindeutig sein."
-                  )
-                );
-                return { refresh: false };
+              const duplicateNames = [
+                ...new Set(
+                  names.filter(Boolean).filter((name, index) => names.indexOf(name) !== index)
+                )
+              ];
+              for (const name of duplicateNames) {
+                conflictMessages.push(`${name} \u2013 mehrfach im Zielger\xE4t ${displayTarget}`);
               }
+              for (const name of names.filter(Boolean).filter((name2) => existingNames.has(name2))) {
+                conflictMessages.push(`${name} \u2013 bereits vorhanden im Zielger\xE4t ${displayTarget}`);
+              }
+              if (names.some((name) => !name)) {
+                conflictMessages.push(`(leer) \u2013 Anzeigename fehlt im Zielger\xE4t ${displayTarget}`);
+              }
+            }
+            if (conflictMessages.length) {
+              await context.showMessage(
+                t(
+                  `Resolve these display-name conflicts before adding:
+${conflictMessages.join("\n")}`,
+                  `Bitte l\xF6se diese Anzeigenamen-Konflikte vor dem Hinzuf\xFCgen:
+${conflictMessages.join("\n")}`
+                )
+              );
+              return { refresh: false };
             }
             for (const group of targetGroups.values()) {
               if (!group.targetId) {
@@ -998,20 +1019,33 @@ function filterStateCandidates(candidates, filter) {
     (candidate) => includes(candidate.role, selectedRole) && includes(candidate.name, filter.name) && includes(candidate.id, filter.id) && (!selectedType || candidate.type === selectedType) && (filter.includeExisting === true || !candidate.alreadyAdded)
   );
 }
+function sourceParentId(sourceId) {
+  const separator = sourceId.lastIndexOf(".");
+  return separator > 0 ? sourceId.slice(0, separator) : "";
+}
+function inferBulkTargetDevice(candidate, devices) {
+  if (devices.length === 1) {
+    return devices[0].id;
+  }
+  const parentId = sourceParentId(candidate.id);
+  if (!parentId) {
+    return "";
+  }
+  const matches = devices.filter((device) => device.states.some((state) => sourceParentId(state.sourceId) === parentId));
+  return matches.length === 1 ? matches[0].id : "";
+}
 function defaultBulkStateForm(candidates, devices) {
   return {
-    states: candidates.map((candidate) => {
-      var _a;
-      return {
-        selected: !candidate.alreadyAdded,
-        name: candidate.name,
-        remark: "",
-        sourceId: candidate.id,
-        role: candidate.role || "\u2014",
-        type: candidate.type || "\u2014",
-        targetDevice: ((_a = devices[0]) == null ? void 0 : _a.id) || ""
-      };
-    }),
+    states: candidates.map((candidate) => ({
+      selected: !candidate.alreadyAdded,
+      name: candidate.name,
+      remark: "",
+      sourceId: candidate.id,
+      role: candidate.role || "\u2014",
+      type: candidate.type || "\u2014",
+      targetDevice: inferBulkTargetDevice(candidate, devices),
+      _validation: ""
+    })),
     function: "",
     _saveAsTemplate: false,
     warning: defaultFormLimit("outside"),
@@ -1023,13 +1057,18 @@ function defaultBulkStateForm(candidates, devices) {
     staleWarning: { enabled: false, minutes: 60 }
   };
 }
-function bulkStateForm(candidates, devices, functionTemplates, functionNames, selectionToken) {
+function bulkStateForm(candidates, devices, deviceConfigurations, functionTemplates, functionNames, selectionToken) {
   const hasSelectedNumber = "Array.isArray(data.states) && data.states.some(row => row && row.selected === true && String(row.type || '') === 'number')";
   const hasSelectedBoolean = "Array.isArray(data.states) && data.states.some(row => row && row.selected === true && String(row.type || '') === 'boolean')";
   const mixedSource = `(${hasSelectedNumber}) && (${hasSelectedBoolean})`;
   const numberOnlySource = `(${hasSelectedNumber}) && !(${hasSelectedBoolean})`;
   const booleanOnlySource = `(${hasSelectedBoolean}) && !(${hasSelectedNumber})`;
   const selectionHiddenDependsOn = [{ attr: "states" }];
+  const validationExpression = bulkStateValidationExpression(deviceConfigurations);
+  const validationHiddenDependency = {
+    attr: "_validation",
+    hidden: `!(${validationExpression})`
+  };
   const settings = stateForm(
     functionTemplates,
     functionNames,
@@ -1106,19 +1145,41 @@ function bulkStateForm(candidates, devices, functionTemplates, functionNames, se
           `Select states, target devices, display names and remarks (${candidates.length} matches)`,
           `States, Zielger\xE4te, Anzeigenamen und Bemerkungen anpassen (${candidates.length} Treffer)`
         ),
+        help: t(
+          "All eligible results are selected initially. Target devices are suggested from matching source paths. Display-name conflicts are listed after clicking Apply.",
+          "Alle geeigneten Treffer sind zun\xE4chst ausgew\xE4hlt. Zielger\xE4te werden m\xF6glichst aus passenden State-Pfaden vorgeschlagen. Anzeigenamen-Konflikte werden nach Klick auf OK aufgelistet."
+        ),
         newLine: true,
         xs: 12,
         style: { fontWeight: 700, marginTop: "8px" }
       },
+      validationHint: {
+        type: "staticText",
+        text: t(
+          "OK remains disabled while a selected state has no target device, an empty display name, or a duplicate display name in the target device. The affected states are listed below.",
+          "OK bleibt deaktiviert, solange einem ausgew\xE4hlten State ein Zielger\xE4t oder ein Anzeigename fehlt oder der Anzeigename im Zielger\xE4t doppelt ist. Die betroffenen States werden darunter aufgef\xFChrt."
+        ),
+        icon: "info",
+        newLine: true,
+        xs: 12,
+        style: { color: "#6d4c41", marginBottom: "8px" }
+      },
       states: {
         type: "table",
         items: [
-          { type: "checkbox", attr: "selected", title: t("Add", "Hinzuf\xFCgen"), width: "8%" },
+          {
+            type: "checkbox",
+            attr: "selected",
+            title: t("Add", "Hinzuf\xFCgen"),
+            width: "8%",
+            hiddenDependsOn: [validationHiddenDependency]
+          },
           {
             type: "text",
             attr: "name",
             title: t("Display name", "Anzeigename"),
-            width: "17%"
+            width: "17%",
+            hiddenDependsOn: [validationHiddenDependency]
           },
           {
             type: "text",
@@ -1140,7 +1201,8 @@ function bulkStateForm(candidates, devices, functionTemplates, functionNames, se
             options: devices.map((device) => ({ value: device.id, label: device.name })),
             freeSolo: true,
             noTranslation: true,
-            width: "20%"
+            width: "20%",
+            hiddenDependsOn: [validationHiddenDependency]
           },
           {
             type: "text",
@@ -1155,6 +1217,32 @@ function bulkStateForm(candidates, devices, functionTemplates, functionNames, se
             title: t("Type", "Typ"),
             disabled: true,
             width: "6%"
+          },
+          {
+            type: "staticText",
+            attr: "_validation",
+            title: t("Hint", "Hinweis"),
+            text: {
+              func: {
+                en: bulkStateValidationTextExpression(validationExpression, [
+                  "Target device is missing.",
+                  "Display name is missing.",
+                  "Display name is already used in this target device.",
+                  "Display name is selected more than once in this target device."
+                ]),
+                de: bulkStateValidationTextExpression(validationExpression, [
+                  "Zielger\xE4t fehlt.",
+                  "Anzeigename fehlt.",
+                  "Anzeigename ist im Zielger\xE4t bereits vorhanden.",
+                  "Anzeigename wird in dieser Auswahl mehrfach verwendet."
+                ])
+              }
+            },
+            hidden: `!(${validationExpression})`,
+            hiddenDependsOn: [{ attr: "selected" }, { attr: "name" }, { attr: "targetDevice" }],
+            newLine: true,
+            xs: 12,
+            style: { color: "#c62828", marginBottom: "4px" }
           }
         ],
         noDelete: true,
@@ -1167,6 +1255,21 @@ function bulkStateForm(candidates, devices, functionTemplates, functionNames, se
     }
   };
 }
+function bulkStateValidationExpression(devices) {
+  const existingNames = Object.fromEntries(
+    devices.map((device) => [device.id, device.states.map((state) => state.name.trim().toLocaleLowerCase())])
+  );
+  const targetAliases = Object.fromEntries(
+    devices.flatMap((device) => [
+      [device.id.toLocaleLowerCase(), device.id],
+      [device.name.trim().toLocaleLowerCase(), device.id]
+    ])
+  );
+  return `(() => { const selected = data && (data.selected === true || data.selected === 'true' || data.selected === 1); if (!selected) return ''; const text = value => typeof value === 'string' ? value.trim() : (value && typeof value === 'object' ? String(value.value || value.label || value.id || value.name || '').trim() : ''); const target = text(data.targetDevice).toLocaleLowerCase(); const name = String(data.name || '').trim().toLocaleLowerCase(); if (!target) return 'missingTarget'; if (!name) return 'emptyName'; const existingNames = ${JSON.stringify(existingNames)}; const targetAliases = ${JSON.stringify(targetAliases)}; const targetKey = targetAliases[target] || 'new:' + target; const rows = typeof globalData !== 'undefined' && Array.isArray(globalData.states) ? globalData.states : []; const currentIndex = typeof arrayIndex === 'number' ? arrayIndex : -1; const currentSourceId = String(data.sourceId || '').trim(); const duplicate = rows.some((row, index) => row && index !== currentIndex && String(row.sourceId || '').trim() !== currentSourceId && (row.selected === true || row.selected === 'true' || row.selected === 1) && String(row.name || '').trim().toLocaleLowerCase() === name && (targetAliases[text(row.targetDevice).toLocaleLowerCase()] || 'new:' + text(row.targetDevice).toLocaleLowerCase()) === targetKey); if ((existingNames[targetKey] || []).includes(name)) return 'existingName'; return duplicate ? 'duplicateName' : ''; })()`;
+}
+function bulkStateValidationTextExpression(validationExpression, messages) {
+  return `\${(() => { const issue = ${validationExpression}; return issue === 'missingTarget' ? ${JSON.stringify(messages[0])} : issue === 'emptyName' ? ${JSON.stringify(messages[1])} : issue === 'existingName' ? ${JSON.stringify(messages[2])} : issue === 'duplicateName' ? ${JSON.stringify(messages[3])} : ''; })()}`;
+}
 function bulkStateDisabledRule(devices) {
   const existingNames = Object.fromEntries(
     devices.map((device) => [device.id, device.states.map((state) => state.name.trim().toLocaleLowerCase())])
@@ -1177,7 +1280,7 @@ function bulkStateDisabledRule(devices) {
       [device.name.trim().toLocaleLowerCase(), device.id]
     ])
   );
-  return `(() => { const rows = Array.isArray(data.states) ? data.states.filter(row => row && row.selected) : []; const existingNames = ${JSON.stringify(existingNames)}; const targetAliases = ${JSON.stringify(targetAliases)}; const text = value => typeof value === 'string' ? value.trim() : (value && typeof value === 'object' ? String(value.value || value.label || '').trim() : ''); const groups = {}; for (const row of rows) { const target = text(row.targetDevice).toLocaleLowerCase(); const name = String(row.name || '').trim().toLocaleLowerCase(); if (!target || !name) return true; const key = targetAliases[target] || 'new:' + target; groups[key] ||= { names: [], existing: existingNames[key] || [] }; groups[key].names.push(name); } return !rows.length || Object.values(groups).some(group => group.names.some((name, index) => group.names.indexOf(name) !== index) || group.names.some(name => group.existing.includes(name))); })()`;
+  return `(() => { const rows = Array.isArray(data.states) ? data.states.filter(row => row && (row.selected === true || row.selected === 'true' || row.selected === 1)) : []; const existingNames = ${JSON.stringify(existingNames)}; const targetAliases = ${JSON.stringify(targetAliases)}; const text = value => typeof value === 'string' ? value.trim() : (value && typeof value === 'object' ? String(value.value || value.label || '').trim() : ''); const groups = {}; for (const row of rows) { const target = text(row.targetDevice).toLocaleLowerCase(); const name = String(row.name || '').trim().toLocaleLowerCase(); if (!target || !name) return true; const key = targetAliases[target] || 'new:' + target; groups[key] ||= { names: [], existing: existingNames[key] || [] }; groups[key].names.push(name); } return !rows.length || Object.values(groups).some(group => group.names.some((name, index) => group.names.indexOf(name) !== index) || group.names.some(name => group.existing.includes(name))); })()`;
 }
 function stateForm(functionTemplates, functionNames, states, stateId, sourceTypeExpression, booleanSourceExpression, numericSourceExpression, mixedSourceExpression, hiddenDependsOn) {
   const functions = [.../* @__PURE__ */ new Set([...functionNames, ...Object.keys(functionTemplates)])].sort();
@@ -1273,6 +1376,19 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
         `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below'`
       ),
       ...visibilityDependencies
+    },
+    [key(`${prefix}.responseDelayMinutes`)]: {
+      type: "number",
+      label: t("Response time in minutes (optional)", "Ansprechzeit in Minuten (optional)"),
+      help: t(
+        "Leave empty to activate the limit immediately; otherwise activate it only after this many minutes.",
+        "Leer lassen, damit der Grenzwert sofort aktiv wird; andernfalls erst nach dieser Dauer aktivieren."
+      ),
+      min: 1,
+      step: 1,
+      xs: 12,
+      hidden: combineHidden(`${data(`${prefix}.enabled`)} !== true || (${mixedSource})`),
+      ...visibilityDependencies
     }
   });
   return {
@@ -1335,6 +1451,8 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
             "alarm.booleanValue",
             "alarm.min",
             "alarm.max",
+            "warning.responseDelayMinutes",
+            "alarm.responseDelayMinutes",
             "staleWarning.enabled",
             "staleWarning.minutes"
           ].map((path) => ({ attr: key(path), onChange: templateValue(path) }))
@@ -1458,6 +1576,19 @@ function bulkTypeLimitFields(type, prefix, visible, hiddenDependsOn) {
       ...visibilityDependencies
     };
   }
+  fields[`${root}.responseDelayMinutes`] = {
+    type: "number",
+    label: t("Response time in minutes (optional)", "Ansprechzeit in Minuten (optional)"),
+    help: t(
+      "Leave empty to activate the limit immediately; otherwise activate it only after this many minutes.",
+      "Leer lassen, damit der Grenzwert sofort aktiv wird; andernfalls erst nach dieser Dauer aktivieren."
+    ),
+    min: 1,
+    step: 1,
+    xs: 12,
+    hidden: `!(${visible}) || data.${root}.enabled !== true`,
+    ...visibilityDependencies
+  };
   return fields;
 }
 function editStatesDisabledRule(states) {
@@ -1492,6 +1623,8 @@ class DeviceMonitoring extends utils.Adapter {
   updateHistoryQueues = /* @__PURE__ */ new Map();
   notificationStatuses = /* @__PURE__ */ new Map();
   notificationLastSent = /* @__PURE__ */ new Map();
+  limitActivationStates = /* @__PURE__ */ new Map();
+  limitActivationTimers = /* @__PURE__ */ new Map();
   bufferedNotificationEvents = [];
   messageWriteQueue = Promise.resolve();
   cardDetails = /* @__PURE__ */ new Map();
@@ -1509,6 +1642,7 @@ class DeviceMonitoring extends utils.Adapter {
   notificationCollectionEndTimer;
   notificationCollectionUntil = 0;
   notificationCollectionStartedAt = 0;
+  notificationCollectionStateWriteQueue = Promise.resolve();
   bulkSelectionSessions = /* @__PURE__ */ new Map();
   constructor(options = {}) {
     super({ ...options, name: "device-monitoring" });
@@ -1538,6 +1672,10 @@ class DeviceMonitoring extends utils.Adapter {
         this.clearTimeout(this.notificationCollectionEndTimer);
         this.notificationCollectionEndTimer = void 0;
       }
+      for (const timer of this.limitActivationTimers.values()) {
+        this.clearTimeout(timer);
+      }
+      this.limitActivationTimers.clear();
       callback();
     });
   }
@@ -1561,12 +1699,25 @@ class DeviceMonitoring extends utils.Adapter {
       "string",
       "json"
     );
+    await this.ensureState(
+      "info.notificationCollection",
+      t("Notification collection state", "Status der Benachrichtigungs-Sammelphase"),
+      "string",
+      "json",
+      void 0,
+      true
+    );
     await this.clearLegacyMessageState();
     await this.rebuildObjects();
+    const restoredNotificationCollection = await this.restoreNotificationCollection();
     if (legacyDevices.length) {
       await this.removeLegacyDeviceConfig();
     }
     await this.refreshSubscriptions();
+    this.scheduleNotificationCollection();
+    if (!restoredNotificationCollection) {
+      await this.restoreMissedNotificationCollection();
+    }
     await this.updateAll();
     await this.setState("info.connection", true, true);
     this.sortRefreshTimer = this.setInterval(() => {
@@ -1577,7 +1728,6 @@ class DeviceMonitoring extends utils.Adapter {
       void this.updateAll();
     }, 6e4);
     this.scheduleSummaryReminder();
-    this.scheduleNotificationCollection();
     this.scheduleConfigurationBackup();
   }
   async clearLegacyMessageState() {
@@ -1980,7 +2130,8 @@ class DeviceMonitoring extends utils.Adapter {
       mode: ["below", "above", "outside", "inside"].includes(input == null ? void 0 : input.mode) ? input.mode : fallback,
       booleanValue: (input == null ? void 0 : input.booleanValue) === false || (input == null ? void 0 : input.booleanValue) === "false" ? false : true,
       min: typeof (input == null ? void 0 : input.min) === "number" ? input.min : void 0,
-      max: typeof (input == null ? void 0 : input.max) === "number" ? input.max : void 0
+      max: typeof (input == null ? void 0 : input.max) === "number" ? input.max : void 0,
+      responseDelayMinutes: typeof (input == null ? void 0 : input.responseDelayMinutes) === "number" && Number.isFinite(input.responseDelayMinutes) && input.responseDelayMinutes > 0 ? input.responseDelayMinutes : void 0
     });
     return {
       id,
@@ -2032,6 +2183,20 @@ class DeviceMonitoring extends utils.Adapter {
   async saveDevices(devices, refreshCards = true) {
     var _a;
     this.devices = devices;
+    const activeLimitKeys = new Set(
+      devices.flatMap((device) => device.states.map((watched) => `${device.id}.${watched.id}`))
+    );
+    for (const [key, timer] of this.limitActivationTimers) {
+      if (!activeLimitKeys.has(key)) {
+        this.clearTimeout(timer);
+        this.limitActivationTimers.delete(key);
+      }
+    }
+    for (const key of this.limitActivationStates.keys()) {
+      if (!activeLimitKeys.has(key)) {
+        this.limitActivationStates.delete(key);
+      }
+    }
     const activeCardDetails = new Set(
       devices.flatMap((device) => device.states.map((watched) => `${device.id}.${watched.id}`))
     );
@@ -2250,6 +2415,14 @@ class DeviceMonitoring extends utils.Adapter {
           true
         );
         await this.ensureState(
+          `${base}.data.limitViolation`,
+          t("Limit response state", "Status der Grenzwert-Ansprechzeit"),
+          "string",
+          "json",
+          void 0,
+          true
+        );
+        await this.ensureState(
           `${base}.data.details`,
           t("Monitoring details", "\xDCberwachungsdetails"),
           "string",
@@ -2286,7 +2459,7 @@ class DeviceMonitoring extends utils.Adapter {
     return this.normalizeDevices((_c = folder == null ? void 0 : folder.native) == null ? void 0 : _c.devices);
   }
   normalizeFunctionTemplates(value) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p;
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       return {};
     }
@@ -2304,18 +2477,20 @@ class DeviceMonitoring extends utils.Adapter {
           mode: mode((_b = template.warning) == null ? void 0 : _b.mode),
           booleanValue: ((_c = template.warning) == null ? void 0 : _c.booleanValue) === false || ((_d = template.warning) == null ? void 0 : _d.booleanValue) === "false" ? false : true,
           min: number((_e = template.warning) == null ? void 0 : _e.min),
-          max: number((_f = template.warning) == null ? void 0 : _f.max)
+          max: number((_f = template.warning) == null ? void 0 : _f.max),
+          responseDelayMinutes: number((_g = template.warning) == null ? void 0 : _g.responseDelayMinutes)
         },
         alarm: {
-          enabled: ((_g = template.alarm) == null ? void 0 : _g.enabled) === true,
-          mode: mode((_h = template.alarm) == null ? void 0 : _h.mode),
-          booleanValue: ((_i = template.alarm) == null ? void 0 : _i.booleanValue) === false || ((_j = template.alarm) == null ? void 0 : _j.booleanValue) === "false" ? false : true,
-          min: number((_k = template.alarm) == null ? void 0 : _k.min),
-          max: number((_l = template.alarm) == null ? void 0 : _l.max)
+          enabled: ((_h = template.alarm) == null ? void 0 : _h.enabled) === true,
+          mode: mode((_i = template.alarm) == null ? void 0 : _i.mode),
+          booleanValue: ((_j = template.alarm) == null ? void 0 : _j.booleanValue) === false || ((_k = template.alarm) == null ? void 0 : _k.booleanValue) === "false" ? false : true,
+          min: number((_l = template.alarm) == null ? void 0 : _l.min),
+          max: number((_m = template.alarm) == null ? void 0 : _m.max),
+          responseDelayMinutes: number((_n = template.alarm) == null ? void 0 : _n.responseDelayMinutes)
         },
         staleWarning: {
-          enabled: ((_m = template.staleWarning) == null ? void 0 : _m.enabled) === true,
-          minutes: number((_n = template.staleWarning) == null ? void 0 : _n.minutes) || 60
+          enabled: ((_o = template.staleWarning) == null ? void 0 : _o.enabled) === true,
+          minutes: number((_p = template.staleWarning) == null ? void 0 : _p.minutes) || 60
         }
       };
     }
@@ -2429,6 +2604,31 @@ class DeviceMonitoring extends utils.Adapter {
       })
     );
   }
+  parseLimitActivationState(value) {
+    if (typeof value !== "string" || !value.trim()) {
+      return void 0;
+    }
+    try {
+      const parsed = JSON.parse(value);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return void 0;
+      }
+      const parseSince = (input) => input === null ? null : typeof input === "number" && Number.isFinite(input) && input > 0 ? input : void 0;
+      const warningSince = parseSince(parsed.warningSince);
+      const alarmSince = parseSince(parsed.alarmSince);
+      if (warningSince === void 0 || alarmSince === void 0) {
+        return void 0;
+      }
+      return {
+        warningSince,
+        alarmSince,
+        ...typeof parsed.warningSignature === "string" ? { warningSignature: parsed.warningSignature } : {},
+        ...typeof parsed.alarmSignature === "string" ? { alarmSignature: parsed.alarmSignature } : {}
+      };
+    } catch {
+      return void 0;
+    }
+  }
   async getSourceUnit(sourceId) {
     var _a;
     if (this.sourceUnits.has(sourceId)) {
@@ -2463,7 +2663,8 @@ class DeviceMonitoring extends utils.Adapter {
       updateInterval,
       average,
       history,
-      valueHistory
+      valueHistory,
+      limitViolation
     ] = await Promise.all([
       this.getStateAsync(`${base}.value`),
       this.getStateAsync(`${base}.data.value`),
@@ -2481,7 +2682,8 @@ class DeviceMonitoring extends utils.Adapter {
       this.getStateAsync(`${base}.data.updateInterval`),
       this.getStateAsync(`${base}.data.averageUpdateInterval`),
       this.getStateAsync(`${base}.data.updateHistory`),
-      this.getStateAsync(`${base}.data.valueHistory`)
+      this.getStateAsync(`${base}.data.valueHistory`),
+      this.getStateAsync(`${base}.data.limitViolation`)
     ]);
     if (status || bundledStatus) {
       return {
@@ -2496,7 +2698,8 @@ class DeviceMonitoring extends utils.Adapter {
         updateInterval: typeof (updateInterval == null ? void 0 : updateInterval.val) === "number" ? updateInterval.val : void 0,
         averageUpdateInterval: typeof (average == null ? void 0 : average.val) === "number" ? average.val : void 0,
         updateHistory: (0, import_update_history.parseUpdateHistory)(history == null ? void 0 : history.val),
-        valueHistory: (0, import_update_history.parseValueHistory)(valueHistory == null ? void 0 : valueHistory.val)
+        valueHistory: (0, import_update_history.parseValueHistory)(valueHistory == null ? void 0 : valueHistory.val),
+        limitViolation: this.parseLimitActivationState(limitViolation == null ? void 0 : limitViolation.val)
       };
     }
     const legacy = await Promise.all(LEGACY_RUNTIME_STATE_IDS.map((id) => this.getStateAsync(`${base}.${id}`)));
@@ -2590,7 +2793,12 @@ class DeviceMonitoring extends utils.Adapter {
         for (const watched of device.states) {
           const sourceState = await this.getForeignStateAsync(watched.sourceId);
           const updateTimeout = (0, import_evaluation.isUpdateTimedOut)(sourceState, watched.staleWarning);
-          const status = this.getWatchedStatus(watched, sourceState, updateTimeout);
+          const status = this.getWatchedStatus(
+            watched,
+            sourceState,
+            updateTimeout,
+            `${device.id}.${watched.id}`
+          );
           if (status === "ok") {
             continue;
           }
@@ -2640,16 +2848,24 @@ class DeviceMonitoring extends utils.Adapter {
       this.notificationCollectionJob = schedule.scheduleJob(
         "device-monitoring-notification-collection",
         cron,
-        () => this.startNotificationCollection(duration)
+        () => {
+          void this.startNotificationCollection(duration).catch((error) => {
+            this.log.warn(`Could not start notification collection: ${String(error)}`);
+          });
+        }
       );
     } catch (error) {
       this.log.warn(`Could not schedule notification collection for cron expression "${cron}": ${String(error)}`);
     }
   }
-  startNotificationCollection(durationMinutes) {
+  async startNotificationCollection(durationMinutes, startedAt = Date.now()) {
     const now = Date.now();
     if (this.notificationCollectionUntil > now) {
       this.log.warn("Notification collection is already active; keeping the existing collection period");
+      return;
+    }
+    const endedAt = startedAt + durationMinutes * 6e4;
+    if (endedAt <= now) {
       return;
     }
     if (this.notificationCollectionEndTimer) {
@@ -2657,12 +2873,113 @@ class DeviceMonitoring extends utils.Adapter {
       this.notificationCollectionEndTimer = void 0;
     }
     this.bufferedNotificationEvents = [];
-    this.notificationCollectionStartedAt = now;
-    this.notificationCollectionUntil = now + durationMinutes * 6e4;
-    this.notificationCollectionEndTimer = this.setTimeout(() => {
-      this.notificationCollectionEndTimer = void 0;
-      void this.finishNotificationCollection();
-    }, durationMinutes * 6e4);
+    this.notificationCollectionStartedAt = startedAt;
+    this.notificationCollectionUntil = endedAt;
+    this.scheduleNotificationCollectionEndTimer(endedAt - now);
+    await this.persistNotificationCollection();
+  }
+  scheduleNotificationCollectionEndTimer(delay) {
+    if (this.notificationCollectionEndTimer) {
+      this.clearTimeout(this.notificationCollectionEndTimer);
+    }
+    this.notificationCollectionEndTimer = this.setTimeout(
+      () => {
+        this.notificationCollectionEndTimer = void 0;
+        void this.finishNotificationCollection().catch((error) => {
+          this.log.warn(`Could not finish notification collection: ${String(error)}`);
+        });
+      },
+      Math.max(1, delay)
+    );
+  }
+  async restoreMissedNotificationCollection() {
+    if (this.config.notificationCollectionEnabled !== true) {
+      return;
+    }
+    const cron = typeof this.config.notificationCollectionCron === "string" ? this.config.notificationCollectionCron.trim() : "";
+    const duration = Number(this.config.notificationCollectionDurationMinutes);
+    if (!cron || !Number.isFinite(duration) || duration <= 0) {
+      return;
+    }
+    const now = Date.now();
+    try {
+      const previousInvocation = (0, import_cron_parser.parseExpression)(cron, { currentDate: new Date(now + 1) }).prev().toDate().getTime();
+      if (previousInvocation <= now && now < previousInvocation + duration * 6e4) {
+        await this.startNotificationCollection(duration, previousInvocation);
+      }
+    } catch (error) {
+      this.log.warn(
+        `Could not restore a missed notification collection for cron expression "${cron}": ${String(error)}`
+      );
+    }
+  }
+  async restoreNotificationCollection() {
+    var _a;
+    const state = await this.getStateAsync("info.notificationCollection");
+    if (this.config.notificationCollectionEnabled !== true) {
+      this.notificationCollectionStartedAt = 0;
+      this.notificationCollectionUntil = 0;
+      this.bufferedNotificationEvents = [];
+      if ((state == null ? void 0 : state.val) && state.val !== "{}") {
+        await this.persistNotificationCollection();
+      }
+      return false;
+    }
+    const persisted = this.parsePersistedNotificationCollection((_a = state == null ? void 0 : state.val) != null ? _a : null);
+    if (!persisted) {
+      if ((state == null ? void 0 : state.val) && state.val !== "{}") {
+        await this.persistNotificationCollection();
+      }
+      return false;
+    }
+    this.notificationCollectionStartedAt = persisted.startedAt;
+    this.notificationCollectionUntil = persisted.endedAt;
+    this.bufferedNotificationEvents = persisted.events;
+    const remaining = persisted.endedAt - Date.now();
+    if (remaining <= 0) {
+      await this.finishNotificationCollection();
+      return true;
+    }
+    this.scheduleNotificationCollectionEndTimer(remaining);
+    return true;
+  }
+  parsePersistedNotificationCollection(value) {
+    if (typeof value !== "string" || !value.trim() || value === "{}") {
+      return void 0;
+    }
+    try {
+      const parsed = JSON.parse(value);
+      const { startedAt, endedAt, events: rawEvents } = parsed;
+      if (typeof startedAt !== "number" || !Number.isFinite(startedAt) || typeof endedAt !== "number" || !Number.isFinite(endedAt) || endedAt <= startedAt || !Array.isArray(rawEvents)) {
+        return void 0;
+      }
+      const events = rawEvents.filter((event) => {
+        if (!event || typeof event !== "object") {
+          return false;
+        }
+        const candidate = event;
+        return typeof candidate.category === "string" && ["info", "warnung", "alarm"].includes(candidate.category) && typeof candidate.deviceName === "string" && typeof candidate.stateName === "string" && typeof candidate.title === "string" && typeof candidate.message === "string" && typeof candidate.triggeredAt === "number";
+      });
+      return { startedAt, endedAt, events };
+    } catch {
+      return void 0;
+    }
+  }
+  async persistNotificationCollection() {
+    const value = this.notificationCollectionUntil > Date.now() ? JSON.stringify({
+      startedAt: this.notificationCollectionStartedAt,
+      endedAt: this.notificationCollectionUntil,
+      events: this.bufferedNotificationEvents
+    }) : "{}";
+    const write = this.notificationCollectionStateWriteQueue.catch(() => void 0).then(async () => {
+      await this.setStateChangedAsync("info.notificationCollection", { val: value, ack: true });
+    });
+    this.notificationCollectionStateWriteQueue = write;
+    try {
+      await write;
+    } catch (error) {
+      this.log.warn(`Could not persist notification collection state: ${String(error)}`);
+    }
   }
   async finishNotificationCollection() {
     const startedAt = this.notificationCollectionStartedAt;
@@ -2671,6 +2988,7 @@ class DeviceMonitoring extends utils.Adapter {
     this.bufferedNotificationEvents = [];
     this.notificationCollectionStartedAt = 0;
     this.notificationCollectionUntil = 0;
+    await this.persistNotificationCollection();
     const summary = (0, import_reminders.createNotificationCollectionSummaryMessage)(events, this.displayLanguage, startedAt, endedAt);
     if (!summary) {
       return;
@@ -2688,6 +3006,7 @@ class DeviceMonitoring extends utils.Adapter {
   async publishMessageEvent(event) {
     if (this.notificationCollectionUntil > Date.now()) {
       this.bufferedNotificationEvents.push(event);
+      await this.persistNotificationCollection();
       return;
     }
     await this.deliverMessageEvent(event, "notification");
@@ -2726,7 +3045,12 @@ ${event.message}` : event.message;
           device.states.map(async (watched) => {
             const sourceState = await this.getForeignStateAsync(watched.sourceId);
             const updateTimeout = (0, import_evaluation.isUpdateTimedOut)(sourceState, watched.staleWarning);
-            const status = this.getWatchedStatus(watched, sourceState, updateTimeout);
+            const status = this.getWatchedStatus(
+              watched,
+              sourceState,
+              updateTimeout,
+              `${device.id}.${watched.id}`
+            );
             return {
               id: watched.id,
               name: watched.name,
@@ -2761,16 +3085,103 @@ ${event.message}` : event.message;
     let status = "ok";
     for (const watched of device.states) {
       const state = await this.getForeignStateAsync(watched.sourceId);
-      const current = this.getWatchedStatus(watched, state);
+      const current = this.getWatchedStatus(watched, state, void 0, `${device.id}.${watched.id}`);
       if (rank[current] < rank[status]) {
         status = current;
       }
     }
     return status;
   }
-  getWatchedStatus(watched, state, updateTimeout = (0, import_evaluation.isUpdateTimedOut)(state, watched.staleWarning)) {
+  limitSignature(limit) {
+    return JSON.stringify({
+      enabled: limit.enabled,
+      mode: limit.mode,
+      booleanValue: limit.booleanValue,
+      min: limit.min,
+      max: limit.max,
+      responseDelayMinutes: limit.responseDelayMinutes
+    });
+  }
+  scheduleLimitActivation(device, watched, key, activation, now = Date.now()) {
+    const previousTimer = this.limitActivationTimers.get(key);
+    if (previousTimer) {
+      this.clearTimeout(previousTimer);
+      this.limitActivationTimers.delete(key);
+    }
+    const dueTimes = [
+      { since: activation.warningSince, delay: watched.warning.responseDelayMinutes },
+      { since: activation.alarmSince, delay: watched.alarm.responseDelayMinutes }
+    ].filter(
+      (entry) => typeof entry.since === "number" && Number.isFinite(entry.since) && typeof entry.delay === "number" && Number.isFinite(entry.delay) && entry.delay > 0
+    ).map((entry) => entry.since + entry.delay * 6e4).filter((dueAt2) => dueAt2 > now).sort((a, b) => a - b);
+    const dueAt = dueTimes[0];
+    if (dueAt === void 0) {
+      return;
+    }
+    const timer = this.setTimeout(
+      () => {
+        this.limitActivationTimers.delete(key);
+        void this.refreshLimitActivation(device.id, watched.id).catch(
+          (error) => this.log.warn(`Could not activate delayed limit for ${key}: ${String(error)}`)
+        );
+      },
+      Math.min(Math.max(1, dueAt - now), 2147483647)
+    );
+    if (timer) {
+      this.limitActivationTimers.set(key, timer);
+    }
+  }
+  async refreshLimitActivation(deviceId, stateId) {
+    const device = this.devices.find((entry) => entry.id === deviceId);
+    const watched = device == null ? void 0 : device.states.find((entry) => entry.id === stateId);
+    if (!device || !watched) {
+      return;
+    }
+    const sourceState = await this.getForeignStateAsync(watched.sourceId);
+    await this.updateValue(device, watched, sourceState);
+    await this.updateDeviceSummary(device);
+    await this.updateDeviceInfo();
+  }
+  updateLimitActivationState(key, watched, value, sourceState, previousData, sameSource, now = Date.now()) {
+    const previous = sameSource ? this.limitActivationStates.get(key) || previousData.limitViolation : void 0;
+    const warningSignature = this.limitSignature(watched.warning);
+    const alarmSignature = this.limitSignature(watched.alarm);
+    const sourceTimestamp = typeof (sourceState == null ? void 0 : sourceState.ts) === "number" && Number.isFinite(sourceState.ts) && sourceState.ts > 0 && sourceState.ts <= now ? sourceState.ts : now;
+    const since = (violated, previousSince, previousSignature, currentSignature) => {
+      if (!violated) {
+        return null;
+      }
+      if (!sameSource || previousSignature !== void 0 && previousSignature !== currentSignature) {
+        return now;
+      }
+      return previousSince != null ? previousSince : sourceTimestamp;
+    };
+    return {
+      warningSince: since(
+        (0, import_evaluation.evaluateLimit)(value, watched.warning),
+        previous == null ? void 0 : previous.warningSince,
+        previous == null ? void 0 : previous.warningSignature,
+        warningSignature
+      ),
+      alarmSince: since(
+        (0, import_evaluation.evaluateLimit)(value, watched.alarm),
+        previous == null ? void 0 : previous.alarmSince,
+        previous == null ? void 0 : previous.alarmSignature,
+        alarmSignature
+      ),
+      warningSignature,
+      alarmSignature
+    };
+  }
+  getWatchedStatus(watched, state, updateTimeout = (0, import_evaluation.isUpdateTimedOut)(state, watched.staleWarning), key, activation) {
     var _a;
-    return this.invalidSources.has(watched.sourceId) ? "invalid" : (0, import_evaluation.getWatchStatus)((_a = state == null ? void 0 : state.val) != null ? _a : null, watched.warning, watched.alarm, updateTimeout);
+    return this.invalidSources.has(watched.sourceId) ? "invalid" : (0, import_evaluation.getWatchStatus)(
+      (_a = state == null ? void 0 : state.val) != null ? _a : null,
+      watched.warning,
+      watched.alarm,
+      updateTimeout,
+      activation != null ? activation : key ? this.limitActivationStates.get(key) : void 0
+    );
   }
   async updateDeviceSummary(device) {
     const status = await this.getDeviceStatus(device);
@@ -2805,11 +3216,21 @@ ${event.message}` : event.message;
       tooltip.push(
         `${this.localize("Warning condition:", "Warnbedingung:")} ${this.formatLimitDescription(watched.warning, data.value, unit)}`
       );
+      if (watched.warning.responseDelayMinutes && watched.warning.responseDelayMinutes > 0) {
+        tooltip.push(
+          `${this.localize("Warning response time:", "Warnungs-Ansprechzeit:")} ${watched.warning.responseDelayMinutes} min`
+        );
+      }
     }
     if (watched.alarm.enabled) {
       tooltip.push(
         `${this.localize("Alarm condition:", "Alarmbedingung:")} ${this.formatLimitDescription(watched.alarm, data.value, unit)}`
       );
+      if (watched.alarm.responseDelayMinutes && watched.alarm.responseDelayMinutes > 0) {
+        tooltip.push(
+          `${this.localize("Alarm response time:", "Alarm-Ansprechzeit:")} ${watched.alarm.responseDelayMinutes} min`
+        );
+      }
     }
     if (watched.staleWarning.enabled) {
       tooltip.push(`Timeout: ${watched.staleWarning.minutes} min`);
@@ -2842,6 +3263,7 @@ ${event.message}` : event.message;
   }
   async updateValueNow(device, watched, sourceState) {
     var _a, _b, _c, _d;
+    const key = `${device.id}.${watched.id}`;
     const base = `devices.${device.id}.${watched.id}`;
     const value = (_a = sourceState == null ? void 0 : sourceState.val) != null ? _a : null;
     await this.setStateChangedAsync(`${base}.value`, { val: value, ack: true });
@@ -2875,8 +3297,18 @@ ${event.message}` : event.message;
       valueHistory,
       watched.staleWarning.enabled ? watched.staleWarning.minutes * 6e4 : void 0
     );
-    const status = this.getWatchedStatus(watched, sourceState, updateTimedOut);
-    const underlyingStatus = this.getWatchedStatus(watched, sourceState, false);
+    const limitViolation = this.updateLimitActivationState(
+      key,
+      watched,
+      value,
+      sourceState,
+      previousData,
+      sameSource
+    );
+    this.limitActivationStates.set(key, limitViolation);
+    this.scheduleLimitActivation(device, watched, key, limitViolation);
+    const status = this.getWatchedStatus(watched, sourceState, updateTimedOut, key, limitViolation);
+    const underlyingStatus = this.getWatchedStatus(watched, sourceState, false, key, limitViolation);
     const unit = await this.getSourceUnit(watched.sourceId);
     const display = status === "invalid" ? `${watched.name}: \u26A0 ${watched.sourceId}` : `${watched.name}: ${value === null ? "\u2014" : `${String(value)}${unit ? ` ${unit}` : ""}`}`;
     const data = {
@@ -2893,7 +3325,8 @@ ${event.message}` : event.message;
       averageUpdateInterval,
       updateHistory,
       averageValue,
-      valueHistory
+      valueHistory,
+      limitViolation
     };
     await Promise.all([
       this.setStateChangedAsync(`${base}.status`, { val: data.status, ack: true }),
@@ -2917,13 +3350,48 @@ ${event.message}` : event.message;
       this.setStateChangedAsync(`${base}.data.valueHistory`, {
         val: JSON.stringify(data.valueHistory),
         ack: true
+      }),
+      this.setStateChangedAsync(`${base}.data.limitViolation`, {
+        val: JSON.stringify(limitViolation),
+        ack: true
       })
     ]);
     this.resetUpdateHistories.delete(base);
-    await this.notifyStatusTransition(device, watched, status, underlyingStatus, data);
+    await this.notifyStatusTransition(
+      device,
+      watched,
+      status,
+      underlyingStatus,
+      data,
+      previousData,
+      sourceState,
+      sameSource
+    );
     await this.updateDetailsDisplay(device, watched, status, display, unit, data);
   }
-  async notifyStatusTransition(device, watched, status, underlyingStatus, data) {
+  getRestartNotificationSnapshot(watched, current, previousData, sourceState, sameSource) {
+    var _a, _b;
+    const previousStatus = previousData.status;
+    if (!sameSource || !previousStatus || previousStatus === current.status) {
+      return void 0;
+    }
+    const sourceChangedWhileStopped = typeof (sourceState == null ? void 0 : sourceState.ts) === "number" && Number.isFinite(sourceState.ts) && typeof previousData.lastUpdate === "number" && Number.isFinite(previousData.lastUpdate) && sourceState.ts > previousData.lastUpdate;
+    const delayedLimitCompletedWhileStopped = previousStatus === "ok" && (current.status === "warning" || current.status === "alarm") && [
+      { since: (_a = previousData.limitViolation) == null ? void 0 : _a.warningSince, delay: watched.warning.responseDelayMinutes },
+      { since: (_b = previousData.limitViolation) == null ? void 0 : _b.alarmSince, delay: watched.alarm.responseDelayMinutes }
+    ].some(
+      (entry) => typeof entry.since === "number" && Number.isFinite(entry.since) && typeof entry.delay === "number" && Number.isFinite(entry.delay) && entry.delay > 0 && entry.since + entry.delay * 6e4 <= Date.now()
+    );
+    if (!sourceChangedWhileStopped && !delayedLimitCompletedWhileStopped) {
+      return void 0;
+    }
+    return {
+      status: previousStatus,
+      underlyingStatus: previousStatus,
+      timedOut: previousStatus === "timeout"
+    };
+  }
+  async notifyStatusTransition(device, watched, status, underlyingStatus, data, previousData, sourceState, sameSource = false) {
     const key = `${device.id}.${watched.id}`;
     const current = {
       status,
@@ -2932,10 +3400,11 @@ ${event.message}` : event.message;
     };
     const previous = this.notificationStatuses.get(key);
     this.notificationStatuses.set(key, current);
-    if (!previous) {
+    const transitionSource = previous || this.getRestartNotificationSnapshot(watched, current, previousData || {}, sourceState, sameSource);
+    if (!transitionSource) {
       return;
     }
-    const transitions = (0, import_notifications.notificationTransitionsForSnapshots)(previous, current);
+    const transitions = (0, import_notifications.notificationTransitionsForSnapshots)(transitionSource, current);
     for (const transition of transitions) {
       await this.publishStatusTransition(
         device,

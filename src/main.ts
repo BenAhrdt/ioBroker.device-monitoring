@@ -1,13 +1,16 @@
 import * as utils from '@iobroker/adapter-core';
 import { DeviceManagement } from '@iobroker/dm-utils';
+import { parseExpression } from 'cron-parser';
 import * as schedule from 'node-schedule';
 import type { Job } from 'node-schedule';
 import {
 	createFunctionTemplate,
+	evaluateLimit,
 	getWatchStatus,
 	isUpdateTimedOut,
 	type DeviceConfiguration,
 	type FunctionTemplate,
+	type LimitActivationState,
 	type LimitConfiguration,
 	type LimitMode,
 	type WatchedStateConfiguration,
@@ -460,6 +463,12 @@ interface NotificationMessage {
 	message: string;
 }
 
+interface PersistedNotificationCollection {
+	startedAt: number;
+	endedAt: number;
+	events: NotificationMessage[];
+}
+
 interface SummaryMessage {
 	type: 'summary';
 	summaryKind: 'current' | 'collected';
@@ -705,8 +714,9 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 							return { refresh: false };
 						}
 
-						const devices = this.adapter.getDeviceOptions();
-						const defaultData = defaultBulkStateForm(matching, devices);
+						const deviceConfigurations = this.adapter.getDeviceConfigurations();
+						const devices = deviceConfigurations.map(({ id, name }) => ({ id, name }));
+						const defaultData = defaultBulkStateForm(matching, deviceConfigurations);
 						const selectionToken = this.adapter.createBulkSelectionSession(defaultData);
 						let data: any;
 						try {
@@ -714,6 +724,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 								bulkStateForm(
 									matching,
 									devices,
+									deviceConfigurations,
 									this.adapter.getFunctionTemplates(),
 									this.adapter.getFunctionNames(),
 									selectionToken,
@@ -812,27 +823,40 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 							targetGroups.set(key, group);
 						}
 
+						const conflictMessages: string[] = [];
 						for (const group of targetGroups.values()) {
 							const names = group.entries.map(entry => String(entry.name).trim().toLocaleLowerCase());
+							const displayTarget =
+								devices.find(device => device.id === group.targetId)?.name || group.target;
 							const existingNames = new Set(
 								(group.targetId
 									? this.adapter.getDeviceConfiguration(group.targetId)?.states || []
 									: []
 								).map(state => state.name.trim().toLocaleLowerCase()),
 							);
-							if (
-								names.some(name => !name) ||
-								names.some((name, index) => names.indexOf(name) !== index) ||
-								names.some(name => existingNames.has(name))
-							) {
-								await context.showMessage(
-									t(
-										'Display names must be unique within each target device.',
-										'Die Anzeigenamen müssen innerhalb jedes Zielgeräts eindeutig sein.',
-									),
-								);
-								return { refresh: false };
+							const duplicateNames = [
+								...new Set(
+									names.filter(Boolean).filter((name, index) => names.indexOf(name) !== index),
+								),
+							];
+							for (const name of duplicateNames) {
+								conflictMessages.push(`${name} – mehrfach im Zielgerät ${displayTarget}`);
 							}
+							for (const name of names.filter(Boolean).filter(name => existingNames.has(name))) {
+								conflictMessages.push(`${name} – bereits vorhanden im Zielgerät ${displayTarget}`);
+							}
+							if (names.some(name => !name)) {
+								conflictMessages.push(`(leer) – Anzeigename fehlt im Zielgerät ${displayTarget}`);
+							}
+						}
+						if (conflictMessages.length) {
+							await context.showMessage(
+								t(
+									`Resolve these display-name conflicts before adding:\n${conflictMessages.join('\n')}`,
+									`Bitte löse diese Anzeigenamen-Konflikte vor dem Hinzufügen:\n${conflictMessages.join('\n')}`,
+								),
+							);
+							return { refresh: false };
 						}
 
 						for (const group of targetGroups.values()) {
@@ -1127,7 +1151,22 @@ function filterStateCandidates(candidates: StateCandidate[], filter: any): State
 			(filter.includeExisting === true || !candidate.alreadyAdded),
 	);
 }
-function defaultBulkStateForm(candidates: StateCandidate[], devices: { id: string; name: string }[]): any {
+function sourceParentId(sourceId: string): string {
+	const separator = sourceId.lastIndexOf('.');
+	return separator > 0 ? sourceId.slice(0, separator) : '';
+}
+function inferBulkTargetDevice(candidate: StateCandidate, devices: DeviceConfiguration[]): string {
+	if (devices.length === 1) {
+		return devices[0].id;
+	}
+	const parentId = sourceParentId(candidate.id);
+	if (!parentId) {
+		return '';
+	}
+	const matches = devices.filter(device => device.states.some(state => sourceParentId(state.sourceId) === parentId));
+	return matches.length === 1 ? matches[0].id : '';
+}
+function defaultBulkStateForm(candidates: StateCandidate[], devices: DeviceConfiguration[]): any {
 	return {
 		states: candidates.map(candidate => ({
 			selected: !candidate.alreadyAdded,
@@ -1136,7 +1175,8 @@ function defaultBulkStateForm(candidates: StateCandidate[], devices: { id: strin
 			sourceId: candidate.id,
 			role: candidate.role || '—',
 			type: candidate.type || '—',
-			targetDevice: devices[0]?.id || '',
+			targetDevice: inferBulkTargetDevice(candidate, devices),
+			_validation: '',
 		})),
 		function: '',
 		_saveAsTemplate: false,
@@ -1152,6 +1192,7 @@ function defaultBulkStateForm(candidates: StateCandidate[], devices: { id: strin
 function bulkStateForm(
 	candidates: StateCandidate[],
 	devices: { id: string; name: string }[],
+	deviceConfigurations: DeviceConfiguration[],
 	functionTemplates: Record<string, FunctionTemplate>,
 	functionNames: string[],
 	selectionToken: string,
@@ -1164,6 +1205,11 @@ function bulkStateForm(
 	const numberOnlySource = `(${hasSelectedNumber}) && !(${hasSelectedBoolean})`;
 	const booleanOnlySource = `(${hasSelectedBoolean}) && !(${hasSelectedNumber})`;
 	const selectionHiddenDependsOn = [{ attr: 'states' }];
+	const validationExpression = bulkStateValidationExpression(deviceConfigurations);
+	const validationHiddenDependency = {
+		attr: '_validation',
+		hidden: `!(${validationExpression})`,
+	};
 	const settings = stateForm(
 		functionTemplates,
 		functionNames,
@@ -1241,19 +1287,41 @@ function bulkStateForm(
 					`Select states, target devices, display names and remarks (${candidates.length} matches)`,
 					`States, Zielgeräte, Anzeigenamen und Bemerkungen anpassen (${candidates.length} Treffer)`,
 				),
+				help: t(
+					'All eligible results are selected initially. Target devices are suggested from matching source paths. Display-name conflicts are listed after clicking Apply.',
+					'Alle geeigneten Treffer sind zunächst ausgewählt. Zielgeräte werden möglichst aus passenden State-Pfaden vorgeschlagen. Anzeigenamen-Konflikte werden nach Klick auf OK aufgelistet.',
+				),
 				newLine: true,
 				xs: 12,
 				style: { fontWeight: 700, marginTop: '8px' },
 			},
+			validationHint: {
+				type: 'staticText',
+				text: t(
+					'OK remains disabled while a selected state has no target device, an empty display name, or a duplicate display name in the target device. The affected states are listed below.',
+					'OK bleibt deaktiviert, solange einem ausgewählten State ein Zielgerät oder ein Anzeigename fehlt oder der Anzeigename im Zielgerät doppelt ist. Die betroffenen States werden darunter aufgeführt.',
+				),
+				icon: 'info',
+				newLine: true,
+				xs: 12,
+				style: { color: '#6d4c41', marginBottom: '8px' },
+			},
 			states: {
 				type: 'table',
 				items: [
-					{ type: 'checkbox', attr: 'selected', title: t('Add', 'Hinzufügen'), width: '8%' },
+					{
+						type: 'checkbox',
+						attr: 'selected',
+						title: t('Add', 'Hinzufügen'),
+						width: '8%',
+						hiddenDependsOn: [validationHiddenDependency],
+					},
 					{
 						type: 'text',
 						attr: 'name',
 						title: t('Display name', 'Anzeigename'),
 						width: '17%',
+						hiddenDependsOn: [validationHiddenDependency],
 					},
 					{
 						type: 'text',
@@ -1276,6 +1344,7 @@ function bulkStateForm(
 						freeSolo: true,
 						noTranslation: true,
 						width: '20%',
+						hiddenDependsOn: [validationHiddenDependency],
 					},
 					{
 						type: 'text',
@@ -1291,6 +1360,32 @@ function bulkStateForm(
 						disabled: true,
 						width: '6%',
 					},
+					{
+						type: 'staticText',
+						attr: '_validation',
+						title: t('Hint', 'Hinweis'),
+						text: {
+							func: {
+								en: bulkStateValidationTextExpression(validationExpression, [
+									'Target device is missing.',
+									'Display name is missing.',
+									'Display name is already used in this target device.',
+									'Display name is selected more than once in this target device.',
+								]),
+								de: bulkStateValidationTextExpression(validationExpression, [
+									'Zielgerät fehlt.',
+									'Anzeigename fehlt.',
+									'Anzeigename ist im Zielgerät bereits vorhanden.',
+									'Anzeigename wird in dieser Auswahl mehrfach verwendet.',
+								]),
+							},
+						},
+						hidden: `!(${validationExpression})`,
+						hiddenDependsOn: [{ attr: 'selected' }, { attr: 'name' }, { attr: 'targetDevice' }],
+						newLine: true,
+						xs: 12,
+						style: { color: '#c62828', marginBottom: '4px' },
+					},
 				],
 				noDelete: true,
 				compact: true,
@@ -1302,6 +1397,24 @@ function bulkStateForm(
 		},
 	};
 }
+function bulkStateValidationExpression(devices: DeviceConfiguration[]): string {
+	const existingNames = Object.fromEntries(
+		devices.map(device => [device.id, device.states.map(state => state.name.trim().toLocaleLowerCase())]),
+	);
+	const targetAliases = Object.fromEntries(
+		devices.flatMap(device => [
+			[device.id.toLocaleLowerCase(), device.id],
+			[device.name.trim().toLocaleLowerCase(), device.id],
+		]),
+	);
+	return `(() => { const selected = data && (data.selected === true || data.selected === 'true' || data.selected === 1); if (!selected) return ''; const text = value => typeof value === 'string' ? value.trim() : (value && typeof value === 'object' ? String(value.value || value.label || value.id || value.name || '').trim() : ''); const target = text(data.targetDevice).toLocaleLowerCase(); const name = String(data.name || '').trim().toLocaleLowerCase(); if (!target) return 'missingTarget'; if (!name) return 'emptyName'; const existingNames = ${JSON.stringify(existingNames)}; const targetAliases = ${JSON.stringify(targetAliases)}; const targetKey = targetAliases[target] || 'new:' + target; const rows = typeof globalData !== 'undefined' && Array.isArray(globalData.states) ? globalData.states : []; const currentIndex = typeof arrayIndex === 'number' ? arrayIndex : -1; const currentSourceId = String(data.sourceId || '').trim(); const duplicate = rows.some((row, index) => row && index !== currentIndex && String(row.sourceId || '').trim() !== currentSourceId && (row.selected === true || row.selected === 'true' || row.selected === 1) && String(row.name || '').trim().toLocaleLowerCase() === name && (targetAliases[text(row.targetDevice).toLocaleLowerCase()] || 'new:' + text(row.targetDevice).toLocaleLowerCase()) === targetKey); if ((existingNames[targetKey] || []).includes(name)) return 'existingName'; return duplicate ? 'duplicateName' : ''; })()`;
+}
+function bulkStateValidationTextExpression(
+	validationExpression: string,
+	messages: [string, string, string, string],
+): string {
+	return `\${(() => { const issue = ${validationExpression}; return issue === 'missingTarget' ? ${JSON.stringify(messages[0])} : issue === 'emptyName' ? ${JSON.stringify(messages[1])} : issue === 'existingName' ? ${JSON.stringify(messages[2])} : issue === 'duplicateName' ? ${JSON.stringify(messages[3])} : ''; })()}`;
+}
 function bulkStateDisabledRule(devices: DeviceConfiguration[]): string {
 	const existingNames = Object.fromEntries(
 		devices.map(device => [device.id, device.states.map(state => state.name.trim().toLocaleLowerCase())]),
@@ -1312,7 +1425,7 @@ function bulkStateDisabledRule(devices: DeviceConfiguration[]): string {
 			[device.name.trim().toLocaleLowerCase(), device.id],
 		]),
 	);
-	return `(() => { const rows = Array.isArray(data.states) ? data.states.filter(row => row && row.selected) : []; const existingNames = ${JSON.stringify(existingNames)}; const targetAliases = ${JSON.stringify(targetAliases)}; const text = value => typeof value === 'string' ? value.trim() : (value && typeof value === 'object' ? String(value.value || value.label || '').trim() : ''); const groups = {}; for (const row of rows) { const target = text(row.targetDevice).toLocaleLowerCase(); const name = String(row.name || '').trim().toLocaleLowerCase(); if (!target || !name) return true; const key = targetAliases[target] || 'new:' + target; groups[key] ||= { names: [], existing: existingNames[key] || [] }; groups[key].names.push(name); } return !rows.length || Object.values(groups).some(group => group.names.some((name, index) => group.names.indexOf(name) !== index) || group.names.some(name => group.existing.includes(name))); })()`;
+	return `(() => { const rows = Array.isArray(data.states) ? data.states.filter(row => row && (row.selected === true || row.selected === 'true' || row.selected === 1)) : []; const existingNames = ${JSON.stringify(existingNames)}; const targetAliases = ${JSON.stringify(targetAliases)}; const text = value => typeof value === 'string' ? value.trim() : (value && typeof value === 'object' ? String(value.value || value.label || '').trim() : ''); const groups = {}; for (const row of rows) { const target = text(row.targetDevice).toLocaleLowerCase(); const name = String(row.name || '').trim().toLocaleLowerCase(); if (!target || !name) return true; const key = targetAliases[target] || 'new:' + target; groups[key] ||= { names: [], existing: existingNames[key] || [] }; groups[key].names.push(name); } return !rows.length || Object.values(groups).some(group => group.names.some((name, index) => group.names.indexOf(name) !== index) || group.names.some(name => group.existing.includes(name))); })()`;
 }
 function stateForm(
 	functionTemplates: Record<string, FunctionTemplate>,
@@ -1429,6 +1542,19 @@ function stateForm(
 			),
 			...visibilityDependencies,
 		},
+		[key(`${prefix}.responseDelayMinutes`)]: {
+			type: 'number',
+			label: t('Response time in minutes (optional)', 'Ansprechzeit in Minuten (optional)'),
+			help: t(
+				'Leave empty to activate the limit immediately; otherwise activate it only after this many minutes.',
+				'Leer lassen, damit der Grenzwert sofort aktiv wird; andernfalls erst nach dieser Dauer aktivieren.',
+			),
+			min: 1,
+			step: 1,
+			xs: 12,
+			hidden: combineHidden(`${data(`${prefix}.enabled`)} !== true || (${mixedSource})`),
+			...visibilityDependencies,
+		},
 	});
 	return {
 		type: 'panel',
@@ -1494,6 +1620,8 @@ function stateForm(
 						'alarm.booleanValue',
 						'alarm.min',
 						'alarm.max',
+						'warning.responseDelayMinutes',
+						'alarm.responseDelayMinutes',
 						'staleWarning.enabled',
 						'staleWarning.minutes',
 					].map(path => ({ attr: key(path), onChange: templateValue(path) })),
@@ -1631,6 +1759,19 @@ function bulkTypeLimitFields(
 			...visibilityDependencies,
 		};
 	}
+	fields[`${root}.responseDelayMinutes`] = {
+		type: 'number',
+		label: t('Response time in minutes (optional)', 'Ansprechzeit in Minuten (optional)'),
+		help: t(
+			'Leave empty to activate the limit immediately; otherwise activate it only after this many minutes.',
+			'Leer lassen, damit der Grenzwert sofort aktiv wird; andernfalls erst nach dieser Dauer aktivieren.',
+		),
+		min: 1,
+		step: 1,
+		xs: 12,
+		hidden: `!(${visible}) || data.${root}.enabled !== true`,
+		...visibilityDependencies,
+	};
 	return fields;
 }
 function editStatesDisabledRule(states: WatchedStateConfiguration[]): string {
@@ -1669,6 +1810,8 @@ class DeviceMonitoring extends utils.Adapter {
 	private updateHistoryQueues = new Map<string, Promise<void>>();
 	private notificationStatuses = new Map<string, NotificationStatusSnapshot>();
 	private notificationLastSent = new Map<string, number>();
+	private limitActivationStates = new Map<string, LimitActivationState>();
+	private limitActivationTimers = new Map<string, ioBroker.Timeout>();
 	private bufferedNotificationEvents: NotificationMessage[] = [];
 	private messageWriteQueue: Promise<void> = Promise.resolve();
 	private cardDetails = new Map<string, string>();
@@ -1686,6 +1829,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private notificationCollectionEndTimer: ioBroker.Timeout | undefined;
 	private notificationCollectionUntil = 0;
 	private notificationCollectionStartedAt = 0;
+	private notificationCollectionStateWriteQueue: Promise<void> = Promise.resolve();
 	private bulkSelectionSessions = new Map<string, any>();
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({ ...options, name: 'device-monitoring' });
@@ -1715,6 +1859,10 @@ class DeviceMonitoring extends utils.Adapter {
 				this.clearTimeout(this.notificationCollectionEndTimer);
 				this.notificationCollectionEndTimer = undefined;
 			}
+			for (const timer of this.limitActivationTimers.values()) {
+				this.clearTimeout(timer);
+			}
+			this.limitActivationTimers.clear();
 			callback();
 		});
 	}
@@ -1737,12 +1885,25 @@ class DeviceMonitoring extends utils.Adapter {
 			'string',
 			'json',
 		);
+		await this.ensureState(
+			'info.notificationCollection',
+			t('Notification collection state', 'Status der Benachrichtigungs-Sammelphase'),
+			'string',
+			'json',
+			undefined,
+			true,
+		);
 		await this.clearLegacyMessageState();
 		await this.rebuildObjects();
+		const restoredNotificationCollection = await this.restoreNotificationCollection();
 		if (legacyDevices.length) {
 			await this.removeLegacyDeviceConfig();
 		}
 		await this.refreshSubscriptions();
+		this.scheduleNotificationCollection();
+		if (!restoredNotificationCollection) {
+			await this.restoreMissedNotificationCollection();
+		}
 		await this.updateAll();
 		await this.setState('info.connection', true, true);
 		this.sortRefreshTimer = this.setInterval(() => {
@@ -1752,7 +1913,6 @@ class DeviceMonitoring extends utils.Adapter {
 			void this.updateAll();
 		}, 60_000);
 		this.scheduleSummaryReminder();
-		this.scheduleNotificationCollection();
 		this.scheduleConfigurationBackup();
 	}
 	private async clearLegacyMessageState(): Promise<void> {
@@ -2175,6 +2335,12 @@ class DeviceMonitoring extends utils.Adapter {
 			booleanValue: input?.booleanValue === false || input?.booleanValue === 'false' ? false : true,
 			min: typeof input?.min === 'number' ? input.min : undefined,
 			max: typeof input?.max === 'number' ? input.max : undefined,
+			responseDelayMinutes:
+				typeof input?.responseDelayMinutes === 'number' &&
+				Number.isFinite(input.responseDelayMinutes) &&
+				input.responseDelayMinutes > 0
+					? input.responseDelayMinutes
+					: undefined,
 		});
 		return {
 			id,
@@ -2232,6 +2398,20 @@ class DeviceMonitoring extends utils.Adapter {
 	}
 	private async saveDevices(devices: DeviceConfiguration[], refreshCards = true): Promise<void> {
 		this.devices = devices;
+		const activeLimitKeys = new Set(
+			devices.flatMap(device => device.states.map(watched => `${device.id}.${watched.id}`)),
+		);
+		for (const [key, timer] of this.limitActivationTimers) {
+			if (!activeLimitKeys.has(key)) {
+				this.clearTimeout(timer);
+				this.limitActivationTimers.delete(key);
+			}
+		}
+		for (const key of this.limitActivationStates.keys()) {
+			if (!activeLimitKeys.has(key)) {
+				this.limitActivationStates.delete(key);
+			}
+		}
 		const activeCardDetails = new Set(
 			devices.flatMap(device => device.states.map(watched => `${device.id}.${watched.id}`)),
 		);
@@ -2457,6 +2637,14 @@ class DeviceMonitoring extends utils.Adapter {
 					true,
 				);
 				await this.ensureState(
+					`${base}.data.limitViolation`,
+					t('Limit response state', 'Status der Grenzwert-Ansprechzeit'),
+					'string',
+					'json',
+					undefined,
+					true,
+				);
+				await this.ensureState(
 					`${base}.data.details`,
 					t('Monitoring details', 'Überwachungsdetails'),
 					'string',
@@ -2515,6 +2703,7 @@ class DeviceMonitoring extends utils.Adapter {
 							: true,
 					min: number(template.warning?.min),
 					max: number(template.warning?.max),
+					responseDelayMinutes: number(template.warning?.responseDelayMinutes),
 				},
 				alarm: {
 					enabled: template.alarm?.enabled === true,
@@ -2525,6 +2714,7 @@ class DeviceMonitoring extends utils.Adapter {
 							: true,
 					min: number(template.alarm?.min),
 					max: number(template.alarm?.max),
+					responseDelayMinutes: number(template.alarm?.responseDelayMinutes),
 				},
 				staleWarning: {
 					enabled: template.staleWarning?.enabled === true,
@@ -2647,6 +2837,36 @@ class DeviceMonitoring extends utils.Adapter {
 			}),
 		);
 	}
+	private parseLimitActivationState(value: ioBroker.StateValue | undefined): LimitActivationState | undefined {
+		if (typeof value !== 'string' || !value.trim()) {
+			return undefined;
+		}
+		try {
+			const parsed = JSON.parse(value) as Record<string, unknown>;
+			if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+				return undefined;
+			}
+			const parseSince = (input: unknown): number | null | undefined =>
+				input === null
+					? null
+					: typeof input === 'number' && Number.isFinite(input) && input > 0
+						? input
+						: undefined;
+			const warningSince = parseSince(parsed.warningSince);
+			const alarmSince = parseSince(parsed.alarmSince);
+			if (warningSince === undefined || alarmSince === undefined) {
+				return undefined;
+			}
+			return {
+				warningSince,
+				alarmSince,
+				...(typeof parsed.warningSignature === 'string' ? { warningSignature: parsed.warningSignature } : {}),
+				...(typeof parsed.alarmSignature === 'string' ? { alarmSignature: parsed.alarmSignature } : {}),
+			};
+		} catch {
+			return undefined;
+		}
+	}
 	public async getSourceUnit(sourceId: string): Promise<string> {
 		if (this.sourceUnits.has(sourceId)) {
 			return this.sourceUnits.get(sourceId) || '';
@@ -2679,6 +2899,7 @@ class DeviceMonitoring extends utils.Adapter {
 			average,
 			history,
 			valueHistory,
+			limitViolation,
 		] = await Promise.all([
 			this.getStateAsync(`${base}.value`),
 			this.getStateAsync(`${base}.data.value`),
@@ -2697,6 +2918,7 @@ class DeviceMonitoring extends utils.Adapter {
 			this.getStateAsync(`${base}.data.averageUpdateInterval`),
 			this.getStateAsync(`${base}.data.updateHistory`),
 			this.getStateAsync(`${base}.data.valueHistory`),
+			this.getStateAsync(`${base}.data.limitViolation`),
 		]);
 		if (status || bundledStatus) {
 			return {
@@ -2724,6 +2946,7 @@ class DeviceMonitoring extends utils.Adapter {
 				averageUpdateInterval: typeof average?.val === 'number' ? average.val : undefined,
 				updateHistory: parseUpdateHistory(history?.val),
 				valueHistory: parseValueHistory(valueHistory?.val),
+				limitViolation: this.parseLimitActivationState(limitViolation?.val),
 			};
 		}
 		const legacy = await Promise.all(LEGACY_RUNTIME_STATE_IDS.map(id => this.getStateAsync(`${base}.${id}`)));
@@ -2816,7 +3039,12 @@ class DeviceMonitoring extends utils.Adapter {
 				for (const watched of device.states) {
 					const sourceState = await this.getForeignStateAsync(watched.sourceId);
 					const updateTimeout = isUpdateTimedOut(sourceState, watched.staleWarning);
-					const status = this.getWatchedStatus(watched, sourceState, updateTimeout);
+					const status = this.getWatchedStatus(
+						watched,
+						sourceState,
+						updateTimeout,
+						`${device.id}.${watched.id}`,
+					);
 					if (status === 'ok') {
 						continue;
 					}
@@ -2869,16 +3097,24 @@ class DeviceMonitoring extends utils.Adapter {
 			this.notificationCollectionJob = schedule.scheduleJob(
 				'device-monitoring-notification-collection',
 				cron,
-				() => this.startNotificationCollection(duration),
+				() => {
+					void this.startNotificationCollection(duration).catch(error => {
+						this.log.warn(`Could not start notification collection: ${String(error)}`);
+					});
+				},
 			);
 		} catch (error) {
 			this.log.warn(`Could not schedule notification collection for cron expression "${cron}": ${String(error)}`);
 		}
 	}
-	private startNotificationCollection(durationMinutes: number): void {
+	private async startNotificationCollection(durationMinutes: number, startedAt = Date.now()): Promise<void> {
 		const now = Date.now();
 		if (this.notificationCollectionUntil > now) {
 			this.log.warn('Notification collection is already active; keeping the existing collection period');
+			return;
+		}
+		const endedAt = startedAt + durationMinutes * 60_000;
+		if (endedAt <= now) {
 			return;
 		}
 		if (this.notificationCollectionEndTimer) {
@@ -2886,12 +3122,144 @@ class DeviceMonitoring extends utils.Adapter {
 			this.notificationCollectionEndTimer = undefined;
 		}
 		this.bufferedNotificationEvents = [];
-		this.notificationCollectionStartedAt = now;
-		this.notificationCollectionUntil = now + durationMinutes * 60_000;
-		this.notificationCollectionEndTimer = this.setTimeout(() => {
-			this.notificationCollectionEndTimer = undefined;
-			void this.finishNotificationCollection();
-		}, durationMinutes * 60_000);
+		this.notificationCollectionStartedAt = startedAt;
+		this.notificationCollectionUntil = endedAt;
+		this.scheduleNotificationCollectionEndTimer(endedAt - now);
+		await this.persistNotificationCollection();
+	}
+	private scheduleNotificationCollectionEndTimer(delay: number): void {
+		if (this.notificationCollectionEndTimer) {
+			this.clearTimeout(this.notificationCollectionEndTimer);
+		}
+		this.notificationCollectionEndTimer = this.setTimeout(
+			() => {
+				this.notificationCollectionEndTimer = undefined;
+				void this.finishNotificationCollection().catch(error => {
+					this.log.warn(`Could not finish notification collection: ${String(error)}`);
+				});
+			},
+			Math.max(1, delay),
+		);
+	}
+	private async restoreMissedNotificationCollection(): Promise<void> {
+		if (this.config.notificationCollectionEnabled !== true) {
+			return;
+		}
+		const cron =
+			typeof this.config.notificationCollectionCron === 'string'
+				? this.config.notificationCollectionCron.trim()
+				: '';
+		const duration = Number(this.config.notificationCollectionDurationMinutes);
+		if (!cron || !Number.isFinite(duration) || duration <= 0) {
+			return;
+		}
+		const now = Date.now();
+		try {
+			const previousInvocation = parseExpression(cron, { currentDate: new Date(now + 1) })
+				.prev()
+				.toDate()
+				.getTime();
+			if (previousInvocation <= now && now < previousInvocation + duration * 60_000) {
+				await this.startNotificationCollection(duration, previousInvocation);
+			}
+		} catch (error) {
+			this.log.warn(
+				`Could not restore a missed notification collection for cron expression "${cron}": ${String(error)}`,
+			);
+		}
+	}
+	private async restoreNotificationCollection(): Promise<boolean> {
+		const state = await this.getStateAsync('info.notificationCollection');
+		if (this.config.notificationCollectionEnabled !== true) {
+			this.notificationCollectionStartedAt = 0;
+			this.notificationCollectionUntil = 0;
+			this.bufferedNotificationEvents = [];
+			if (state?.val && state.val !== '{}') {
+				await this.persistNotificationCollection();
+			}
+			return false;
+		}
+		const persisted = this.parsePersistedNotificationCollection(state?.val ?? null);
+		if (!persisted) {
+			if (state?.val && state.val !== '{}') {
+				await this.persistNotificationCollection();
+			}
+			return false;
+		}
+		this.notificationCollectionStartedAt = persisted.startedAt;
+		this.notificationCollectionUntil = persisted.endedAt;
+		this.bufferedNotificationEvents = persisted.events;
+		const remaining = persisted.endedAt - Date.now();
+		if (remaining <= 0) {
+			await this.finishNotificationCollection();
+			return true;
+		}
+		this.scheduleNotificationCollectionEndTimer(remaining);
+		return true;
+	}
+	private parsePersistedNotificationCollection(
+		value: ioBroker.StateValue,
+	): PersistedNotificationCollection | undefined {
+		if (typeof value !== 'string' || !value.trim() || value === '{}') {
+			return undefined;
+		}
+		try {
+			const parsed = JSON.parse(value) as {
+				startedAt?: unknown;
+				endedAt?: unknown;
+				events?: unknown;
+			};
+			const { startedAt, endedAt, events: rawEvents } = parsed;
+			if (
+				typeof startedAt !== 'number' ||
+				!Number.isFinite(startedAt) ||
+				typeof endedAt !== 'number' ||
+				!Number.isFinite(endedAt) ||
+				endedAt <= startedAt ||
+				!Array.isArray(rawEvents)
+			) {
+				return undefined;
+			}
+			const events = rawEvents.filter((event): event is NotificationMessage => {
+				if (!event || typeof event !== 'object') {
+					return false;
+				}
+				const candidate = event as Record<string, unknown>;
+				return (
+					typeof candidate.category === 'string' &&
+					['info', 'warnung', 'alarm'].includes(candidate.category) &&
+					typeof candidate.deviceName === 'string' &&
+					typeof candidate.stateName === 'string' &&
+					typeof candidate.title === 'string' &&
+					typeof candidate.message === 'string' &&
+					typeof candidate.triggeredAt === 'number'
+				);
+			});
+			return { startedAt, endedAt, events };
+		} catch {
+			return undefined;
+		}
+	}
+	private async persistNotificationCollection(): Promise<void> {
+		const value =
+			this.notificationCollectionUntil > Date.now()
+				? JSON.stringify({
+						startedAt: this.notificationCollectionStartedAt,
+						endedAt: this.notificationCollectionUntil,
+						events: this.bufferedNotificationEvents,
+					})
+				: '{}';
+		const write = this.notificationCollectionStateWriteQueue
+			.catch(() => undefined)
+			.then(async () => {
+				await this.setStateChangedAsync('info.notificationCollection', { val: value, ack: true });
+			});
+		this.notificationCollectionStateWriteQueue = write;
+		try {
+			await write;
+		} catch (error) {
+			this.log.warn(`Could not persist notification collection state: ${String(error)}`);
+		}
 	}
 	private async finishNotificationCollection(): Promise<void> {
 		const startedAt = this.notificationCollectionStartedAt;
@@ -2900,6 +3268,7 @@ class DeviceMonitoring extends utils.Adapter {
 		this.bufferedNotificationEvents = [];
 		this.notificationCollectionStartedAt = 0;
 		this.notificationCollectionUntil = 0;
+		await this.persistNotificationCollection();
 		const summary = createNotificationCollectionSummaryMessage(events, this.displayLanguage, startedAt, endedAt);
 		if (!summary) {
 			return;
@@ -2917,6 +3286,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private async publishMessageEvent(event: NotificationMessage): Promise<void> {
 		if (this.notificationCollectionUntil > Date.now()) {
 			this.bufferedNotificationEvents.push(event);
+			await this.persistNotificationCollection();
 			return;
 		}
 		await this.deliverMessageEvent(event, 'notification');
@@ -2956,7 +3326,12 @@ class DeviceMonitoring extends utils.Adapter {
 					device.states.map(async watched => {
 						const sourceState = await this.getForeignStateAsync(watched.sourceId);
 						const updateTimeout = isUpdateTimedOut(sourceState, watched.staleWarning);
-						const status = this.getWatchedStatus(watched, sourceState, updateTimeout);
+						const status = this.getWatchedStatus(
+							watched,
+							sourceState,
+							updateTimeout,
+							`${device.id}.${watched.id}`,
+						);
 						return {
 							id: watched.id,
 							name: watched.name,
@@ -2991,21 +3366,144 @@ class DeviceMonitoring extends utils.Adapter {
 		let status: WatchStatus = 'ok';
 		for (const watched of device.states) {
 			const state = await this.getForeignStateAsync(watched.sourceId);
-			const current = this.getWatchedStatus(watched, state);
+			const current = this.getWatchedStatus(watched, state, undefined, `${device.id}.${watched.id}`);
 			if (rank[current] < rank[status]) {
 				status = current;
 			}
 		}
 		return status;
 	}
+	private limitSignature(limit: LimitConfiguration): string {
+		return JSON.stringify({
+			enabled: limit.enabled,
+			mode: limit.mode,
+			booleanValue: limit.booleanValue,
+			min: limit.min,
+			max: limit.max,
+			responseDelayMinutes: limit.responseDelayMinutes,
+		});
+	}
+	private scheduleLimitActivation(
+		device: DeviceConfiguration,
+		watched: WatchedStateConfiguration,
+		key: string,
+		activation: LimitActivationState,
+		now = Date.now(),
+	): void {
+		const previousTimer = this.limitActivationTimers.get(key);
+		if (previousTimer) {
+			this.clearTimeout(previousTimer);
+			this.limitActivationTimers.delete(key);
+		}
+		const dueTimes = [
+			{ since: activation.warningSince, delay: watched.warning.responseDelayMinutes },
+			{ since: activation.alarmSince, delay: watched.alarm.responseDelayMinutes },
+		]
+			.filter(
+				(entry): entry is { since: number; delay: number } =>
+					typeof entry.since === 'number' &&
+					Number.isFinite(entry.since) &&
+					typeof entry.delay === 'number' &&
+					Number.isFinite(entry.delay) &&
+					entry.delay > 0,
+			)
+			.map(entry => entry.since + entry.delay * 60_000)
+			.filter(dueAt => dueAt > now)
+			.sort((a, b) => a - b);
+		const dueAt = dueTimes[0];
+		if (dueAt === undefined) {
+			return;
+		}
+		const timer = this.setTimeout(
+			() => {
+				this.limitActivationTimers.delete(key);
+				void this.refreshLimitActivation(device.id, watched.id).catch(error =>
+					this.log.warn(`Could not activate delayed limit for ${key}: ${String(error)}`),
+				);
+			},
+			Math.min(Math.max(1, dueAt - now), 2_147_483_647),
+		);
+		if (timer) {
+			this.limitActivationTimers.set(key, timer);
+		}
+	}
+	private async refreshLimitActivation(deviceId: string, stateId: string): Promise<void> {
+		const device = this.devices.find(entry => entry.id === deviceId);
+		const watched = device?.states.find(entry => entry.id === stateId);
+		if (!device || !watched) {
+			return;
+		}
+		const sourceState = await this.getForeignStateAsync(watched.sourceId);
+		await this.updateValue(device, watched, sourceState);
+		await this.updateDeviceSummary(device);
+		await this.updateDeviceInfo();
+	}
+	private updateLimitActivationState(
+		key: string,
+		watched: WatchedStateConfiguration,
+		value: ioBroker.StateValue,
+		sourceState: ioBroker.State | null | undefined,
+		previousData: Partial<MonitoringData>,
+		sameSource: boolean,
+		now = Date.now(),
+	): LimitActivationState {
+		const previous = sameSource ? this.limitActivationStates.get(key) || previousData.limitViolation : undefined;
+		const warningSignature = this.limitSignature(watched.warning);
+		const alarmSignature = this.limitSignature(watched.alarm);
+		const sourceTimestamp =
+			typeof sourceState?.ts === 'number' &&
+			Number.isFinite(sourceState.ts) &&
+			sourceState.ts > 0 &&
+			sourceState.ts <= now
+				? sourceState.ts
+				: now;
+		const since = (
+			violated: boolean,
+			previousSince: number | null | undefined,
+			previousSignature: string | undefined,
+			currentSignature: string,
+		): number | null => {
+			if (!violated) {
+				return null;
+			}
+			if (!sameSource || (previousSignature !== undefined && previousSignature !== currentSignature)) {
+				return now;
+			}
+			return previousSince ?? sourceTimestamp;
+		};
+		return {
+			warningSince: since(
+				evaluateLimit(value, watched.warning),
+				previous?.warningSince,
+				previous?.warningSignature,
+				warningSignature,
+			),
+			alarmSince: since(
+				evaluateLimit(value, watched.alarm),
+				previous?.alarmSince,
+				previous?.alarmSignature,
+				alarmSignature,
+			),
+			warningSignature,
+			alarmSignature,
+		};
+	}
 	private getWatchedStatus(
 		watched: WatchedStateConfiguration,
 		state: ioBroker.State | null | undefined,
 		updateTimeout = isUpdateTimedOut(state, watched.staleWarning),
+		key?: string,
+		activation?: LimitActivationState,
 	): WatchStatus {
 		return this.invalidSources.has(watched.sourceId)
 			? 'invalid'
-			: getWatchStatus(state?.val ?? null, watched.warning, watched.alarm, updateTimeout);
+			: getWatchStatus(
+					state?.val ?? null,
+					watched.warning,
+					watched.alarm,
+					updateTimeout,
+					activation ?? (key ? this.limitActivationStates.get(key) : undefined),
+				);
 	}
 	private async updateDeviceSummary(device: DeviceConfiguration): Promise<void> {
 		const status = await this.getDeviceStatus(device);
@@ -3051,11 +3549,21 @@ class DeviceMonitoring extends utils.Adapter {
 			tooltip.push(
 				`${this.localize('Warning condition:', 'Warnbedingung:')} ${this.formatLimitDescription(watched.warning, data.value, unit)}`,
 			);
+			if (watched.warning.responseDelayMinutes && watched.warning.responseDelayMinutes > 0) {
+				tooltip.push(
+					`${this.localize('Warning response time:', 'Warnungs-Ansprechzeit:')} ${watched.warning.responseDelayMinutes} min`,
+				);
+			}
 		}
 		if (watched.alarm.enabled) {
 			tooltip.push(
 				`${this.localize('Alarm condition:', 'Alarmbedingung:')} ${this.formatLimitDescription(watched.alarm, data.value, unit)}`,
 			);
+			if (watched.alarm.responseDelayMinutes && watched.alarm.responseDelayMinutes > 0) {
+				tooltip.push(
+					`${this.localize('Alarm response time:', 'Alarm-Ansprechzeit:')} ${watched.alarm.responseDelayMinutes} min`,
+				);
+			}
 		}
 		if (watched.staleWarning.enabled) {
 			tooltip.push(`Timeout: ${watched.staleWarning.minutes} min`);
@@ -3108,6 +3616,7 @@ class DeviceMonitoring extends utils.Adapter {
 		watched: WatchedStateConfiguration,
 		sourceState: ioBroker.State | null | undefined,
 	): Promise<void> {
+		const key = `${device.id}.${watched.id}`;
 		const base = `devices.${device.id}.${watched.id}`;
 		const value = sourceState?.val ?? null;
 		// Keep the current source value up to date even if a later metadata or history write fails.
@@ -3153,8 +3662,18 @@ class DeviceMonitoring extends utils.Adapter {
 			valueHistory,
 			watched.staleWarning.enabled ? watched.staleWarning.minutes * 60_000 : undefined,
 		);
-		const status = this.getWatchedStatus(watched, sourceState, updateTimedOut);
-		const underlyingStatus = this.getWatchedStatus(watched, sourceState, false);
+		const limitViolation = this.updateLimitActivationState(
+			key,
+			watched,
+			value,
+			sourceState,
+			previousData,
+			sameSource,
+		);
+		this.limitActivationStates.set(key, limitViolation);
+		this.scheduleLimitActivation(device, watched, key, limitViolation);
+		const status = this.getWatchedStatus(watched, sourceState, updateTimedOut, key, limitViolation);
+		const underlyingStatus = this.getWatchedStatus(watched, sourceState, false, key, limitViolation);
 		const unit = await this.getSourceUnit(watched.sourceId);
 		const display =
 			status === 'invalid'
@@ -3175,6 +3694,7 @@ class DeviceMonitoring extends utils.Adapter {
 			updateHistory,
 			averageValue,
 			valueHistory,
+			limitViolation,
 		};
 		await Promise.all([
 			this.setStateChangedAsync(`${base}.status`, { val: data.status, ack: true }),
@@ -3199,10 +3719,64 @@ class DeviceMonitoring extends utils.Adapter {
 				val: JSON.stringify(data.valueHistory),
 				ack: true,
 			}),
+			this.setStateChangedAsync(`${base}.data.limitViolation`, {
+				val: JSON.stringify(limitViolation),
+				ack: true,
+			}),
 		]);
 		this.resetUpdateHistories.delete(base);
-		await this.notifyStatusTransition(device, watched, status, underlyingStatus, data);
+		await this.notifyStatusTransition(
+			device,
+			watched,
+			status,
+			underlyingStatus,
+			data,
+			previousData,
+			sourceState,
+			sameSource,
+		);
 		await this.updateDetailsDisplay(device, watched, status, display, unit, data);
+	}
+	private getRestartNotificationSnapshot(
+		watched: WatchedStateConfiguration,
+		current: NotificationStatusSnapshot,
+		previousData: Partial<MonitoringData>,
+		sourceState: ioBroker.State | null | undefined,
+		sameSource: boolean,
+	): NotificationStatusSnapshot | undefined {
+		const previousStatus = previousData.status;
+		if (!sameSource || !previousStatus || previousStatus === current.status) {
+			return undefined;
+		}
+		const sourceChangedWhileStopped =
+			typeof sourceState?.ts === 'number' &&
+			Number.isFinite(sourceState.ts) &&
+			typeof previousData.lastUpdate === 'number' &&
+			Number.isFinite(previousData.lastUpdate) &&
+			sourceState.ts > previousData.lastUpdate;
+		const delayedLimitCompletedWhileStopped =
+			previousStatus === 'ok' &&
+			(current.status === 'warning' || current.status === 'alarm') &&
+			[
+				{ since: previousData.limitViolation?.warningSince, delay: watched.warning.responseDelayMinutes },
+				{ since: previousData.limitViolation?.alarmSince, delay: watched.alarm.responseDelayMinutes },
+			].some(
+				entry =>
+					typeof entry.since === 'number' &&
+					Number.isFinite(entry.since) &&
+					typeof entry.delay === 'number' &&
+					Number.isFinite(entry.delay) &&
+					entry.delay > 0 &&
+					entry.since + entry.delay * 60_000 <= Date.now(),
+			);
+		if (!sourceChangedWhileStopped && !delayedLimitCompletedWhileStopped) {
+			return undefined;
+		}
+		return {
+			status: previousStatus,
+			underlyingStatus: previousStatus,
+			timedOut: previousStatus === 'timeout',
+		};
 	}
 	private async notifyStatusTransition(
 		device: DeviceConfiguration,
@@ -3210,6 +3784,9 @@ class DeviceMonitoring extends utils.Adapter {
 		status: WatchStatus,
 		underlyingStatus: WatchStatus,
 		data: MonitoringData,
+		previousData?: Partial<MonitoringData>,
+		sourceState?: ioBroker.State | null,
+		sameSource = false,
 	): Promise<void> {
 		const key = `${device.id}.${watched.id}`;
 		const current: NotificationStatusSnapshot = {
@@ -3219,10 +3796,13 @@ class DeviceMonitoring extends utils.Adapter {
 		};
 		const previous = this.notificationStatuses.get(key);
 		this.notificationStatuses.set(key, current);
-		if (!previous) {
+		const transitionSource =
+			previous ||
+			this.getRestartNotificationSnapshot(watched, current, previousData || {}, sourceState, sameSource);
+		if (!transitionSource) {
 			return;
 		}
-		const transitions = notificationTransitionsForSnapshots(previous, current);
+		const transitions = notificationTransitionsForSnapshots(transitionSource, current);
 		for (const transition of transitions) {
 			await this.publishStatusTransition(
 				device,

@@ -12,6 +12,20 @@ export interface LimitConfiguration {
 	min?: number;
 	/** Optional upper boundary. */
 	max?: number;
+	/** Optional time in minutes the violation must persist before activation. */
+	responseDelayMinutes?: number;
+}
+
+/** Persisted start times of currently violated limits. */
+export interface LimitActivationState {
+	/** Start of the current warning violation. */
+	warningSince: number | null;
+	/** Start of the current alarm violation. */
+	alarmSince: number | null;
+	/** Configuration signature used for the warning timer. */
+	warningSignature?: string;
+	/** Configuration signature used for the alarm timer. */
+	alarmSignature?: string;
 }
 
 /** Persistent configuration of one monitored ioBroker state. */
@@ -114,6 +128,8 @@ export function evaluateLimit(value: ioBroker.StateValue, limit: LimitConfigurat
  * @param warning Warning-limit configuration.
  * @param alarm Alarm-limit configuration.
  * @param stale Whether the source state exceeded its update timeout.
+ * @param activation Persisted start times of active limit violations.
+ * @param now Timestamp used as the comparison reference.
  * @returns Effective status of the monitored state.
  */
 export function getWatchStatus(
@@ -121,6 +137,8 @@ export function getWatchStatus(
 	warning: LimitConfiguration,
 	alarm: LimitConfiguration,
 	stale = false,
+	activation?: LimitActivationState,
+	now = Date.now(),
 ): WatchStatus {
 	if (stale) {
 		return 'timeout';
@@ -128,13 +146,33 @@ export function getWatchStatus(
 	if ((typeof value !== 'number' || !Number.isFinite(value)) && typeof value !== 'boolean') {
 		return 'invalidValue';
 	}
-	if (evaluateLimit(value, alarm)) {
+	if (isLimitActive(value, alarm, activation?.alarmSince, now)) {
 		return 'alarm';
 	}
-	if (evaluateLimit(value, warning)) {
+	if (isLimitActive(value, warning, activation?.warningSince, now)) {
 		return 'warning';
 	}
 	return 'ok';
+}
+
+function isLimitActive(
+	value: ioBroker.StateValue,
+	limit: LimitConfiguration,
+	since: number | null | undefined,
+	now: number,
+): boolean {
+	if (!evaluateLimit(value, limit)) {
+		return false;
+	}
+	const responseDelayMinutes = limit.responseDelayMinutes;
+	if (
+		typeof responseDelayMinutes !== 'number' ||
+		!Number.isFinite(responseDelayMinutes) ||
+		responseDelayMinutes <= 0
+	) {
+		return true;
+	}
+	return typeof since === 'number' && now - since >= responseDelayMinutes * 60_000;
 }
 
 /**

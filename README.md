@@ -83,7 +83,11 @@ The `type` field remains the original event type when its notification category 
 
 ## Recurring reminders
 
-The Notifications section can enable recurring reminders. The schedule is configured with a Cron selector, and the selected `info`, `warnung` or `alarm` category is used for the summary. At each scheduled time, the adapter checks all monitored states and sends one summary for every currently non-normal state (`warning`, `alarm`, `timeout`, `invalid` or `invalidValue`). If all states are normal, no reminder is sent. The summary stored in `info.message` contains only `type`, `category`, `title` and `message`.
+The Notifications section can enable recurring reminders. The schedule is configured with a Cron selector, and the selected `info`, `warnung` or `alarm` category is used for the summary. At each scheduled time, the adapter checks all monitored states and sends one summary for every currently non-normal state (`warning`, `alarm`, `timeout`, `invalid` or `invalidValue`). If all states are normal, no reminder is sent. If the adapter starts after a scheduled collection start but while its configured duration is still running, that missed collection start is restored with its original end time. The summary stored in `info.message` contains only `type`, `category`, `title` and `message`.
+
+## Limit response time
+
+Warning and alarm limits can optionally have a response time in minutes. The corresponding status and notification become active only when the limit remains violated for the configured duration. If the value returns to normal before that, no warning or alarm is generated. The adapter schedules the activation for the exact due time instead of waiting for the periodic refresh. The start of a pending violation is stored below the monitored state's expert data and survives adapter restarts. If a source state changes while the adapter is stopped and is still active at restart, the change is caught up and can be added to an active notification collection.
 
 ### Example
 `http://192.168.0.222:8081/#tab-objects/select/device-monitoring.0.info.message`
@@ -129,6 +133,12 @@ The Notifications section can enable recurring reminders. The schedule is config
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* Persist the notification collection period and its buffered events so an adapter restart continues the active pause and completes its summary.
+* Recreate recurring reminder schedules on adapter startup so future reminder times continue after a restart.
+* Add optional response times to warning and alarm limits and persist pending limit violations across adapter restarts.
+* Infer bulk state target devices from matching source paths and report the affected state and reason for bulk-add validation conflicts.
+
 ### 0.0.30 (2026-09-26)
 * Add cause-specific recovery templates for limit violations, timeouts, and invalid source/value states.
 * Add configurable notification collection periods with priority-based summaries.

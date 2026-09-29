@@ -1,4 +1,4 @@
-import type { WatchStatus } from './evaluation';
+import type { LimitActivationState, WatchStatus } from './evaluation';
 import type { NumericValueSample } from './update-history';
 
 /** Runtime snapshot stored for one monitored source. */
@@ -31,4 +31,6 @@ export interface MonitoringData {
 	averageValue: number | null;
 	/** Up to ten most recent timestamped numeric values. */
 	valueHistory: NumericValueSample[];
+	/** Start times of currently pending warning and alarm responses. */
+	limitViolation?: LimitActivationState;
 }
