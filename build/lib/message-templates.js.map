@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../../src/lib/message-templates.ts"],
+  "sourcesContent": ["/** Language used for user-facing message fragments. */\nexport type MessageLanguage = 'de' | 'en';\n\n/**\n * Formats the optional response-time suffix used by warning and alarm templates.\n *\n * @param minutes Configured response time in minutes.\n * @param language Language for the generated fragment.\n * @returns A suffix including its leading space, or an empty string.\n */\nexport function formatResponseTimeSuffix(minutes: number | undefined, language: MessageLanguage): string {\n\tif (typeof minutes !== 'number' || !Number.isFinite(minutes) || minutes <= 0) {\n\t\treturn '';\n\t}\n\treturn language === 'de' ? ` (Ansprechzeit ${minutes} Minuten)` : ` (Response time ${minutes} minutes)`;\n}\n"],
+  "mappings": ";;;;;;;;;;;;;;;;;;AAAA;AAAA;AAAA;AAAA;AAAA;AAUO,SAAS,yBAAyB,SAA6B,UAAmC;AACxG,MAAI,OAAO,YAAY,YAAY,CAAC,OAAO,SAAS,OAAO,KAAK,WAAW,GAAG;AAC7E,WAAO;AAAA,EACR;AACA,SAAO,aAAa,OAAO,kBAAkB,OAAO,cAAc,mBAAmB,OAAO;AAC7F;",
+  "names": []
+}

@@ -1,5 +1,25 @@
 export type LimitMode = 'below' | 'above' | 'outside' | 'inside';
 
+/**
+ * Converts a configured numeric value to a finite number.
+ *
+ * Admin forms may submit localized decimal values as strings, so both the
+ * JavaScript decimal point and the German decimal comma are accepted.
+ *
+ * @param value Value received from adapter configuration or an admin form.
+ * @returns A finite number, or undefined for an empty/invalid value.
+ */
+export function parseFiniteNumber(value: unknown): number | undefined {
+	if (typeof value === 'number') {
+		return Number.isFinite(value) ? value : undefined;
+	}
+	if (typeof value !== 'string' || !value.trim()) {
+		return undefined;
+	}
+	const parsed = Number(value.trim().replace(',', '.'));
+	return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 /** Configuration of a numeric or boolean warning/alarm limit. */
 export interface LimitConfiguration {
 	/** Whether this limit is evaluated. */

@@ -89,6 +89,8 @@ The Notifications section can enable recurring reminders. The schedule is config
 
 Warning and alarm limits can optionally have a response time in minutes. The corresponding status and notification become active only when the limit remains violated for the configured duration. If the value returns to normal before that, no warning or alarm is generated. The adapter schedules the activation for the exact due time instead of waiting for the periodic refresh. The start of a pending violation is stored below the monitored state's expert data and survives adapter restarts. If a source state changes while the adapter is stopped and is still active at restart, the change is caught up and can be added to an active notification collection.
 
+Warning and alarm message templates can use `{{warningResponseTime}}` and `{{alarmResponseTime}}`. Each placeholder contains an optional localized suffix such as ` (Ansprechzeit 5 Minuten)` and is empty when no positive response time is configured. The default places it directly after the message with a space, for example: `... ({{remark}}) {{warningResponseTime}}`.
+
 ### Example
 `http://192.168.0.222:8081/#tab-objects/select/device-monitoring.0.info.message`
 
@@ -133,6 +135,10 @@ Warning and alarm limits can optionally have a response time in minutes. The cor
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Accept decimal values entered with either a point or comma for warning and alarm limits.
+* (BenAhrdt) Add optional warning and alarm response-time suffixes to message-template placeholders.
+
 ### 0.0.31 (2026-09-29)
 * Persist the notification collection period and its buffered events so an adapter restart continues the active pause and completes its summary.
 * Recreate recurring reminder schedules on adapter startup so future reminder times continue after a restart.

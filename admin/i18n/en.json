@@ -51,7 +51,7 @@
     "device-monitoring adapter settings": "Device Monitoring settings",
     "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID; {{function}} configured function name.": "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID; {{function}} configured function name.",
     "{{value}} current or last value; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.": "{{value}} current or last value; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.",
-    "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.": "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.",
+    "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{warningResponseTime}} optional warning response-time suffix; {{alarmResponseTime}} optional alarm response-time suffix; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.": "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{warningResponseTime}} optional warning response-time suffix; {{alarmResponseTime}} optional alarm response-time suffix; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.",
     "Collection duration in minutes": "Collection duration in minutes",
     "Collection start": "Collection start",
     "Collect notifications during a quiet period": "Collect notifications during a quiet period",

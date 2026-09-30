@@ -21,9 +21,20 @@ __export(evaluation_exports, {
   createFunctionTemplate: () => createFunctionTemplate,
   evaluateLimit: () => evaluateLimit,
   getWatchStatus: () => getWatchStatus,
-  isUpdateTimedOut: () => isUpdateTimedOut
+  isUpdateTimedOut: () => isUpdateTimedOut,
+  parseFiniteNumber: () => parseFiniteNumber
 });
 module.exports = __toCommonJS(evaluation_exports);
+function parseFiniteNumber(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : void 0;
+  }
+  if (typeof value !== "string" || !value.trim()) {
+    return void 0;
+  }
+  const parsed = Number(value.trim().replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : void 0;
+}
 function createFunctionTemplate(watched) {
   return {
     warning: { ...watched.warning },
@@ -87,6 +98,7 @@ function isUpdateTimedOut(state, configuration, now = Date.now()) {
   createFunctionTemplate,
   evaluateLimit,
   getWatchStatus,
-  isUpdateTimedOut
+  isUpdateTimedOut,
+  parseFiniteNumber
 });
 //# sourceMappingURL=evaluation.js.map

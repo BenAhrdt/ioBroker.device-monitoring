@@ -27,6 +27,7 @@ var import_cron_parser = require("cron-parser");
 var schedule = __toESM(require("node-schedule"));
 var import_evaluation = require("./lib/evaluation");
 var import_configuration_backup = require("./lib/configuration-backup");
+var import_message_templates = require("./lib/message-templates");
 var import_reminders = require("./lib/reminders");
 var import_notifications = require("./lib/notifications");
 var import_update_history = require("./lib/update-history");
@@ -421,12 +422,12 @@ function isNotificationLevelValue(value) {
 }
 const DEFAULT_MESSAGE_TEMPLATES = {
   warning: {
-    en: "State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}})",
-    de: "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}})"
+    en: "State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}) {{warningResponseTime}}",
+    de: "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}) {{warningResponseTime}}"
   },
   alarm: {
-    en: "State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}})",
-    de: "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}})"
+    en: "State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}) {{alarmResponseTime}}",
+    de: "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}) {{alarmResponseTime}}"
   },
   timeout: {
     en: "State {{state}} on device {{device}} has not reported for at least {{timeoutMinutes}} minutes. Last update: {{lastUpdate}} ({{remark}})",
@@ -480,13 +481,21 @@ const LEGACY_DEFAULT_MESSAGE_TEMPLATES = {
     "Warnung bei {{device}} / {{state}}: {{value}} {{unit}}",
     "Warning at {{device}} / {{state}}: {{value}} {{unit}}",
     "Warnung bei {{device}} / {{state}}: {{value}} {{unit}} (Grenze: {{warningLimits}})",
-    "Warning at {{device}} / {{state}}: {{value}} {{unit}} (limit: {{warningLimits}})"
+    "Warning at {{device}} / {{state}}: {{value}} {{unit}} (limit: {{warningLimits}})",
+    "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}})",
+    "State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}})",
+    "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}){{warningResponseTime}}",
+    "State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}"
   ],
   alarm: [
     "Alarm bei {{device}} / {{state}}: {{value}} {{unit}}",
     "Alarm at {{device}} / {{state}}: {{value}} {{unit}}",
     "Alarm bei {{device}} / {{state}}: {{value}} {{unit}} (Grenze: {{alarmLimits}})",
-    "Alarm at {{device}} / {{state}}: {{value}} {{unit}} (limit: {{alarmLimits}})"
+    "Alarm at {{device}} / {{state}}: {{value}} {{unit}} (limit: {{alarmLimits}})",
+    "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}})",
+    "State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}})",
+    "Der State {{state}} vom Ger\xE4t {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}){{alarmResponseTime}}",
+    "State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}"
   ],
   timeout: [
     "Keine Aktualisierung bei {{device}} / {{state}} seit {{timeoutMinutes}} Minuten. Letzter Wert: {{value}} {{unit}} (letzte Aktualisierung: {{lastUpdate}})",
@@ -1357,9 +1366,18 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
       ...visibilityDependencies
     },
     [key(`${prefix}.min`)]: {
-      type: "number",
+      type: "text",
       label: t("Lower limit", "Untergrenze"),
-      step: 0.01,
+      help: t(
+        "Decimal values are supported, for example 9.5 or 9,5.",
+        "Dezimalwerte sind m\xF6glich, zum Beispiel 9,5."
+      ),
+      validator: `return (() => { const value = String(${data(`${prefix}.min`)} ?? '').trim(); return !value || Number.isFinite(Number(value.replace(',', '.'))); })()`,
+      validatorErrorText: t(
+        "Enter a valid number; use a point or comma for decimals.",
+        "Bitte eine g\xFCltige Zahl eingeben; Dezimalstellen k\xF6nnen mit Punkt oder Komma eingegeben werden."
+      ),
+      validatorNoSaveOnError: true,
       newLine: true,
       xs: 6,
       hidden: combineHidden(
@@ -1368,9 +1386,18 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
       ...visibilityDependencies
     },
     [key(`${prefix}.max`)]: {
-      type: "number",
+      type: "text",
       label: t("Upper limit", "Obergrenze"),
-      step: 0.01,
+      help: t(
+        "Decimal values are supported, for example 9.5 or 9,5.",
+        "Dezimalwerte sind m\xF6glich, zum Beispiel 9,5."
+      ),
+      validator: `return (() => { const value = String(${data(`${prefix}.max`)} ?? '').trim(); return !value || Number.isFinite(Number(value.replace(',', '.'))); })()`,
+      validatorErrorText: t(
+        "Enter a valid number; use a point or comma for decimals.",
+        "Bitte eine g\xFCltige Zahl eingeben; Dezimalstellen k\xF6nnen mit Punkt oder Komma eingegeben werden."
+      ),
+      validatorNoSaveOnError: true,
       xs: 6,
       hidden: combineHidden(
         `${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below'`
@@ -1546,18 +1573,36 @@ function bulkTypeLimitFields(type, prefix, visible, hiddenDependsOn) {
       ...visibilityDependencies
     };
     fields[`${root}.min`] = {
-      type: "number",
+      type: "text",
       label: t("Lower limit", "Untergrenze"),
-      step: 0.01,
+      help: t(
+        "Decimal values are supported, for example 9.5 or 9,5.",
+        "Dezimalwerte sind m\xF6glich, zum Beispiel 9,5."
+      ),
+      validator: `return (() => { const value = String(data.${root}.min ?? '').trim(); return !value || Number.isFinite(Number(value.replace(',', '.'))); })()`,
+      validatorErrorText: t(
+        "Enter a valid number; use a point or comma for decimals.",
+        "Bitte eine g\xFCltige Zahl eingeben; Dezimalstellen k\xF6nnen mit Punkt oder Komma eingegeben werden."
+      ),
+      validatorNoSaveOnError: true,
       newLine: true,
       xs: 6,
       hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'above'`,
       ...visibilityDependencies
     };
     fields[`${root}.max`] = {
-      type: "number",
+      type: "text",
       label: t("Upper limit", "Obergrenze"),
-      step: 0.01,
+      help: t(
+        "Decimal values are supported, for example 9.5 or 9,5.",
+        "Dezimalwerte sind m\xF6glich, zum Beispiel 9,5."
+      ),
+      validator: `return (() => { const value = String(data.${root}.max ?? '').trim(); return !value || Number.isFinite(Number(value.replace(',', '.'))); })()`,
+      validatorErrorText: t(
+        "Enter a valid number; use a point or comma for decimals.",
+        "Bitte eine g\xFCltige Zahl eingeben; Dezimalstellen k\xF6nnen mit Punkt oder Komma eingegeben werden."
+      ),
+      validatorNoSaveOnError: true,
       xs: 6,
       hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'below'`,
       ...visibilityDependencies
@@ -2125,14 +2170,18 @@ class DeviceMonitoring extends utils.Adapter {
   }
   normalizeState(data, id) {
     var _a, _b;
-    const limit = (input, fallback) => ({
-      enabled: (input == null ? void 0 : input.enabled) === true,
-      mode: ["below", "above", "outside", "inside"].includes(input == null ? void 0 : input.mode) ? input.mode : fallback,
-      booleanValue: (input == null ? void 0 : input.booleanValue) === false || (input == null ? void 0 : input.booleanValue) === "false" ? false : true,
-      min: typeof (input == null ? void 0 : input.min) === "number" ? input.min : void 0,
-      max: typeof (input == null ? void 0 : input.max) === "number" ? input.max : void 0,
-      responseDelayMinutes: typeof (input == null ? void 0 : input.responseDelayMinutes) === "number" && Number.isFinite(input.responseDelayMinutes) && input.responseDelayMinutes > 0 ? input.responseDelayMinutes : void 0
-    });
+    const limit = (input, fallback) => {
+      const responseDelayMinutes = (0, import_evaluation.parseFiniteNumber)(input == null ? void 0 : input.responseDelayMinutes);
+      return {
+        enabled: (input == null ? void 0 : input.enabled) === true,
+        mode: ["below", "above", "outside", "inside"].includes(input == null ? void 0 : input.mode) ? input.mode : fallback,
+        booleanValue: (input == null ? void 0 : input.booleanValue) === false || (input == null ? void 0 : input.booleanValue) === "false" ? false : true,
+        min: (0, import_evaluation.parseFiniteNumber)(input == null ? void 0 : input.min),
+        max: (0, import_evaluation.parseFiniteNumber)(input == null ? void 0 : input.max),
+        responseDelayMinutes: responseDelayMinutes !== void 0 && responseDelayMinutes > 0 ? responseDelayMinutes : void 0
+      };
+    };
+    const staleWarningMinutes = (0, import_evaluation.parseFiniteNumber)((_a = data.staleWarning) == null ? void 0 : _a.minutes);
     return {
       id,
       name: String(data.name || id).trim(),
@@ -2142,8 +2191,8 @@ class DeviceMonitoring extends utils.Adapter {
       warning: limit(data.warning, "outside"),
       alarm: limit(data.alarm, "outside"),
       staleWarning: {
-        enabled: ((_a = data.staleWarning) == null ? void 0 : _a.enabled) === true,
-        minutes: typeof ((_b = data.staleWarning) == null ? void 0 : _b.minutes) === "number" && data.staleWarning.minutes > 0 ? data.staleWarning.minutes : 60
+        enabled: ((_b = data.staleWarning) == null ? void 0 : _b.enabled) === true,
+        minutes: staleWarningMinutes !== void 0 && staleWarningMinutes > 0 ? staleWarningMinutes : 60
       }
     };
   }
@@ -2470,27 +2519,26 @@ class DeviceMonitoring extends utils.Adapter {
         continue;
       }
       const mode = (input) => ["below", "above", "outside", "inside"].includes(String(input)) ? input : "outside";
-      const number = (input) => typeof input === "number" && Number.isFinite(input) ? input : void 0;
       templates[functionName] = {
         warning: {
           enabled: ((_a = template.warning) == null ? void 0 : _a.enabled) === true,
           mode: mode((_b = template.warning) == null ? void 0 : _b.mode),
           booleanValue: ((_c = template.warning) == null ? void 0 : _c.booleanValue) === false || ((_d = template.warning) == null ? void 0 : _d.booleanValue) === "false" ? false : true,
-          min: number((_e = template.warning) == null ? void 0 : _e.min),
-          max: number((_f = template.warning) == null ? void 0 : _f.max),
-          responseDelayMinutes: number((_g = template.warning) == null ? void 0 : _g.responseDelayMinutes)
+          min: (0, import_evaluation.parseFiniteNumber)((_e = template.warning) == null ? void 0 : _e.min),
+          max: (0, import_evaluation.parseFiniteNumber)((_f = template.warning) == null ? void 0 : _f.max),
+          responseDelayMinutes: (0, import_evaluation.parseFiniteNumber)((_g = template.warning) == null ? void 0 : _g.responseDelayMinutes)
         },
         alarm: {
           enabled: ((_h = template.alarm) == null ? void 0 : _h.enabled) === true,
           mode: mode((_i = template.alarm) == null ? void 0 : _i.mode),
           booleanValue: ((_j = template.alarm) == null ? void 0 : _j.booleanValue) === false || ((_k = template.alarm) == null ? void 0 : _k.booleanValue) === "false" ? false : true,
-          min: number((_l = template.alarm) == null ? void 0 : _l.min),
-          max: number((_m = template.alarm) == null ? void 0 : _m.max),
-          responseDelayMinutes: number((_n = template.alarm) == null ? void 0 : _n.responseDelayMinutes)
+          min: (0, import_evaluation.parseFiniteNumber)((_l = template.alarm) == null ? void 0 : _l.min),
+          max: (0, import_evaluation.parseFiniteNumber)((_m = template.alarm) == null ? void 0 : _m.max),
+          responseDelayMinutes: (0, import_evaluation.parseFiniteNumber)((_n = template.alarm) == null ? void 0 : _n.responseDelayMinutes)
         },
         staleWarning: {
           enabled: ((_o = template.staleWarning) == null ? void 0 : _o.enabled) === true,
-          minutes: number((_p = template.staleWarning) == null ? void 0 : _p.minutes) || 60
+          minutes: (0, import_evaluation.parseFiniteNumber)((_p = template.staleWarning) == null ? void 0 : _p.minutes) || 60
         }
       };
     }
@@ -3446,6 +3494,8 @@ ${event.message}` : event.message;
       remark: ((_a = watched.remark) == null ? void 0 : _a.trim()) || "",
       warningLimits: this.formatLimitDescription(watched.warning, data.value, data.unit),
       alarmLimits: this.formatLimitDescription(watched.alarm, data.value, data.unit),
+      warningResponseTime: (0, import_message_templates.formatResponseTimeSuffix)(watched.warning.responseDelayMinutes, this.displayLanguage),
+      alarmResponseTime: (0, import_message_templates.formatResponseTimeSuffix)(watched.alarm.responseDelayMinutes, this.displayLanguage),
       timeoutMinutes: String(watched.staleWarning.minutes),
       lastUpdate: data.lastUpdate === null ? "\u2014" : timestampDisplay(data.lastUpdate),
       triggeredAt: timestampDisplay(now)

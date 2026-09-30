@@ -5,6 +5,7 @@ import {
 	evaluateLimit,
 	getWatchStatus,
 	isUpdateTimedOut,
+	parseFiniteNumber,
 	type LimitConfiguration,
 	type WatchedStateConfiguration,
 } from './lib/evaluation';
@@ -17,6 +18,12 @@ const limit = (mode: LimitConfiguration['mode'], min?: number, max?: number): Li
 });
 
 describe('threshold evaluation', () => {
+	it('parses decimal limits with either locale separator', () => {
+		expect(parseFiniteNumber('9.5')).to.equal(9.5);
+		expect(parseFiniteNumber('9,5')).to.equal(9.5);
+		expect(parseFiniteNumber('9,5,1')).to.equal(undefined);
+	});
+
 	it('supports lower and upper limits', () => {
 		expect(evaluateLimit(9, limit('below', 10))).to.equal(true);
 		expect(evaluateLimit(11, limit('above', undefined, 10))).to.equal(true);
