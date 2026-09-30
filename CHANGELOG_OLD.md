@@ -1,4 +1,8 @@
 # Older changelog entries
+## 0.0.27 (2026-09-23)
+* (BenAhrdt) Distinguish missing source IDs from invalid source values, add configurable invalid-value notifications, update the monitored value state first, and include the configured function in `info.message`.
+* (BenAhrdt) Match notification-template header colors to their standard output categories.
+
 ## 0.0.26 (2026-09-22)
 * (BenAhrdt) Link the historical changelog from the README.
 * (BenAhrdt) Use only the general `info`, `warnung` and `alarm` categories for notification output while preserving the original event type in `info.message.type`.

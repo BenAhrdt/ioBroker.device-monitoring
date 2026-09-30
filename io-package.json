@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.31",
+    "version": "0.0.32",
     "news": {
+      "0.0.32": {
+        "en": "Accept decimal values entered with either a point or comma for warning and alarm limits.\nAdd optional warning and alarm response-time suffixes to message-template placeholders.",
+        "de": "Akzeptieren Sie Dezimalwerte mit Punkt oder Komma für Warn- und Alarmgrenzen.\nFügen Sie optionale Warn- und Alarm-Suffixe zu Platzhaltern in Nachrichtenvorlagen hinzu.",
+        "ru": "Допускайте десятичные значения, вводимые с точкой или запятой, в качестве предельных значений предупреждений и аварийных сигналов.\nДобавьте дополнительные суффиксы времени отклика предупреждений и аварийных сигналов в заполнители шаблонов сообщений.",
+        "pt": "Aceite valores decimais inseridos com ponto ou vírgula para limites de aviso e alarme.\nAdicione sufixos opcionais de aviso e alarme aos espaços reservados do modelo.",
+        "nl": "Accepteer decimale waarden die zijn ingevoerd met een punt of een komma voor waarschuwings- en alarmlimieten.\nVoeg optionele achtervoegsels voor waarschuwingen en de reactietijd van alarmen toe aan tijdelijke aanduidingen voor berichtsjablonen.",
+        "fr": "Acceptez les décimales saisies avec un point ou une virgule pour les limites d'alerte.\nAjoutez des suffixes facultatifs d'avertissement et d'alarme aux espaces réservés des modèles de message.",
+        "it": "Accetti i valori decimali inseriti con punto o virgola per i limiti di avviso e allarme.\nAggiungi suffissi opzionali di avviso e risposta ai segnaposti dei modelli di messaggio.",
+        "es": "Aceptar valores decimales introducidos con punto o coma para los límites de aviso y alarma.\nAñada sufijos opcionales de aviso y alarma a los marcadores de las plantillas de mensajes.",
+        "pl": "Zaakceptuj wartości dziesiętne wprowadzone z punktem lub przecinkiem dla ograniczeń ostrzegawczych i alarmowych.\nDodaj opcjonalne przyrostki ostrzeżenia i czasu reakcji alarmu do symbolów zastępczych szablonów wiadomości.",
+        "uk": "Приймайте десяткові значення, введені крапкою або комою для обмежень попередження та тривоги.\nДодайте додаткові суфікси попередження та часу відгуку на нагадування до заповнювачів шаблонів повідомлень.",
+        "zh-cn": "接受用点或逗号输入的十进制值，表示警告和警报限制。\n向消息模板占位符添加可选的警告和警报响应时间后缀。"
+      },
       "0.0.31": {
         "en": "Persist the notification collection period and its buffered events so an adapter restart continues the active pause and completes its summary.\nRecreate recurring reminder schedules on adapter startup so future reminder times continue after a restart.\nAdd optional response times to warning and alarm limits and persist pending limit violations across adapter restarts.\nInfer bulk state target devices from matching source paths and report the affected state and reason for bulk-add validation conflicts.",
         "de": "Behalten Sie den Meldezeitraum und die gepufferten Ereignisse bei, sodass ein Adapter-Neustart die Pause beendet.\nWiederkehrende Erinnerungspläne beim Adapter-Start erstellen, damit auch nach dem Neustart wieder erinnert wird.\nOptionale Reaktionszeiten auf Warn- und Alarmlimits hinzufügen und bei Adapter-Neustarts andauern.\nErmitteln Sie Massenzustandszielgeräte anhand der Quellpfade und melden Sie den betroffenen Zustand und Grund.",
@@ -80,19 +93,6 @@
         "pl": "Połącz historyczny dziennik zmian z README.\nUżywaj tylko ogólnych kategorii „info”, „warnung” i „alarm” do wyświetlania powiadomień, zachowując oryginalny typ zdarzenia w `info.message.type`.",
         "uk": "Зв'яжіть історичний журнал змін з README.\nВикористовуйте лише загальні категорії `info`, `warnung` та `alarm` для виведення сповіщень, зберігаючи початковий тип події в `info.message.type`.",
         "zh-cn": "链接自述文件中的历史变更日志。\n仅使用通用的 “信息”、“警告” 和 “警报” 类别作为通知输出，同时在 “info.message.type” 中保留原始事件类型。"
-      },
-      "0.0.25": {
-        "en": "Exclude the historical changelog from the npm package and link to it from the README.",
-        "de": "Schließt das historische Changelog aus dem npm-Paket aus und verlinkt es in der README.",
-        "ru": "Исключите исторический журнал изменений из пакета npm и создайте ссылку на него из README.",
-        "pt": "Exclua o changelog histórico do pacote npm e vincule-o ao README.",
-        "nl": "Sluit de historische changelog uit het npm-pakket en link ernaar vanuit de README.",
-        "fr": "Excluez l'historique des modifications du package npm et créez un lien vers celui-ci depuis le README.",
-        "it": "Escluda il changelog storico dal pacchetto npm e collegalo dal README.",
-        "es": "Excluya el registro de cambios histórico del paquete npm y enlácelo desde el README.",
-        "pl": "Wyklucz historyczny dziennik zmian z pakietu npm i połącz do niego z README.",
-        "uk": "Виключити історичний журнал змін з пакета npm та посилатися на нього з README.",
-        "zh-cn": "从 npm 包中排除历史变更日志，并从 README 中链接到该日志。"
       }
     },
     "titleLang": {

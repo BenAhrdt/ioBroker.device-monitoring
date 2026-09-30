@@ -135,7 +135,7 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.32 (2026-09-30)
 * (BenAhrdt) Accept decimal values entered with either a point or comma for warning and alarm limits.
 * (BenAhrdt) Add optional warning and alarm response-time suffixes to message-template placeholders.
 
@@ -158,10 +158,6 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 * (BenAhrdt) Set generated monitored value states to the source state's `boolean` or `number` type.
 * (BenAhrdt) Use the writable `level` role for notification-level states.
 * (BenAhrdt) Use the `sensor` role for boolean monitored value states while keeping `value` for numeric states.
-
-### 0.0.27 (2026-09-23)
-* (BenAhrdt) Distinguish missing source IDs from invalid source values, add configurable invalid-value notifications, update the monitored value state first, and include the configured function in `info.message`.
-* (BenAhrdt) Match notification-template header colors to their standard output categories.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 
