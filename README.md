@@ -135,6 +135,9 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Configure multiple notification quiet periods with optional end-of-pause summaries.
+
 ### 0.0.32 (2026-09-30)
 * (BenAhrdt) Accept decimal values entered with either a point or comma for warning and alarm limits.
 * (BenAhrdt) Add optional warning and alarm response-time suffixes to message-template placeholders.

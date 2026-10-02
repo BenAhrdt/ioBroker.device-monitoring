@@ -296,6 +296,15 @@
   "native": {
     "configurationBackupDelayMinutes": 60,
     "notificationCollectionEnabled": false,
+    "notificationCollectionPeriods": [
+      {
+        "name": "Benachrichtigungspause",
+        "cron": "0 22 * * *",
+        "durationMinutes": 600,
+        "summaryEnabled": true
+      }
+    ],
+    "notificationCollectionSummaryEnabled": true,
     "notificationCollectionCron": "0 22 * * *",
     "notificationCollectionDurationMinutes": 600,
     "warningTitleTemplate": "Warnung: {{device}} - {{state}}",

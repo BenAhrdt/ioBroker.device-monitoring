@@ -1683,10 +1683,11 @@ class DeviceMonitoring extends utils.Adapter {
   staleCheckTimer;
   configurationBackupTimer;
   summaryReminderJob;
-  notificationCollectionJob;
+  notificationCollectionJobs = [];
   notificationCollectionEndTimer;
   notificationCollectionUntil = 0;
   notificationCollectionStartedAt = 0;
+  notificationCollectionSummaryEnabledForActive = true;
   notificationCollectionStateWriteQueue = Promise.resolve();
   bulkSelectionSessions = /* @__PURE__ */ new Map();
   constructor(options = {}) {
@@ -1709,10 +1710,10 @@ class DeviceMonitoring extends utils.Adapter {
         this.summaryReminderJob.cancel();
         this.summaryReminderJob = void 0;
       }
-      if (this.notificationCollectionJob) {
-        this.notificationCollectionJob.cancel();
-        this.notificationCollectionJob = void 0;
+      for (const job of this.notificationCollectionJobs) {
+        job.cancel();
       }
+      this.notificationCollectionJobs = [];
       if (this.notificationCollectionEndTimer) {
         this.clearTimeout(this.notificationCollectionEndTimer);
         this.notificationCollectionEndTimer = void 0;
@@ -1746,7 +1747,7 @@ class DeviceMonitoring extends utils.Adapter {
     );
     await this.ensureState(
       "info.notificationCollection",
-      t("Notification collection state", "Status der Benachrichtigungs-Sammelphase"),
+      t("Notification quiet period state", "Status der Benachrichtigungspause"),
       "string",
       "json",
       void 0,
@@ -1754,15 +1755,13 @@ class DeviceMonitoring extends utils.Adapter {
     );
     await this.clearLegacyMessageState();
     await this.rebuildObjects();
-    const restoredNotificationCollection = await this.restoreNotificationCollection();
+    await this.restoreNotificationCollection();
     if (legacyDevices.length) {
       await this.removeLegacyDeviceConfig();
     }
     await this.refreshSubscriptions();
     this.scheduleNotificationCollection();
-    if (!restoredNotificationCollection) {
-      await this.restoreMissedNotificationCollection();
-    }
+    await this.restoreMissedNotificationCollection();
     await this.updateAll();
     await this.setState("info.connection", true, true);
     this.sortRefreshTimer = this.setInterval(() => {
@@ -1844,6 +1843,44 @@ class DeviceMonitoring extends utils.Adapter {
           DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].en,
           DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].de
         );
+        changed = true;
+      }
+    }
+    if (Array.isArray(native.notificationCollectionPeriods)) {
+      const usedPeriodNames = /* @__PURE__ */ new Set();
+      let periodsChanged = false;
+      native.notificationCollectionPeriods = native.notificationCollectionPeriods.map((period, index) => {
+        if (!period || typeof period !== "object" || Array.isArray(period)) {
+          return period;
+        }
+        const configuredName = typeof period.name === "string" ? period.name.trim() : "";
+        const baseName = configuredName || this.localize(`Quiet period ${index + 1}`, `Benachrichtigungspause ${index + 1}`);
+        let name = baseName;
+        let suffix = 2;
+        while (usedPeriodNames.has(name.toLowerCase())) {
+          name = `${baseName} (${suffix++})`;
+        }
+        usedPeriodNames.add(name.toLowerCase());
+        if (period.name !== name) {
+          periodsChanged = true;
+        }
+        return { ...period, name };
+      });
+      if (periodsChanged) {
+        changed = true;
+      }
+    } else {
+      const legacyCron = typeof native.notificationCollectionCron === "string" ? native.notificationCollectionCron.trim() : "";
+      const legacyDuration = Number(native.notificationCollectionDurationMinutes);
+      if (legacyCron && Number.isFinite(legacyDuration) && legacyDuration > 0) {
+        native.notificationCollectionPeriods = [
+          {
+            name: this.localize("Quiet period", "Benachrichtigungspause"),
+            cron: legacyCron,
+            durationMinutes: legacyDuration,
+            summaryEnabled: native.notificationCollectionSummaryEnabled !== false
+          }
+        ];
         changed = true;
       }
     }
@@ -2878,42 +2915,101 @@ class DeviceMonitoring extends utils.Adapter {
       this.log.warn(`Could not create summary reminder: ${String(error)}`);
     }
   }
-  scheduleNotificationCollection() {
-    if (this.notificationCollectionJob) {
-      this.notificationCollectionJob.cancel();
-      this.notificationCollectionJob = void 0;
+  getNotificationCollectionPeriods() {
+    const configuredPeriods = this.config.notificationCollectionPeriods;
+    if (Array.isArray(configuredPeriods)) {
+      const usedPeriodNames = /* @__PURE__ */ new Set();
+      return configuredPeriods.flatMap((period) => {
+        if (!period || typeof period !== "object") {
+          return [];
+        }
+        const name = typeof period.name === "string" ? period.name.trim() : "";
+        const cron2 = typeof period.cron === "string" ? period.cron.trim() : "";
+        const durationMinutes2 = Number(period.durationMinutes);
+        const normalizedName = name.toLowerCase();
+        if (!name || usedPeriodNames.has(normalizedName) || !cron2 || !Number.isFinite(durationMinutes2) || durationMinutes2 <= 0) {
+          return [];
+        }
+        usedPeriodNames.add(normalizedName);
+        return [
+          {
+            name,
+            cron: cron2,
+            durationMinutes: durationMinutes2,
+            summaryEnabled: period.summaryEnabled !== false
+          }
+        ];
+      });
     }
+    const cron = typeof this.config.notificationCollectionCron === "string" ? this.config.notificationCollectionCron.trim() : "";
+    const durationMinutes = Number(this.config.notificationCollectionDurationMinutes);
+    if (!cron || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+      return [];
+    }
+    return [
+      {
+        name: this.localize("Quiet period", "Benachrichtigungspause"),
+        cron,
+        durationMinutes,
+        summaryEnabled: this.config.notificationCollectionSummaryEnabled !== false
+      }
+    ];
+  }
+  cancelNotificationCollectionJobs() {
+    for (const job of this.notificationCollectionJobs) {
+      job.cancel();
+    }
+    this.notificationCollectionJobs = [];
+  }
+  scheduleNotificationCollection() {
+    this.cancelNotificationCollectionJobs();
     if (this.config.notificationCollectionEnabled !== true) {
       return;
     }
-    const cron = typeof this.config.notificationCollectionCron === "string" ? this.config.notificationCollectionCron.trim() : "";
-    const duration = Number(this.config.notificationCollectionDurationMinutes);
-    if (!cron || !Number.isFinite(duration) || duration <= 0) {
-      this.log.warn("Notification collection is enabled, but no valid cron schedule or duration is configured");
+    const periods = this.getNotificationCollectionPeriods();
+    if (!periods.length) {
+      this.log.warn("Notification collection is enabled, but no valid quiet period is configured");
       return;
     }
-    try {
-      this.notificationCollectionJob = schedule.scheduleJob(
-        "device-monitoring-notification-collection",
-        cron,
-        () => {
-          void this.startNotificationCollection(duration).catch((error) => {
-            this.log.warn(`Could not start notification collection: ${String(error)}`);
-          });
-        }
-      );
-    } catch (error) {
-      this.log.warn(`Could not schedule notification collection for cron expression "${cron}": ${String(error)}`);
-    }
+    periods.forEach((period, index) => {
+      try {
+        const job = schedule.scheduleJob(
+          `device-monitoring-notification-collection-${index}`,
+          period.cron,
+          () => {
+            void this.startNotificationCollection(
+              period.durationMinutes,
+              Date.now(),
+              period.summaryEnabled
+            ).catch((error) => {
+              this.log.warn(`Could not start notification collection: ${String(error)}`);
+            });
+          }
+        );
+        this.notificationCollectionJobs.push(job);
+      } catch (error) {
+        this.log.warn(
+          `Could not schedule notification collection for cron expression "${period.cron}": ${String(error)}`
+        );
+      }
+    });
   }
-  async startNotificationCollection(durationMinutes, startedAt = Date.now()) {
+  async startNotificationCollection(durationMinutes, startedAt = Date.now(), summaryEnabled = true) {
     const now = Date.now();
-    if (this.notificationCollectionUntil > now) {
-      this.log.warn("Notification collection is already active; keeping the existing collection period");
-      return;
-    }
     const endedAt = startedAt + durationMinutes * 6e4;
     if (endedAt <= now) {
+      return;
+    }
+    if (this.notificationCollectionUntil > now) {
+      const extendsPeriod = endedAt > this.notificationCollectionUntil;
+      const enablesSummary = summaryEnabled && !this.notificationCollectionSummaryEnabledForActive;
+      if (!extendsPeriod && !enablesSummary) {
+        return;
+      }
+      this.notificationCollectionUntil = Math.max(this.notificationCollectionUntil, endedAt);
+      this.notificationCollectionSummaryEnabledForActive || (this.notificationCollectionSummaryEnabledForActive = summaryEnabled);
+      this.scheduleNotificationCollectionEndTimer(this.notificationCollectionUntil - now);
+      await this.persistNotificationCollection();
       return;
     }
     if (this.notificationCollectionEndTimer) {
@@ -2923,6 +3019,7 @@ class DeviceMonitoring extends utils.Adapter {
     this.bufferedNotificationEvents = [];
     this.notificationCollectionStartedAt = startedAt;
     this.notificationCollectionUntil = endedAt;
+    this.notificationCollectionSummaryEnabledForActive = summaryEnabled;
     this.scheduleNotificationCollectionEndTimer(endedAt - now);
     await this.persistNotificationCollection();
   }
@@ -2944,21 +3041,26 @@ class DeviceMonitoring extends utils.Adapter {
     if (this.config.notificationCollectionEnabled !== true) {
       return;
     }
-    const cron = typeof this.config.notificationCollectionCron === "string" ? this.config.notificationCollectionCron.trim() : "";
-    const duration = Number(this.config.notificationCollectionDurationMinutes);
-    if (!cron || !Number.isFinite(duration) || duration <= 0) {
+    const periods = this.getNotificationCollectionPeriods();
+    if (!periods.length) {
       return;
     }
     const now = Date.now();
-    try {
-      const previousInvocation = (0, import_cron_parser.parseExpression)(cron, { currentDate: new Date(now + 1) }).prev().toDate().getTime();
-      if (previousInvocation <= now && now < previousInvocation + duration * 6e4) {
-        await this.startNotificationCollection(duration, previousInvocation);
+    for (const period of periods) {
+      try {
+        const previousInvocation = (0, import_cron_parser.parseExpression)(period.cron, { currentDate: new Date(now + 1) }).prev().toDate().getTime();
+        if (previousInvocation <= now && now < previousInvocation + period.durationMinutes * 6e4) {
+          await this.startNotificationCollection(
+            period.durationMinutes,
+            previousInvocation,
+            period.summaryEnabled
+          );
+        }
+      } catch (error) {
+        this.log.warn(
+          `Could not restore a missed notification collection for cron expression "${period.cron}": ${String(error)}`
+        );
       }
-    } catch (error) {
-      this.log.warn(
-        `Could not restore a missed notification collection for cron expression "${cron}": ${String(error)}`
-      );
     }
   }
   async restoreNotificationCollection() {
@@ -2967,6 +3069,7 @@ class DeviceMonitoring extends utils.Adapter {
     if (this.config.notificationCollectionEnabled !== true) {
       this.notificationCollectionStartedAt = 0;
       this.notificationCollectionUntil = 0;
+      this.notificationCollectionSummaryEnabledForActive = true;
       this.bufferedNotificationEvents = [];
       if ((state == null ? void 0 : state.val) && state.val !== "{}") {
         await this.persistNotificationCollection();
@@ -2982,7 +3085,12 @@ class DeviceMonitoring extends utils.Adapter {
     }
     this.notificationCollectionStartedAt = persisted.startedAt;
     this.notificationCollectionUntil = persisted.endedAt;
-    this.bufferedNotificationEvents = persisted.events;
+    this.notificationCollectionSummaryEnabledForActive = persisted.summaryEnabled;
+    const summaryEnabled = this.notificationCollectionSummaryEnabledForActive;
+    this.bufferedNotificationEvents = summaryEnabled ? persisted.events : [];
+    if (!summaryEnabled && persisted.events.length) {
+      await this.persistNotificationCollection();
+    }
     const remaining = persisted.endedAt - Date.now();
     if (remaining <= 0) {
       await this.finishNotificationCollection();
@@ -2997,7 +3105,7 @@ class DeviceMonitoring extends utils.Adapter {
     }
     try {
       const parsed = JSON.parse(value);
-      const { startedAt, endedAt, events: rawEvents } = parsed;
+      const { startedAt, endedAt, events: rawEvents, summaryEnabled: persistedSummaryEnabled } = parsed;
       if (typeof startedAt !== "number" || !Number.isFinite(startedAt) || typeof endedAt !== "number" || !Number.isFinite(endedAt) || endedAt <= startedAt || !Array.isArray(rawEvents)) {
         return void 0;
       }
@@ -3008,7 +3116,7 @@ class DeviceMonitoring extends utils.Adapter {
         const candidate = event;
         return typeof candidate.category === "string" && ["info", "warnung", "alarm"].includes(candidate.category) && typeof candidate.deviceName === "string" && typeof candidate.stateName === "string" && typeof candidate.title === "string" && typeof candidate.message === "string" && typeof candidate.triggeredAt === "number";
       });
-      return { startedAt, endedAt, events };
+      return { startedAt, endedAt, events, summaryEnabled: persistedSummaryEnabled !== false };
     } catch {
       return void 0;
     }
@@ -3017,7 +3125,8 @@ class DeviceMonitoring extends utils.Adapter {
     const value = this.notificationCollectionUntil > Date.now() ? JSON.stringify({
       startedAt: this.notificationCollectionStartedAt,
       endedAt: this.notificationCollectionUntil,
-      events: this.bufferedNotificationEvents
+      events: this.bufferedNotificationEvents,
+      summaryEnabled: this.notificationCollectionSummaryEnabledForActive
     }) : "{}";
     const write = this.notificationCollectionStateWriteQueue.catch(() => void 0).then(async () => {
       await this.setStateChangedAsync("info.notificationCollection", { val: value, ack: true });
@@ -3033,10 +3142,15 @@ class DeviceMonitoring extends utils.Adapter {
     const startedAt = this.notificationCollectionStartedAt;
     const endedAt = Date.now();
     const events = this.bufferedNotificationEvents;
+    const summaryEnabled = this.notificationCollectionSummaryEnabledForActive;
     this.bufferedNotificationEvents = [];
     this.notificationCollectionStartedAt = 0;
     this.notificationCollectionUntil = 0;
+    this.notificationCollectionSummaryEnabledForActive = true;
     await this.persistNotificationCollection();
+    if (!summaryEnabled) {
+      return;
+    }
     const summary = (0, import_reminders.createNotificationCollectionSummaryMessage)(events, this.displayLanguage, startedAt, endedAt);
     if (!summary) {
       return;
@@ -3053,8 +3167,10 @@ class DeviceMonitoring extends utils.Adapter {
   }
   async publishMessageEvent(event) {
     if (this.notificationCollectionUntil > Date.now()) {
-      this.bufferedNotificationEvents.push(event);
-      await this.persistNotificationCollection();
+      if (this.notificationCollectionSummaryEnabledForActive) {
+        this.bufferedNotificationEvents.push(event);
+        await this.persistNotificationCollection();
+      }
       return;
     }
     await this.deliverMessageEvent(event, "notification");

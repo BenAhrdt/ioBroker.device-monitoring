@@ -19,6 +19,19 @@ declare global {
 			summaryReminderCron?: string;
 			/** Whether notification collection periods are enabled. */
 			notificationCollectionEnabled?: boolean;
+			/** Configured recurring notification quiet periods. */
+			notificationCollectionPeriods?: Array<{
+				/** Unique display name of the quiet period. */
+				name?: string;
+				/** Cron expression that starts the quiet period. */
+				cron?: string;
+				/** Duration of the quiet period in minutes. */
+				durationMinutes?: number;
+				/** Whether a summary is sent when the quiet period ends. Defaults to true. */
+				summaryEnabled?: boolean;
+			}>;
+			/** @deprecated Use notificationCollectionPeriods[].summaryEnabled. Defaults to true. */
+			notificationCollectionSummaryEnabled?: boolean;
 			/** Cron expression that starts a notification collection period. */
 			notificationCollectionCron?: string;
 			/** Duration of a notification collection period in minutes. */
