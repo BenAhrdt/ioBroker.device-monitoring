@@ -135,7 +135,7 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.33 (2026-10-02)
 * (BenAhrdt) Configure multiple notification quiet periods with optional end-of-pause summaries.
 
 ### 0.0.32 (2026-09-30)
@@ -155,12 +155,6 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 
 ### 0.0.29 (2026-09-25)
 * (BenAhrdt) Add configurable Cron-based reminders with a summary of all currently non-normal monitored states.
-
-### 0.0.28 (2026-09-23)
-* (BenAhrdt) Keep monitored state names unchanged in the edit dialog and add the recommended translations to generated object names.
-* (BenAhrdt) Set generated monitored value states to the source state's `boolean` or `number` type.
-* (BenAhrdt) Use the writable `level` role for notification-level states.
-* (BenAhrdt) Use the `sensor` role for boolean monitored value states while keeping `value` for numeric states.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 
