@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.34",
+    "version": "0.0.35",
     "news": {
+      "0.0.35": {
+        "en": "Complete the supported admin translations for recurring reminders, notification quiet periods, and recovery states.",
+        "de": "Füllen Sie die unterstützten Admin-Übersetzungen für Erinnerungen, Wartezeiten und Wiederherstellungsstatus aus.",
+        "ru": "Выполните поддерживаемые переводы администраторов для повторяющихся напоминаний, периодов ожидания уведомлений и состояний восстановления.",
+        "pt": "Conclua as traduções administrativas suportadas para lembretes, notificações e estados de recuperação.",
+        "nl": "Voltooi de ondersteunde beheerdersvertalingen voor terugkerende herinneringen, stilteperiodes van meldingen en herstelstatussen.",
+        "fr": "Effectuez les traductions administratives prises en charge pour les rappels récurrents, les périodes calmes et les états de reprise.",
+        "it": "Completa le traduzioni admin supportate per i promemoria ricorrenti, le notifiche e gli stati di recupero.",
+        "es": "Complete las traducciones administrativas admitidas para recordatorios recurrentes, periodos de inactividad y estados de recuperación",
+        "pl": "Ukończ obsługiwane tłumaczenia administratora dla powtarzających się przypomnień, okresów cichych powiadomień i stanów odzyskiwania.",
+        "uk": "Виконайте підтримувані переклади адміністратора для повторюваних нагадувань, періодів тиші сповіщень та станів відновлення.",
+        "zh-cn": "完成对定期提醒、通知静默期和恢复状态的支持的管理员翻译。"
+      },
       "0.0.34": {
         "en": "Synchronize the supported admin translations with the current configuration strings and remove obsolete notification-template entries.",
         "de": "Synchronisieren Sie die unterstützten Admin-Übersetzungen mit der aktuellen Konfiguration und löschen Sie veraltete Meldevorlagen.",
@@ -80,19 +93,6 @@
         "pl": "Dodaj konfigurowalne przypomnienia oparte na CRON z podsumowaniem wszystkich aktualnie nienaturalnych monitorowanych stanów.",
         "uk": "Додайте настроювані нагадування на основі CRON із резюме всіх станів, які зараз не є нормальними, що відстежуються.",
         "zh-cn": "添加基于 Cron 的可配置提醒，其中包含所有当前非正常监控状态的摘要。"
-      },
-      "0.0.28": {
-        "en": "Keep monitored state names unchanged in the edit dialog and add the recommended translations to generated object names.\nSet generated monitored value states to the source state's `boolean` or `number` type.\nUse the writable `level` role for notification-level states.\nUse the `sensor` role for boolean monitored value states while keeping `value` for numeric states.",
-        "de": "Behalten Sie die Namen der überwachten Staaten im Bearbeitungsdialog bei und fügen Sie generierte Objekte um.\nSetzt generierte Werte auf den Typ `Boolean` oder `Zahl` des Quellstatus.\nVerwenden Sie die beschreibbare Level-Rolle für Meldestatus.\nVerwenden Sie die Rolle „Sensor“ für boolesche Werte und „Wert“ für Zahlen.",
-        "ru": "Сохраните имена отслеживаемых состояний без изменений в диалоговом окне редактирования и добавьте рекомендуемые переводы к созданным именам объектов.\nЗадайте для сгенерированных состояний отслеживаемых значений тип исходного состояния «логический» или «числовой».\nИспользуйте доступную для записи роль `level` для состояний уровня уведомлений.\nИспользуйте роль «сенсор» для состояний булевых контролируемых значений, сохраняя «значение» для числовых состояний.",
-        "pt": "Não altere os nomes dos estados na caixa de edição e adicione as traduções recomendadas aos objetos gerados.\nDefina os valores monitorados gerados para o tipo `booleano` ou `número` da fonte.\nUse a função “nível” gravável para estados de notificação.\nUse a função `sensor` para valores booleanos monitorados e mantenha `valor` para números.",
-        "nl": "Houd de namen van gecontroleerde staten ongewijzigd in het bewerkingsvenster en voeg de aanbevolen vertalingen toe aan de gegenereerde objectnamen.\nStel de gegenereerde gecontroleerde waardestatussen in op het type `boolean` of `nummer` van de bronstatus.\nGebruik de schrijfbare rol 'niveau' voor statussen op meldingsniveau.\nGebruik de rol `sensor` voor booleaanse gecontroleerde waardestatussen en behoud de `waarde` voor numerieke toestanden.",
-        "fr": "Conservez les noms des états surveillés dans la boîte de dialogue et ajoutez les traductions recommandées aux noms d'objets générés.\nDéfinissez les valeurs surveillées générées sur le type « booléen » ou « numérique » de l'état source.\nUtilisez le rôle « level » en écriture pour les états de notification.\nUtilisez le rôle « capteur » pour les états booléens surveillés et conservez « valeur » pour les états numériques.",
-        "it": "Mantieni invariati i nomi di stato monitorati e aggiungi le traduzioni consigliate ai nomi degli oggetti generati.\nImposta i valori monitorati generati sul tipo «booleano» o «numero» dello stato sorgente.\nUsa il ruolo scrivibile «level» per gli stati di notifica.\nUsa il ruolo «sensore» per i valori booleani monitorati mantenendo «valore» per i numeri.",
-        "es": "Mantenga los nombres de los estados monitorizados en el cuadro de edición y añada las traducciones recomendadas a los nombres de objetos generados.\nDefina los estados de valores monitorizados generados en el tipo «booleano» o «número» del estado fuente.\nUtilice el rol de «nivel» escribible para los estados de notificación.\nUtilice la función «sensor» para los estados de valor monitorizados booleanos y mantenga «valor» para los numéricos.",
-        "pl": "Zachowaj niezmienione nazwy monitorowanych stanów w oknie dialogowym edycji i dodaj zalecane tłumaczenia do wygenerowanych nazw obiektów.\nUstaw wygenerowane monitorowane stany wartości na typ „boolean” lub „number” stanu źródłowego.\nUżyj zapisywalnej roli „poziom” dla stanów na poziomie powiadomień.\nUżyj roli „czujnik” dla logicznych stanów wartości monitorowanych, zachowując „wartość” dla stanów liczbowych.",
-        "uk": "Зберігайте назви станів, що контролюються, незмінними у діалоговому вікні редагування та додайте рекомендовані переклади до згенерованих імен об'єктів.\nВстановіть згенеровані стани контрольованих значень на тип «булевий» або «номер» стану джерела.\nВикористовуйте роль `level`, яку можна записувати, для станів рівня сповіщень.\nВикористовуйте роль `sensor` для булевих станів контрольованих значень, зберігаючи `значення` для числових станів.",
-        "zh-cn": "在编辑对话框中保持监控状态名称不变，并将推荐的翻译添加到生成的对象名称中。\n将生成的监控值状态设置为源状态的 “布尔值” 或 “数字” 类型。\n对通知级别的状态使用可写的 “级别” 角色。\n对布尔值监控状态使用 “传感器” 角色，同时为数字状态保留 “值”。"
       }
     },
     "titleLang": {

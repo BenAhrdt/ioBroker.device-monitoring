@@ -135,7 +135,7 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.35 (2026-10-03)
 * (BenAhrdt) Complete the supported admin translations for recurring reminders, notification quiet periods, and recovery states.
 
 ### 0.0.34 (2026-10-03)
@@ -153,11 +153,6 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 * Recreate recurring reminder schedules on adapter startup so future reminder times continue after a restart.
 * Add optional response times to warning and alarm limits and persist pending limit violations across adapter restarts.
 * Infer bulk state target devices from matching source paths and report the affected state and reason for bulk-add validation conflicts.
-
-### 0.0.30 (2026-09-26)
-* Add cause-specific recovery templates for limit violations, timeouts, and invalid source/value states.
-* Add configurable notification collection periods with priority-based summaries.
-* Add the `{{function}}` placeholder to notification templates.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 
