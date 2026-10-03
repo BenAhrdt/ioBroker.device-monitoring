@@ -135,6 +135,9 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Complete the supported admin translations for recurring reminders, notification quiet periods, and recovery states.
+
 ### 0.0.34 (2026-10-03)
 * (BenAhrdt) Synchronize the supported admin translations with the current configuration strings and remove obsolete notification-template entries.
 
