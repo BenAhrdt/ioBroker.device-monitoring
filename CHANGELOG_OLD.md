@@ -1,4 +1,7 @@
 # Older changelog entries
+## 0.0.29 (2026-09-25)
+* (BenAhrdt) Add configurable Cron-based reminders with a summary of all currently non-normal monitored states.
+
 ## 0.0.28 (2026-09-23)
 * (BenAhrdt) Keep monitored state names unchanged in the edit dialog and add the recommended translations to generated object names.
 * (BenAhrdt) Set generated monitored value states to the source state's `boolean` or `number` type.
