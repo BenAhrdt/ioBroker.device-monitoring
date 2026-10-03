@@ -135,7 +135,7 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.36 (2026-10-03)
 * (BenAhrdt) Keep main-branch test logs available when a release follows a regular push.
 
 ### 0.0.35 (2026-10-03)
@@ -150,12 +150,6 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 ### 0.0.32 (2026-09-30)
 * (BenAhrdt) Accept decimal values entered with either a point or comma for warning and alarm limits.
 * (BenAhrdt) Add optional warning and alarm response-time suffixes to message-template placeholders.
-
-### 0.0.31 (2026-09-29)
-* Persist the notification collection period and its buffered events so an adapter restart continues the active pause and completes its summary.
-* Recreate recurring reminder schedules on adapter startup so future reminder times continue after a restart.
-* Add optional response times to warning and alarm limits and persist pending limit violations across adapter restarts.
-* Infer bulk state target devices from matching source paths and report the affected state and reason for bulk-add validation conflicts.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 

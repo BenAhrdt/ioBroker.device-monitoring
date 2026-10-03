@@ -1,4 +1,10 @@
 # Older changelog entries
+## 0.0.31 (2026-09-29)
+* Persist the notification collection period and its buffered events so an adapter restart continues the active pause and completes its summary.
+* Recreate recurring reminder schedules on adapter startup so future reminder times continue after a restart.
+* Add optional response times to warning and alarm limits and persist pending limit violations across adapter restarts.
+* Infer bulk state target devices from matching source paths and report the affected state and reason for bulk-add validation conflicts.
+
 ## 0.0.30 (2026-09-26)
 * Add cause-specific recovery templates for limit violations, timeouts, and invalid source/value states.
 * Add configurable notification collection periods with priority-based summaries.

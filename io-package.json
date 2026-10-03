@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.35",
+    "version": "0.0.36",
     "news": {
+      "0.0.36": {
+        "en": "Keep main-branch test logs available when a release follows a regular push.",
+        "de": "Halten Sie Testlogs bereit, wenn ein Release auf einen Push folgt.",
+        "ru": "Сохраняйте журналы тестирования основной ветки доступными, если релиз выходит регулярно.",
+        "pt": "Mantenha os logs de teste da filial principal após um push regular.",
+        "nl": "Houd testlogboeken voor de hoofdvestiging beschikbaar wanneer een release volgt op een regelmatige push.",
+        "fr": "Tenez les journaux de test de la branche principale à la suite d'un push.",
+        "it": "Tenga disponibili i log dei test del ramo principale quando un rilascio è regolare.",
+        "es": "Mantenga los registros de pruebas de la rama principal cuando una versión es normal.",
+        "pl": "Zachowaj dostępne dzienniki testów głównych gałęzi, gdy wydanie następuje po regularnym naciśnięciu.",
+        "uk": "Зберігайте журнали тестування головної гілки доступними, коли випуск слідує за звичайним натисканням.",
+        "zh-cn": "定期推送版本后，保持主分支测试日志可用。"
+      },
       "0.0.35": {
         "en": "Complete the supported admin translations for recurring reminders, notification quiet periods, and recovery states.",
         "de": "Füllen Sie die unterstützten Admin-Übersetzungen für Erinnerungen, Wartezeiten und Wiederherstellungsstatus aus.",
@@ -80,19 +93,6 @@
         "pl": "Dodaj szablony odzyskiwania specyficzne dla przyczyny dla naruszeń limitu, limitu czasu i nieprawidłowych stanów źródło/wartości.\nDodaj konfigurowalne okresy zbierania powiadomień za pomocą podsumowań opartych na priorytetach.\nDodaj symbol zastępczy `{{function}}` do szablonów powiadomień.",
         "uk": "Додайте шаблони відновлення для конкретних причин для порушень лімітів, тайм-аутів та недійсних станів джерела/значення.\nДодайте настроювані періоди збору сповіщень із зведеннями на основі пріоритетів.\nДодайте заповнювач `{{function}}` до шаблонів сповіщень.",
         "zh-cn": "为违反限制、超时和无效的源/值状态添加特定原因的恢复模板。\n使用基于优先级的摘要添加可配置的通知收集周期。\n将 {{function}} 占位符添加到通知模板中。"
-      },
-      "0.0.29": {
-        "en": "Add configurable Cron-based reminders with a summary of all currently non-normal monitored states.",
-        "de": "Fügen Sie CRON-basierte Erinnerungen mit allen derzeit unnormalen Überwachungszuständen hinzu.",
-        "ru": "Добавьте настраиваемые напоминания на основе CRON со сводкой всех отслеживаемых состояний, которые в настоящее время не являются нормальными.",
-        "pt": "Adicione lembretes configuráveis em Cron com um resumo dos estados não normais monitorados.",
-        "nl": "Voeg configureerbare herinneringen op basis van Cron toe met een samenvatting van alle staten die momenteel niet normaal worden bewaakt.",
-        "fr": "Ajoutez des rappels configurables basés sur CRON avec un résumé de tous les états surveillés anormaux actuels.",
-        "it": "Aggiunga promemoria configurabili basati su CON con un riepilogo di tutti gli stati non normali.",
-        "es": "Añada recordatorios configurables basados en CRON con un resumen de los estados monitorizados no normales.",
-        "pl": "Dodaj konfigurowalne przypomnienia oparte na CRON z podsumowaniem wszystkich aktualnie nienaturalnych monitorowanych stanów.",
-        "uk": "Додайте настроювані нагадування на основі CRON із резюме всіх станів, які зараз не є нормальними, що відстежуються.",
-        "zh-cn": "添加基于 Cron 的可配置提醒，其中包含所有当前非正常监控状态的摘要。"
       }
     },
     "titleLang": {
