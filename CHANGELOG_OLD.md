@@ -1,4 +1,8 @@
 # Older changelog entries
+## 0.0.32 (2026-09-30)
+* (BenAhrdt) Accept decimal values entered with either a point or comma for warning and alarm limits.
+* (BenAhrdt) Add optional warning and alarm response-time suffixes to message-template placeholders.
+
 ## 0.0.31 (2026-09-29)
 * Persist the notification collection period and its buffered events so an adapter restart continues the active pause and completes its summary.
 * Recreate recurring reminder schedules on adapter startup so future reminder times continue after a restart.

@@ -135,7 +135,7 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.37 (2026-10-03)
 * (BenAhrdt) Restore the ioBroker-recommended workflow concurrency configuration for repository checks.
 
 ### 0.0.36 (2026-10-03)
@@ -149,10 +149,6 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 
 ### 0.0.33 (2026-10-02)
 * (BenAhrdt) Configure multiple notification quiet periods with optional end-of-pause summaries.
-
-### 0.0.32 (2026-09-30)
-* (BenAhrdt) Accept decimal values entered with either a point or comma for warning and alarm limits.
-* (BenAhrdt) Add optional warning and alarm response-time suffixes to message-template placeholders.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 

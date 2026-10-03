@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.36",
+    "version": "0.0.37",
     "news": {
+      "0.0.37": {
+        "en": "Restore the ioBroker-recommended workflow concurrency configuration for repository checks.",
+        "de": "Stellen Sie die von IO-Broker empfohlene Parallelität für Repository-Checks wieder her.",
+        "ru": "Восстановите рекомендованную IOBroker конфигурацию параллелизма рабочих процессов для проверок репозитория.",
+        "pt": "Restaure a configuração simultânea recomendada pelo IObroker para verificações de repositório.",
+        "nl": "Herstel de door IOBroker aanbevolen configuratie voor gelijktijdige werkstromen voor controles van de opslagplaatsen.",
+        "fr": "Restaurez la configuration de flux de travail simultanée recommandée par IOBroker pour vérifier les dépôts.",
+        "it": "Ripristina la concorrenza del workflow consigliata da IObroker per i controlli del repository.",
+        "es": "Restaure la configuración de simultaneidad recomendada por IOBroker para las comprobaciones de repositorios.",
+        "pl": "Przywróć zalecaną przez IOBroker konfigurację współbieżności przepływu pracy dla kontroli repozytorium.",
+        "uk": "Відновити конфігурацію паралельності робочого процесу, рекомендовану IObroker для перевірки сховищ.",
+        "zh-cn": "恢复 IOBroker 推荐的存储库检查工作流程并发配置。"
+      },
       "0.0.36": {
         "en": "Keep main-branch test logs available when a release follows a regular push.",
         "de": "Halten Sie Testlogs bereit, wenn ein Release auf einen Push folgt.",
@@ -80,19 +93,6 @@
         "pl": "Utrzymuj okres zbierania powiadomień i jego zdarzenia buforowane, aby ponowne uruchomienie adaptera kontynuowało aktywną pauzę i zakończyło jej podsumowanie.\nOdtwórz powtarzające się harmonogramy przypomnień podczas uruchamiania adaptera, aby przyszłe czasy przypomnień były kontynuowane po ponownym uruchomieniu.\nDodaj opcjonalne czasy reakcji do limitów ostrzeżeń i alarmów i utrzymuj oczekiwane naruszenia limitu podczas ponownego uruchamiania adaptera.\nWywnioskować urządzenia docelowe stanu zbiorczego na podstawie pasujących ścieżek źródłowych i zgłaszaj stan, którego dotyczy problem i powód konfliktów sprawdzania poprawności dodawania zbiorczego.",
         "uk": "Зберігайте період збору сповіщень та його буферизовані події, щоб перезапуск адаптера продовжив активну паузу та завершив підсумок.\nВідтворіть повторювані графіки нагадувань під час запуску адаптера, щоб майбутні нагадування тривали після перезапуску.\nДодайте необов'язковий час відгуку до лімітів попереджень та тривог та зберігайте очікуючі порушення лімітів під час перезапуску адаптера.\nВиводити цільові пристрої масового стану з відповідних шляхів джерела та повідомити про стан впливу та причину конфліктів перевірки масового додавання.",
         "zh-cn": "保留通知收集期限及其缓冲事件，以便适配器重新启动会继续处于活动暂停状态并完成其摘要。\n在适配器启动时重新创建定期提醒计划，以便将来的提醒时间在重新启动后继续。\n为警告和警报限制添加可选响应时间，并在适配器重新启动后持续等待违反限制的情况。\n根据匹配的源路径推断目标设备的批量状态，并报告受影响的状态和批量添加验证冲突的原因。"
-      },
-      "0.0.30": {
-        "en": "Add cause-specific recovery templates for limit violations, timeouts, and invalid source/value states.\nAdd configurable notification collection periods with priority-based summaries.\nAdd the `{{function}}` placeholder to notification templates.",
-        "de": "Füge ursachenspezifische Vorlagen für Limitverstöße, Timeouts und Quell- und Wertstatus hinzu.\nFügen Sie konfigurierbare Meldezeiträume mit prioritären Zusammenfassungen hinzu.\nFügen Sie den Platzhalter `{{function}}` zu Meldevorlagen hinzu.",
-        "ru": "Добавьте шаблоны восстановления с учетом причин нарушений лимитов, тайм-аутов и неверных состояний источника и значения.\nДобавьте настраиваемые периоды сбора уведомлений со сводками на основе приоритетов.\nДобавьте заполнитель `{{function}}` в шаблоны уведомлений.",
-        "pt": "Adicione modelos de recuperação por causa específica para limites, tempos limite e origem/valor inválidos.\nAdicione períodos de coleta de notificações configuráveis com resumos prioritários.\nAdicione o espaço `{{function}}` aos modelos de notificação.",
-        "nl": "Voeg doelspecifieke herstelsjablonen toe voor limietoverschrijdingen, time-outs en ongeldige bron-/waardestatussen.\nVoeg configureerbare verzamelperioden voor meldingen toe met samenvattingen op basis van prioriteiten.\nVoeg de tijdelijke aanduiding `{{function}}` toe aan meldingssjablonen.",
-        "fr": "Ajoutez des modèles de restauration par cause pour les limites, les délais et les états source/valeur non valides.\nAjoutez des périodes de collecte de notifications configurables avec des résumés prioritaires.\nAjoutez l'espace « {{function}} » aux modèles de notifications.",
-        "it": "Aggiunga modelli di ripristino specifici per violazioni dei limiti, timeout e fonte/valore non validi.\nAggiungi periodi di raccolta notifiche configurabili con riepiloghi per priorità.\nAggiunga il segnaposto {{function}} ai modelli di notifica.",
-        "es": "Añada plantillas de recuperación por causa para infracciones de límites, tiempos de espera y estados de origen/valor no válidos\nAñada períodos de recogida de notificaciones configurables con resúmenes por prioridad.\nAñada el marcador de posición {{function}} a las plantillas de notificaciones.",
-        "pl": "Dodaj szablony odzyskiwania specyficzne dla przyczyny dla naruszeń limitu, limitu czasu i nieprawidłowych stanów źródło/wartości.\nDodaj konfigurowalne okresy zbierania powiadomień za pomocą podsumowań opartych na priorytetach.\nDodaj symbol zastępczy `{{function}}` do szablonów powiadomień.",
-        "uk": "Додайте шаблони відновлення для конкретних причин для порушень лімітів, тайм-аутів та недійсних станів джерела/значення.\nДодайте настроювані періоди збору сповіщень із зведеннями на основі пріоритетів.\nДодайте заповнювач `{{function}}` до шаблонів сповіщень.",
-        "zh-cn": "为违反限制、超时和无效的源/值状态添加特定原因的恢复模板。\n使用基于优先级的摘要添加可配置的通知收集周期。\n将 {{function}} 占位符添加到通知模板中。"
       }
     },
     "titleLang": {
