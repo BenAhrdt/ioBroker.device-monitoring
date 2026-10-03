@@ -135,6 +135,9 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Keep main-branch test logs available when a release follows a regular push.
+
 ### 0.0.35 (2026-10-03)
 * (BenAhrdt) Complete the supported admin translations for recurring reminders, notification quiet periods, and recovery states.
 
