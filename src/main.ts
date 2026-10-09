@@ -599,7 +599,7 @@ interface PersistedNotificationCollection {
 }
 
 interface NotificationCollectionPeriod {
-	name: string;
+	name: ioBroker.StringOrTranslated;
 	cron: string;
 	durationMinutes: number;
 	summaryEnabled: boolean;
@@ -621,62 +621,309 @@ function isNotificationLevelValue(value: unknown): value is number {
 
 const DEFAULT_INVALID_RESPONSE_TIME_SECONDS = 10;
 
-const DEFAULT_MESSAGE_TEMPLATES: Record<MessageTemplateType, { en: string; de: string }> = {
-	warning: {
-		en: 'State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
-		de: 'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}){{warningResponseTime}}{{changeFrom}}',
-	},
-	alarm: {
-		en: 'State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
-		de: 'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
-	},
-	timeout: {
-		en: 'State {{state}} on device {{device}} has not reported for at least {{timeoutMinutes}} minutes. Last update: {{lastUpdate}} ({{remark}})',
-		de: 'Der State {{state}} vom Gerät {{device}} hat sich mindestens {{timeoutMinutes}} Minuten nicht gemeldet. Letzte Aktualisierung: {{lastUpdate}} ({{remark}})',
-	},
-	invalidSource: {
-		en: 'Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
-		de: 'Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
-	},
-	invalidValue: {
-		en: 'Invalid value at device: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
-		de: 'Ungültiger Wert bei Gerät: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
-	},
-	recovered: {
-		en: 'The limit violation at {{device}} / {{state}} is cleared: {{value}} {{unit}} ({{remark}})',
-		de: 'Der State {{state}} vom Gerät {{device}} ist nach einer Grenzwertverletzung wieder in Ordnung: {{value}} {{unit}} ({{remark}})',
-	},
-	timeoutRecovered: {
-		en: '{{device}} / {{state}} is reporting again after the update timeout: {{value}} {{unit}} ({{remark}})',
-		de: 'Der State {{state}} vom Gerät {{device}} meldet sich nach dem Timeout wieder: {{value}} {{unit}} ({{remark}})',
-	},
-	invalidRecovered: {
-		en: '{{device}} / {{state}} is providing valid data again: {{value}} {{unit}} ({{remark}})',
-		de: '{{device}} / {{state}} liefert wieder gültige Daten: {{value}} {{unit}} ({{remark}})',
-	},
+type SupportedLanguage = 'en' | 'de' | 'ru' | 'pt' | 'nl' | 'fr' | 'it' | 'es' | 'pl' | 'uk' | 'zh-cn';
+
+function translated(
+	en: string,
+	de: string,
+	ru: string,
+	pt: string,
+	nl: string,
+	fr: string,
+	it: string,
+	es: string,
+	pl: string,
+	uk: string,
+	zhCn: string,
+): ioBroker.Translated {
+	return { en, de, ru, pt, nl, fr, it, es, pl, uk, 'zh-cn': zhCn };
+}
+
+const DEFAULT_NOTIFICATION_COLLECTION_PERIOD_NAME: ioBroker.Translated = translated(
+	'Notification pause',
+	'Benachrichtigungspause',
+	'Пауза уведомлений',
+	'Pausa de notificações',
+	'Meldingspauze',
+	'Pause des notifications',
+	'Pausa delle notifiche',
+	'Pausa de notificaciones',
+	'Przerwa w powiadomieniach',
+	'Пауза сповіщень',
+	'通知暂停',
+);
+
+const DEFAULT_MESSAGE_TEMPLATES: Record<MessageTemplateType, ioBroker.Translated> = {
+	warning: translated(
+		'State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		'Состояние {{state}} на устройстве {{device}} нарушило настроенное условие предупреждения ({{warningLimits}}): {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		'O estado {{state}} no dispositivo {{device}} violou a condição de aviso configurada ({{warningLimits}}): {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		'Status {{state}} op apparaat {{device}} heeft de geconfigureerde waarschuwingsvoorwaarde ({{warningLimits}}) overschreden: {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		"L'état {{state}} de l'appareil {{device}} a enfreint la condition d'avertissement configurée ({{warningLimits}}) : {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}",
+		'Lo stato {{state}} sul dispositivo {{device}} ha violato la condizione di avviso configurata ({{warningLimits}}): {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		'El estado {{state}} del dispositivo {{device}} incumplió la condición de advertencia configurada ({{warningLimits}}): {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		'Stan {{state}} na urządzeniu {{device}} naruszył skonfigurowany warunek ostrzegawczy ({{warningLimits}}): {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		'Стан {{state}} на пристрої {{device}} порушив налаштовану умову попередження ({{warningLimits}}): {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		'设备 {{device}} 的状态 {{state}} 违反了配置的警告条件（{{warningLimits}}）：{{value}} {{unit}}。（{{remark}}）{{warningResponseTime}}{{changeFrom}}',
+	),
+	alarm: translated(
+		'State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		'Состояние {{state}} на устройстве {{device}} нарушило настроенное условие тревоги ({{alarmLimits}}): {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		'O estado {{state}} no dispositivo {{device}} violou a condição de alarme configurada ({{alarmLimits}}): {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		'Status {{state}} op apparaat {{device}} heeft de geconfigureerde alarmvoorwaarde ({{alarmLimits}}) overschreden: {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		"L'état {{state}} de l'appareil {{device}} a enfreint la condition d'alarme configurée ({{alarmLimits}}) : {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}",
+		'Lo stato {{state}} sul dispositivo {{device}} ha violato la condizione di allarme configurata ({{alarmLimits}}): {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		'El estado {{state}} del dispositivo {{device}} incumplió la condición de alarma configurada ({{alarmLimits}}): {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		'Stan {{state}} na urządzeniu {{device}} naruszył skonfigurowany warunek alarmowy ({{alarmLimits}}): {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		'Стан {{state}} на пристрої {{device}} порушив налаштовану умову тривоги ({{alarmLimits}}): {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		'设备 {{device}} 的状态 {{state}} 违反了配置的报警条件（{{alarmLimits}}）：{{value}} {{unit}}。（{{remark}}）{{alarmResponseTime}}{{changeFrom}}',
+	),
+	timeout: translated(
+		'State {{state}} on device {{device}} has not reported for at least {{timeoutMinutes}} minutes. Last update: {{lastUpdate}} ({{remark}})',
+		'Der State {{state}} vom Gerät {{device}} hat sich mindestens {{timeoutMinutes}} Minuten nicht gemeldet. Letzte Aktualisierung: {{lastUpdate}} ({{remark}})',
+		'Состояние {{state}} на устройстве {{device}} не передавало данные не менее {{timeoutMinutes}} минут. Последнее обновление: {{lastUpdate}} ({{remark}})',
+		'O estado {{state}} no dispositivo {{device}} não é atualizado há pelo menos {{timeoutMinutes}} minutos. Última atualização: {{lastUpdate}} ({{remark}})',
+		'Status {{state}} op apparaat {{device}} heeft al minstens {{timeoutMinutes}} minuten geen update gemeld. Laatste update: {{lastUpdate}} ({{remark}})',
+		"L'état {{state}} de l'appareil {{device}} n'a rien signalé depuis au moins {{timeoutMinutes}} minutes. Dernière mise à jour : {{lastUpdate}} ({{remark}})",
+		'Lo stato {{state}} sul dispositivo {{device}} non invia dati da almeno {{timeoutMinutes}} minuti. Ultimo aggiornamento: {{lastUpdate}} ({{remark}})',
+		'El estado {{state}} del dispositivo {{device}} no ha informado durante al menos {{timeoutMinutes}} minutos. Última actualización: {{lastUpdate}} ({{remark}})',
+		'Stan {{state}} na urządzeniu {{device}} nie zgłasza danych od co najmniej {{timeoutMinutes}} minut. Ostatnia aktualizacja: {{lastUpdate}} ({{remark}})',
+		'Стан {{state}} на пристрої {{device}} не передавав дані щонайменше {{timeoutMinutes}} хвилин. Останнє оновлення: {{lastUpdate}} ({{remark}})',
+		'设备 {{device}} 的状态 {{state}} 至少 {{timeoutMinutes}} 分钟未上报。最近更新：{{lastUpdate}}（{{remark}}）',
+	),
+	invalidSource: translated(
+		'Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Недопустимый или удалённый источник для {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Fonte inválida ou eliminada para {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Ongeldige of verwijderde bron voor {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Source invalide ou supprimée pour {{device}} / {{state}} : {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Sorgente non valida o eliminata per {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Fuente no válida o eliminada para {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Nieprawidłowe lub usunięte źródło dla {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Недійсне або видалене джерело для {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'{{device}} / {{state}} 的来源无效或已删除：{{sourceId}}（{{remark}}）{{invalidResponseTime}}',
+	),
+	invalidValue: translated(
+		'Invalid value at device: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'Ungültiger Wert bei Gerät: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'Обнаружено недопустимое значение на устройстве {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'Valor inválido detetado no dispositivo {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'Ongeldige waarde gedetecteerd op apparaat {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'Valeur invalide détectée sur l’appareil {{device}} / {{state}} : {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'Valore non valido rilevato sul dispositivo {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'Valor no válido detectado en el dispositivo {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'Wykryto nieprawidłową wartość na urządzeniu {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'На пристрої {{device}} / {{state}} виявлено недійсне значення: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		'在设备 {{device}} / {{state}} 中检测到无效值：{{sourceId}}（{{sourceId}}）（{{remark}}）{{invalidResponseTime}}',
+	),
+	recovered: translated(
+		'The limit violation at {{device}} / {{state}} is cleared: {{value}} {{unit}} ({{remark}})',
+		'Der State {{state}} vom Gerät {{device}} ist nach einer Grenzwertverletzung wieder in Ordnung: {{value}} {{unit}} ({{remark}})',
+		'Нарушение лимита для {{device}} / {{state}} устранено: {{value}} {{unit}} ({{remark}})',
+		'A violação do limite em {{device}} / {{state}} foi resolvida: {{value}} {{unit}} ({{remark}})',
+		'De limietoverschrijding bij {{device}} / {{state}} is verholpen: {{value}} {{unit}} ({{remark}})',
+		'Le dépassement de limite pour {{device}} / {{state}} est résolu : {{value}} {{unit}} ({{remark}})',
+		'La violazione del limite su {{device}} / {{state}} è stata risolta: {{value}} {{unit}} ({{remark}})',
+		'La infracción del límite en {{device}} / {{state}} se ha resuelto: {{value}} {{unit}} ({{remark}})',
+		'Naruszenie limitu na {{device}} / {{state}} zostało usunięte: {{value}} {{unit}} ({{remark}})',
+		'Порушення ліміту для {{device}} / {{state}} усунуто: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} 的超限问题已恢复：{{value}} {{unit}}（{{remark}}）',
+	),
+	timeoutRecovered: translated(
+		'{{device}} / {{state}} is reporting again after the update timeout: {{value}} {{unit}} ({{remark}})',
+		'Der State {{state}} vom Gerät {{device}} meldet sich nach dem Timeout wieder: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} снова передаёт данные после тайм-аута обновления: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} voltou a comunicar após o tempo limite de atualização: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} rapporteert weer na de update-time-out: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} signale à nouveau après le délai de mise à jour : {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} invia nuovamente dati dopo il timeout di aggiornamento: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} vuelve a informar después del tiempo de espera de actualización: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} ponownie zgłasza dane po przekroczeniu limitu czasu aktualizacji: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} знову передає дані після тайм-ауту оновлення: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} 在更新超时后再次上报：{{value}} {{unit}}（{{remark}}）',
+	),
+	invalidRecovered: translated(
+		'{{device}} / {{state}} is providing valid data again: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} liefert wieder gültige Daten: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} снова передаёт корректные данные: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} voltou a fornecer dados válidos: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} levert weer geldige gegevens: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} fournit à nouveau des données valides : {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} fornisce nuovamente dati validi: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} vuelve a proporcionar datos válidos: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} ponownie dostarcza prawidłowe dane: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} знову передає дійсні дані: {{value}} {{unit}} ({{remark}})',
+		'{{device}} / {{state}} 再次提供有效数据：{{value}} {{unit}}（{{remark}}）',
+	),
 };
-const DEFAULT_NOTIFICATION_TITLE_TEMPLATES: Record<MessageTemplateType, { en: string; de: string }> = {
-	warning: { en: 'Warning: {{device}} - {{state}}', de: 'Warnung: {{device}} - {{state}}' },
-	alarm: { en: 'Alarm: {{device}} - {{state}}', de: 'Alarm: {{device}} - {{state}}' },
-	timeout: { en: 'Update timeout: {{device}} - {{state}}', de: 'Aktualisierungs-Timeout: {{device}} - {{state}}' },
-	invalidSource: {
-		en: 'Invalid or deleted source: {{device}} - {{state}}',
-		de: 'Ungültige oder gelöschte Quelle: {{device}} - {{state}}',
-	},
-	invalidValue: { en: 'Invalid value detected', de: 'Ungültigen Wert erkannt' },
-	recovered: {
-		en: 'Limit violation cleared: {{device}} - {{state}}',
-		de: 'Grenzwertverletzung behoben: {{device}} - {{state}}',
-	},
-	timeoutRecovered: {
-		en: 'Update timeout ended: {{device}} - {{state}}',
-		de: 'Aktualisierungs-Timeout beendet: {{device}} - {{state}}',
-	},
-	invalidRecovered: {
-		en: 'Valid data received again: {{device}} - {{state}}',
-		de: 'Gültige Daten empfangen: {{device}} - {{state}}',
-	},
+
+const DEFAULT_NOTIFICATION_TITLE_TEMPLATES: Record<MessageTemplateType, ioBroker.Translated> = {
+	warning: translated(
+		'Warning: {{device}} - {{state}}',
+		'Warnung: {{device}} - {{state}}',
+		'Предупреждение: {{device}} - {{state}}',
+		'Aviso: {{device}} - {{state}}',
+		'Waarschuwing: {{device}} - {{state}}',
+		'Avertissement : {{device}} - {{state}}',
+		'Avviso: {{device}} - {{state}}',
+		'Advertencia: {{device}} - {{state}}',
+		'Ostrzeżenie: {{device}} - {{state}}',
+		'Попередження: {{device}} - {{state}}',
+		'警告：{{device}} - {{state}}',
+	),
+	alarm: translated(
+		'Alarm: {{device}} - {{state}}',
+		'Alarm: {{device}} - {{state}}',
+		'Тревога: {{device}} - {{state}}',
+		'Alarme: {{device}} - {{state}}',
+		'Alarm: {{device}} - {{state}}',
+		'Alarme : {{device}} - {{state}}',
+		'Allarme: {{device}} - {{state}}',
+		'Alarma: {{device}} - {{state}}',
+		'Alarm: {{device}} - {{state}}',
+		'Тривога: {{device}} - {{state}}',
+		'报警：{{device}} - {{state}}',
+	),
+	timeout: translated(
+		'Update timeout: {{device}} - {{state}}',
+		'Aktualisierungs-Timeout: {{device}} - {{state}}',
+		'Тайм-аут обновления: {{device}} - {{state}}',
+		'Tempo limite de atualização: {{device}} - {{state}}',
+		'Updatetime-out: {{device}} - {{state}}',
+		'Délai de mise à jour : {{device}} - {{state}}',
+		'Timeout di aggiornamento: {{device}} - {{state}}',
+		'Tiempo de espera de actualización: {{device}} - {{state}}',
+		'Limit czasu aktualizacji: {{device}} - {{state}}',
+		'Тайм-аут оновлення: {{device}} - {{state}}',
+		'更新超时：{{device}} - {{state}}',
+	),
+	invalidSource: translated(
+		'Invalid or deleted source: {{device}} - {{state}}',
+		'Ungültige oder gelöschte Quelle: {{device}} - {{state}}',
+		'Недопустимый или удалённый источник: {{device}} - {{state}}',
+		'Fonte inválida ou eliminada: {{device}} - {{state}}',
+		'Ongeldige of verwijderde bron: {{device}} - {{state}}',
+		'Source invalide ou supprimée : {{device}} - {{state}}',
+		'Sorgente non valida o eliminata: {{device}} - {{state}}',
+		'Fuente no válida o eliminada: {{device}} - {{state}}',
+		'Nieprawidłowe lub usunięte źródło: {{device}} - {{state}}',
+		'Недійсне або видалене джерело: {{device}} - {{state}}',
+		'来源无效或已删除：{{device}} - {{state}}',
+	),
+	invalidValue: translated(
+		'Invalid value detected',
+		'Ungültiger Wert erkannt',
+		'Обнаружено недопустимое значение',
+		'Valor inválido detetado',
+		'Ongeldige waarde gedetecteerd',
+		'Valeur invalide détectée',
+		'Valore non valido rilevato',
+		'Valor no válido detectado',
+		'Wykryto nieprawidłową wartość',
+		'Виявлено недійсне значення',
+		'检测到无效值',
+	),
+	recovered: translated(
+		'Limit violation cleared: {{device}} - {{state}}',
+		'Grenzwertverletzung behoben: {{device}} - {{state}}',
+		'Нарушение лимита устранено: {{device}} - {{state}}',
+		'Violação do limite resolvida: {{device}} - {{state}}',
+		'Limietoverschrijding verholpen: {{device}} - {{state}}',
+		'Dépassement de limite résolu : {{device}} - {{state}}',
+		'Violazione del limite risolta: {{device}} - {{state}}',
+		'Infracción del límite resuelta: {{device}} - {{state}}',
+		'Naruszenie limitu usunięte: {{device}} - {{state}}',
+		'Порушення ліміту усунуто: {{device}} - {{state}}',
+		'超限问题已恢复：{{device}} - {{state}}',
+	),
+	timeoutRecovered: translated(
+		'Update timeout ended: {{device}} - {{state}}',
+		'Aktualisierungs-Timeout beendet: {{device}} - {{state}}',
+		'Тайм-аут обновления завершён: {{device}} - {{state}}',
+		'Tempo limite de atualização terminado: {{device}} - {{state}}',
+		'Updatetime-out beëindigd: {{device}} - {{state}}',
+		'Délai de mise à jour terminé : {{device}} - {{state}}',
+		'Timeout di aggiornamento terminato: {{device}} - {{state}}',
+		'Tiempo de espera de actualización finalizado: {{device}} - {{state}}',
+		'Limit czasu aktualizacji zakończony: {{device}} - {{state}}',
+		'Тайм-аут оновлення завершено: {{device}} - {{state}}',
+		'更新超时结束：{{device}} - {{state}}',
+	),
+	invalidRecovered: translated(
+		'Valid data received again: {{device}} - {{state}}',
+		'Gültige Daten empfangen: {{device}} - {{state}}',
+		'Снова получены корректные данные: {{device}} - {{state}}',
+		'Dados válidos recebidos novamente: {{device}} - {{state}}',
+		'Weer geldige gegevens ontvangen: {{device}} - {{state}}',
+		'Données valides reçues à nouveau : {{device}} - {{state}}',
+		'Dati validi ricevuti nuovamente: {{device}} - {{state}}',
+		'Datos válidos recibidos de nuevo: {{device}} - {{state}}',
+		'Ponownie odebrano prawidłowe dane: {{device}} - {{state}}',
+		'Знову отримано дійсні дані: {{device}} - {{state}}',
+		'再次收到有效数据：{{device}} - {{state}}',
+	),
 };
+
+const SUPPORTED_LANGUAGES: readonly SupportedLanguage[] = [
+	'en',
+	'de',
+	'ru',
+	'pt',
+	'nl',
+	'fr',
+	'it',
+	'es',
+	'pl',
+	'uk',
+	'zh-cn',
+];
+
+function isSupportedLanguage(value: unknown): value is SupportedLanguage {
+	return typeof value === 'string' && SUPPORTED_LANGUAGES.includes(value as SupportedLanguage);
+}
+
+function translatedTextValues(value: unknown): string[] {
+	if (typeof value === 'string') {
+		return value.trim() ? [value] : [];
+	}
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		return [];
+	}
+	return Object.values(value).filter((entry): entry is string => typeof entry === 'string' && !!entry.trim());
+}
+
+function translatedText(value: unknown, language: SupportedLanguage): string | undefined {
+	if (typeof value === 'string') {
+		return value.trim() || undefined;
+	}
+	if (!value || typeof value !== 'object' || Array.isArray(value)) {
+		return undefined;
+	}
+	const values = value as Record<string, unknown>;
+	for (const candidate of [language, 'en', 'de', ...SUPPORTED_LANGUAGES]) {
+		if (typeof values[candidate] === 'string' && values[candidate].trim()) {
+			return values[candidate].trim();
+		}
+	}
+	return undefined;
+}
+
+function isBuiltInTemplateValue(
+	value: unknown,
+	defaults: ioBroker.Translated,
+	legacyValues: readonly string[] | undefined,
+): boolean {
+	const configuredValues = translatedTextValues(value);
+	if (!configuredValues.length) {
+		return true;
+	}
+	const knownValues = new Set([...translatedTextValues(defaults), ...(legacyValues || [])]);
+	return configuredValues.every(entry => knownValues.has(entry));
+}
+
 const LEGACY_DEFAULT_MESSAGE_TEMPLATES: Partial<Record<MessageTemplateType, readonly string[]>> = {
 	warning: [
 		'Warnung bei {{device}} / {{state}}: {{value}} {{unit}}',
@@ -2210,7 +2457,7 @@ class DeviceMonitoring extends utils.Adapter {
 	private cardDetailsQueues = new Map<string, Promise<void>>();
 	private legacyRuntimeStatesRemoved = false;
 	private resetUpdateHistories = new Set<string>();
-	private displayLanguage: 'de' | 'en' = 'en';
+	private displayLanguage: SupportedLanguage = 'en';
 	private invalidValueNotificationsEnabledByMigration = false;
 	private deviceManagement?: DeviceMonitoringManagement;
 	private sortRefreshTimer: ioBroker.Interval | undefined;
@@ -2261,7 +2508,8 @@ class DeviceMonitoring extends utils.Adapter {
 	}
 	private async onReady(): Promise<void> {
 		const systemConfig = await this.getForeignObjectAsync('system.config');
-		this.displayLanguage = systemConfig?.common?.language === 'de' ? 'de' : 'en';
+		const configuredLanguage = systemConfig?.common?.language;
+		this.displayLanguage = isSupportedLanguage(configuredLanguage) ? configuredLanguage : 'en';
 		await this.migrateNotificationTemplateDefaults();
 		this.deviceManagement = new DeviceMonitoringManagement(this);
 		const legacyDevices = this.normalizeDevices(this.config.devices);
@@ -2370,46 +2618,63 @@ class DeviceMonitoring extends utils.Adapter {
 			const { message, title } = configKeys[type];
 			const configuredMessage = native[message];
 			if (
-				typeof configuredMessage !== 'string' ||
-				!configuredMessage.trim() ||
-				LEGACY_DEFAULT_MESSAGE_TEMPLATES[type]?.includes(configuredMessage)
+				isBuiltInTemplateValue(
+					configuredMessage,
+					DEFAULT_MESSAGE_TEMPLATES[type],
+					LEGACY_DEFAULT_MESSAGE_TEMPLATES[type],
+				) &&
+				Object.prototype.hasOwnProperty.call(native, message)
 			) {
-				native[message] = this.localize(DEFAULT_MESSAGE_TEMPLATES[type].en, DEFAULT_MESSAGE_TEMPLATES[type].de);
+				delete native[message];
 				changed = true;
 			}
 			const configuredTitle = native[title];
 			if (
-				typeof configuredTitle !== 'string' ||
-				!configuredTitle.trim() ||
-				LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type]?.includes(configuredTitle)
+				isBuiltInTemplateValue(
+					configuredTitle,
+					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type],
+					LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type],
+				) &&
+				Object.prototype.hasOwnProperty.call(native, title)
 			) {
-				native[title] = this.localize(
-					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].en,
-					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].de,
-				);
+				delete native[title];
 				changed = true;
 			}
 		}
 		if (Array.isArray(native.notificationCollectionPeriods)) {
 			const usedPeriodNames = new Set<string>();
 			let periodsChanged = false;
-			native.notificationCollectionPeriods = native.notificationCollectionPeriods.map((period, index) => {
+			native.notificationCollectionPeriods = native.notificationCollectionPeriods.map(period => {
 				if (!period || typeof period !== 'object' || Array.isArray(period)) {
 					return period;
 				}
-				const configuredName = typeof period.name === 'string' ? period.name.trim() : '';
+				const configuredName = translatedText(period.name, this.displayLanguage);
+				const isDefaultName = isBuiltInTemplateValue(period.name, DEFAULT_NOTIFICATION_COLLECTION_PERIOD_NAME, [
+					'Quiet period',
+					'Benachrichtigungspause',
+					'Quiet period 1',
+					'Benachrichtigungspause 1',
+				]);
 				const baseName =
-					configuredName || this.localize(`Quiet period ${index + 1}`, `Benachrichtigungspause ${index + 1}`);
-				let name = baseName;
+					configuredName ||
+					translatedText(DEFAULT_NOTIFICATION_COLLECTION_PERIOD_NAME, this.displayLanguage)!;
+				let resolvedName = baseName;
 				let suffix = 2;
-				while (usedPeriodNames.has(name.toLowerCase())) {
-					name = `${baseName} (${suffix++})`;
+				while (usedPeriodNames.has(resolvedName.toLowerCase())) {
+					resolvedName = `${baseName} (${suffix++})`;
 				}
-				usedPeriodNames.add(name.toLowerCase());
-				if (period.name !== name) {
+				usedPeriodNames.add(resolvedName.toLowerCase());
+				const nextPeriod = { ...period };
+				if (isDefaultName && resolvedName === baseName) {
+					if (Object.prototype.hasOwnProperty.call(nextPeriod, 'name')) {
+						delete nextPeriod.name;
+						periodsChanged = true;
+					}
+				} else if (resolvedName !== baseName && period.name !== resolvedName) {
+					nextPeriod.name = resolvedName;
 					periodsChanged = true;
 				}
-				return { ...period, name };
+				return nextPeriod;
 			});
 			if (periodsChanged) {
 				changed = true;
@@ -2421,7 +2686,6 @@ class DeviceMonitoring extends utils.Adapter {
 			if (legacyCron && Number.isFinite(legacyDuration) && legacyDuration > 0) {
 				native.notificationCollectionPeriods = [
 					{
-						name: this.localize('Quiet period', 'Benachrichtigungspause'),
 						cron: legacyCron,
 						durationMinutes: legacyDuration,
 						summaryEnabled: native.notificationCollectionSummaryEnabled !== false,
@@ -3516,7 +3780,7 @@ class DeviceMonitoring extends utils.Adapter {
 					});
 				}
 			}
-			const summary = createSummaryReminderMessage(items, this.displayLanguage);
+			const summary = createSummaryReminderMessage(items, this.displayLanguage === 'de' ? 'de' : 'en');
 			if (!summary) {
 				return;
 			}
@@ -3541,7 +3805,9 @@ class DeviceMonitoring extends utils.Adapter {
 				if (!period || typeof period !== 'object') {
 					return [];
 				}
-				const name = typeof period.name === 'string' ? period.name.trim() : '';
+				const name =
+					translatedText(period.name, this.displayLanguage) ||
+					translatedText(DEFAULT_NOTIFICATION_COLLECTION_PERIOD_NAME, this.displayLanguage)!;
 				const cron = typeof period.cron === 'string' ? period.cron.trim() : '';
 				const durationMinutes = Number(period.durationMinutes);
 				const normalizedName = name.toLowerCase();
@@ -3575,7 +3841,7 @@ class DeviceMonitoring extends utils.Adapter {
 		}
 		return [
 			{
-				name: this.localize('Quiet period', 'Benachrichtigungspause'),
+				name: translatedText(DEFAULT_NOTIFICATION_COLLECTION_PERIOD_NAME, this.displayLanguage)!,
 				cron,
 				durationMinutes,
 				summaryEnabled: this.config.notificationCollectionSummaryEnabled !== false,
@@ -3811,7 +4077,12 @@ class DeviceMonitoring extends utils.Adapter {
 		if (!summaryEnabled) {
 			return;
 		}
-		const summary = createNotificationCollectionSummaryMessage(events, this.displayLanguage, startedAt, endedAt);
+		const summary = createNotificationCollectionSummaryMessage(
+			events,
+			this.displayLanguage === 'de' ? 'de' : 'en',
+			startedAt,
+			endedAt,
+		);
 		if (!summary) {
 			return;
 		}
@@ -4673,11 +4944,12 @@ class DeviceMonitoring extends utils.Adapter {
 		};
 		const configKey = configKeys[type];
 		const configured = this.config[configKey];
-		return typeof configured === 'string' &&
-			configured.trim() &&
-			!LEGACY_DEFAULT_MESSAGE_TEMPLATES[type]?.includes(configured)
-			? configured
-			: this.localize(DEFAULT_MESSAGE_TEMPLATES[type].en, DEFAULT_MESSAGE_TEMPLATES[type].de);
+		const configuredText = translatedText(configured, this.displayLanguage);
+		return configuredText &&
+			!isBuiltInTemplateValue(configured, DEFAULT_MESSAGE_TEMPLATES[type], LEGACY_DEFAULT_MESSAGE_TEMPLATES[type])
+			? configuredText
+			: translatedText(DEFAULT_MESSAGE_TEMPLATES[type], this.displayLanguage) ||
+					DEFAULT_MESSAGE_TEMPLATES[type].en;
 	}
 	private getNotificationTitleTemplate(type: MessageTemplateType): string {
 		const configKeys: Record<MessageTemplateType, keyof ioBroker.AdapterConfig> = {
@@ -4692,14 +4964,16 @@ class DeviceMonitoring extends utils.Adapter {
 		};
 		const configKey = configKeys[type];
 		const configured = this.config[configKey];
-		return typeof configured === 'string' &&
-			configured.trim() &&
-			!LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type]?.includes(configured)
-			? configured
-			: this.localize(
-					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].en,
-					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].de,
-				);
+		const configuredText = translatedText(configured, this.displayLanguage);
+		return configuredText &&
+			!isBuiltInTemplateValue(
+				configured,
+				DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type],
+				LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type],
+			)
+			? configuredText
+			: translatedText(DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type], this.displayLanguage) ||
+					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type].en;
 	}
 	private isNotificationEnabled(category: NotificationCategory): boolean {
 		if (category === 'invalidValue' && this.invalidValueNotificationsEnabledByMigration) {

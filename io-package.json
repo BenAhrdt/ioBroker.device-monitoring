@@ -298,7 +298,6 @@
     "notificationCollectionEnabled": false,
     "notificationCollectionPeriods": [
       {
-        "name": "Notification pause",
         "cron": "0 22 * * *",
         "durationMinutes": 600,
         "summaryEnabled": true
@@ -307,22 +306,6 @@
     "notificationCollectionSummaryEnabled": true,
     "notificationCollectionCron": "0 22 * * *",
     "notificationCollectionDurationMinutes": 600,
-    "warningTitleTemplate": "Warning: {{device}} - {{state}}",
-    "warningMessageTemplate": "State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}",
-    "alarmTitleTemplate": "Alarm: {{device}} - {{state}}",
-    "alarmMessageTemplate": "State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}",
-    "timeoutTitleTemplate": "Update timeout: {{device}} - {{state}}",
-    "timeoutMessageTemplate": "State {{state}} on device {{device}} has not reported for at least {{timeoutMinutes}} minutes. Last update: {{lastUpdate}} ({{remark}})",
-    "invalidSourceTitleTemplate": "Invalid or deleted source: {{device}} - {{state}}",
-    "invalidSourceMessageTemplate": "Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}",
-    "invalidValueTitleTemplate": "Invalid value detected",
-    "invalidValueMessageTemplate": "Invalid value at device: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}",
-    "recoveredTitleTemplate": "Limit violation cleared: {{device}} - {{state}}",
-    "recoveredMessageTemplate": "The limit violation at {{device}} / {{state}} is cleared: {{value}} {{unit}} ({{remark}})",
-    "timeoutRecoveredTitleTemplate": "Update timeout ended: {{device}} - {{state}}",
-    "timeoutRecoveredMessageTemplate": "{{device}} / {{state}} is reporting again after the update timeout: {{value}} {{unit}} ({{remark}})",
-    "invalidRecoveredTitleTemplate": "Valid data received again: {{device}} - {{state}}",
-    "invalidRecoveredMessageTemplate": "{{device}} / {{state}} is providing valid data again: {{value}} {{unit}} ({{remark}})",
     "invalidResponseTimeSeconds": 10,
     "sendNotificationsViaNotify": true,
     "enabledNotifications": [
