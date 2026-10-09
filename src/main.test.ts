@@ -5,7 +5,9 @@ import {
 	evaluateLimit,
 	getWatchStatus,
 	isUpdateTimedOut,
+	parseAbsoluteChange,
 	parseFiniteNumber,
+	parsePercentage,
 	type LimitConfiguration,
 	type WatchedStateConfiguration,
 } from './lib/evaluation';
@@ -22,6 +24,19 @@ describe('threshold evaluation', () => {
 		expect(parseFiniteNumber('9.5')).to.equal(9.5);
 		expect(parseFiniteNumber('9,5')).to.equal(9.5);
 		expect(parseFiniteNumber('9,5,1')).to.equal(undefined);
+	});
+	it('parses non-negative percentages without an upper bound', () => {
+		expect(parsePercentage('20,5')).to.equal(20.5);
+		expect(parsePercentage(0)).to.equal(0);
+		expect(parsePercentage(100)).to.equal(100);
+		expect(parsePercentage(-1)).to.equal(undefined);
+		expect(parsePercentage(101)).to.equal(101);
+		expect(parsePercentage(250)).to.equal(250);
+	});
+	it('parses non-negative absolute changes', () => {
+		expect(parseAbsoluteChange('10,5')).to.equal(10.5);
+		expect(parseAbsoluteChange(0)).to.equal(0);
+		expect(parseAbsoluteChange(-1)).to.equal(undefined);
 	});
 
 	it('supports lower and upper limits', () => {
@@ -69,6 +84,69 @@ describe('threshold evaluation', () => {
 					...activation,
 					warningSince: now - 41 * 60_000,
 				},
+				now,
+			),
+		).to.equal('warning');
+	});
+	it('evaluates positive and negative percentage changes against the previous value', () => {
+		const positive: LimitConfiguration = {
+			enabled: true,
+			mode: 'percentage',
+			positiveChangeEnabled: true,
+			positiveChangePercent: 20,
+		};
+		const negative: LimitConfiguration = {
+			enabled: true,
+			mode: 'percentage',
+			negativeChangeEnabled: true,
+			negativeChangePercent: 20,
+		};
+
+		expect(evaluateLimit(60, positive, 50)).to.equal(true);
+		expect(evaluateLimit(55, positive, 50)).to.equal(false);
+		expect(evaluateLimit(40, negative, 50)).to.equal(true);
+		expect(evaluateLimit(45, negative, 50)).to.equal(false);
+		expect(evaluateLimit(10, positive, 0)).to.equal(false);
+	});
+	it('evaluates positive and negative absolute changes against the previous value', () => {
+		const positive: LimitConfiguration = {
+			enabled: true,
+			mode: 'absolute',
+			positiveChangeEnabled: true,
+			positiveChangeValue: 10,
+		};
+		const negative: LimitConfiguration = {
+			enabled: true,
+			mode: 'absolute',
+			negativeChangeEnabled: true,
+			negativeChangeValue: 10,
+		};
+
+		expect(evaluateLimit(60, positive, 50)).to.equal(true);
+		expect(evaluateLimit(59, positive, 50)).to.equal(false);
+		expect(evaluateLimit(40, negative, 50)).to.equal(true);
+		expect(evaluateLimit(41, negative, 50)).to.equal(false);
+		expect(evaluateLimit(10, positive, 0)).to.equal(true);
+	});
+	it('uses the persisted percentage violation for status and response time', () => {
+		const now = 1_000_000;
+		const warning: LimitConfiguration = {
+			enabled: true,
+			mode: 'percentage',
+			positiveChangeEnabled: true,
+			positiveChangePercent: 20,
+			responseDelayMinutes: 10,
+		};
+		const alarm: LimitConfiguration = { enabled: false, mode: 'percentage' };
+
+		expect(getWatchStatus(60, warning, alarm, false)).to.equal('ok');
+		expect(
+			getWatchStatus(
+				60,
+				warning,
+				alarm,
+				false,
+				{ warningSince: now - 10 * 60_000, alarmSince: null, warningPercentageViolation: true },
 				now,
 			),
 		).to.equal('warning');

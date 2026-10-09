@@ -1,4 +1,5 @@
-export type LimitMode = 'below' | 'above' | 'outside' | 'inside';
+export type LimitMode = 'below' | 'above' | 'outside' | 'inside' | 'percentage' | 'absolute';
+export type InvalidStatusSignature = 'invalidSource' | 'invalidValue';
 
 /**
  * Converts a configured numeric value to a finite number.
@@ -20,6 +21,28 @@ export function parseFiniteNumber(value: unknown): number | undefined {
 	return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/**
+ * Converts a configured percentage to a finite non-negative number.
+ *
+ * @param value Value received from adapter configuration or an admin form.
+ * @returns A non-negative percentage, or undefined for an empty/invalid value.
+ */
+export function parsePercentage(value: unknown): number | undefined {
+	const parsed = parseFiniteNumber(value);
+	return parsed !== undefined && parsed >= 0 ? parsed : undefined;
+}
+
+/**
+ * Converts an absolute change threshold to a finite non-negative number.
+ *
+ * @param value Value received from adapter configuration or an admin form.
+ * @returns A non-negative number, or undefined for an empty/invalid value.
+ */
+export function parseAbsoluteChange(value: unknown): number | undefined {
+	const parsed = parseFiniteNumber(value);
+	return parsed !== undefined && parsed >= 0 ? parsed : undefined;
+}
+
 /** Configuration of a numeric or boolean warning/alarm limit. */
 export interface LimitConfiguration {
 	/** Whether this limit is evaluated. */
@@ -32,6 +55,18 @@ export interface LimitConfiguration {
 	min?: number;
 	/** Optional upper boundary. */
 	max?: number;
+	/** Whether positive numeric changes are evaluated in a change mode. */
+	positiveChangeEnabled?: boolean;
+	/** Whether negative numeric changes are evaluated in a change mode. */
+	negativeChangeEnabled?: boolean;
+	/** Minimum positive change in percentage mode. */
+	positiveChangePercent?: number;
+	/** Minimum negative change in percentage mode. */
+	negativeChangePercent?: number;
+	/** Minimum positive change in absolute mode. */
+	positiveChangeValue?: number;
+	/** Minimum negative change in absolute mode. */
+	negativeChangeValue?: number;
 	/** Optional time in minutes the violation must persist before activation. */
 	responseDelayMinutes?: number;
 }
@@ -46,6 +81,18 @@ export interface LimitActivationState {
 	warningSignature?: string;
 	/** Configuration signature used for the alarm timer. */
 	alarmSignature?: string;
+	/** Whether the current value change violates the warning change condition. */
+	warningPercentageViolation?: boolean;
+	/** Whether the current value change violates the alarm change condition. */
+	alarmPercentageViolation?: boolean;
+	/** Previous numeric value that triggered the current warning change condition. */
+	warningPreviousValue?: number;
+	/** Previous numeric value that triggered the current alarm change condition. */
+	alarmPreviousValue?: number;
+	/** Start time of the current invalid-source or invalid-value response delay. */
+	invalidSince?: number | null;
+	/** Kind of invalid condition tracked by invalidSince. */
+	invalidSignature?: InvalidStatusSignature;
 }
 
 /** Persistent configuration of one monitored ioBroker state. */
@@ -117,10 +164,45 @@ export type WatchStatus = 'ok' | 'warning' | 'alarm' | 'timeout' | 'invalid' | '
  *
  * @param value Current state value.
  * @param limit Limit configuration to evaluate.
+ * @param previousValue Previous numeric state value used by a change mode.
  * @returns Whether the enabled limit is violated.
  */
-export function evaluateLimit(value: ioBroker.StateValue, limit: LimitConfiguration): boolean {
+export function evaluateLimit(
+	value: ioBroker.StateValue,
+	limit: LimitConfiguration,
+	previousValue?: ioBroker.StateValue,
+): boolean {
 	if (!limit.enabled) {
+		return false;
+	}
+	if (limit.mode === 'percentage' || limit.mode === 'absolute') {
+		if (
+			typeof value !== 'number' ||
+			!Number.isFinite(value) ||
+			typeof previousValue !== 'number' ||
+			!Number.isFinite(previousValue) ||
+			(limit.mode === 'percentage' && previousValue === 0)
+		) {
+			return false;
+		}
+		const change =
+			limit.mode === 'percentage'
+				? ((value - previousValue) / Math.abs(previousValue)) * 100
+				: value - previousValue;
+		if (change > 0) {
+			return (
+				limit.positiveChangeEnabled === true &&
+				(limit.mode === 'percentage' ? limit.positiveChangePercent : limit.positiveChangeValue) !== undefined &&
+				change >= (limit.mode === 'percentage' ? limit.positiveChangePercent! : limit.positiveChangeValue!)
+			);
+		}
+		if (change < 0) {
+			return (
+				limit.negativeChangeEnabled === true &&
+				(limit.mode === 'percentage' ? limit.negativeChangePercent : limit.negativeChangeValue) !== undefined &&
+				-change >= (limit.mode === 'percentage' ? limit.negativeChangePercent! : limit.negativeChangeValue!)
+			);
+		}
 		return false;
 	}
 	if (typeof value === 'boolean') {
@@ -166,10 +248,10 @@ export function getWatchStatus(
 	if ((typeof value !== 'number' || !Number.isFinite(value)) && typeof value !== 'boolean') {
 		return 'invalidValue';
 	}
-	if (isLimitActive(value, alarm, activation?.alarmSince, now)) {
+	if (isLimitActive(value, alarm, activation?.alarmSince, now, activation?.alarmPercentageViolation)) {
 		return 'alarm';
 	}
-	if (isLimitActive(value, warning, activation?.warningSince, now)) {
+	if (isLimitActive(value, warning, activation?.warningSince, now, activation?.warningPercentageViolation)) {
 		return 'warning';
 	}
 	return 'ok';
@@ -180,9 +262,19 @@ function isLimitActive(
 	limit: LimitConfiguration,
 	since: number | null | undefined,
 	now: number,
+	changeViolation = false,
 ): boolean {
-	if (!evaluateLimit(value, limit)) {
+	if (!limit.enabled) {
 		return false;
+	}
+	const changeMode = limit.mode === 'percentage' || limit.mode === 'absolute';
+	if (!changeMode && !evaluateLimit(value, limit)) {
+		return false;
+	}
+	if (changeMode) {
+		if (typeof value !== 'number' || !Number.isFinite(value) || !changeViolation) {
+			return false;
+		}
 	}
 	const responseDelayMinutes = limit.responseDelayMinutes;
 	if (

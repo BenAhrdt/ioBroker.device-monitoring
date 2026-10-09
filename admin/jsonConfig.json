@@ -79,6 +79,21 @@
 			"lg": 6,
 			"xl": 6
 		},
+		"invalidResponseTimeSeconds": {
+			"type": "number",
+			"label": "Response time for invalid sources and values (seconds)",
+			"help": "Wait this long before an invalid source or value becomes active and generates a notification. Set to 0 for immediate activation.",
+			"min": 0,
+			"max": 86400,
+			"step": 1,
+			"default": 10,
+			"newLine": true,
+			"xs": 12,
+			"sm": 6,
+			"md": 6,
+			"lg": 6,
+			"xl": 6
+		},
 		"summaryReminderHeader": {
 			"type": "header",
 			"text": "Reminders",
@@ -245,7 +260,7 @@
 		},
 		"messageTemplateHelpValues": {
 			"type": "staticText",
-			"text": "{{value}} current or last value; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.",
+			"text": "{{value}} current or last value; {{previousValue}} previous numeric value for a change warning or alarm; {{changeFrom}} optional localized previous-value suffix; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.",
 			"xs": 12,
 			"sm": 12,
 			"md": 12,
@@ -254,7 +269,7 @@
 		},
 		"messageTemplateHelpConditions": {
 			"type": "staticText",
-			"text": "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{warningResponseTime}} optional warning response-time suffix; {{alarmResponseTime}} optional alarm response-time suffix; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.",
+			"text": "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{warningResponseTime}} optional warning response-time suffix; {{alarmResponseTime}} optional alarm response-time suffix; {{invalidResponseTime}} optional invalid source/value response-time suffix; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -277,7 +292,7 @@
 		"warningTitleTemplate": {
 			"type": "text",
 			"label": "Title",
-			"default": "Warnung: {{device}} - {{state}}",
+			"default": "Warning: {{device}} - {{state}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -288,7 +303,7 @@
 		"warningMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}) {{warningResponseTime}}",
+			"default": "State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -314,7 +329,7 @@
 		},
 		"warningPreview": {
 			"type": "staticText",
-			"text": "${(String(data.warningTitleTemplate || '') ? String(data.warningTitleTemplate || '') + String.fromCharCode(10) + String(data.warningMessageTemplate || '') : String(data.warningMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"warningResponseTime\"].indexOf(key) < 0 ? match : [\"Wohnzimmer\",\"Temperatur\",\"0_userdata.0.wohnzimmer.temperatur\",\"29.4\",\"°C\",\"Sensor nahe Fenster\",\"außerhalb 18 °C - 26 °C\",\"größer als 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\",\" (Ansprechzeit 5 Minuten)\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"warningResponseTime\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"text": "${(String(data.warningTitleTemplate || '') ? String(data.warningTitleTemplate || '') + String.fromCharCode(10) + String(data.warningMessageTemplate || '') : String(data.warningMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"previousValue\",\"changeFrom\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"warningResponseTime\"].indexOf(key) < 0 ? match : [\"Living room\",\"Temperature\",\"0_userdata.0.wohnzimmer.temperatur\",\"29.4\",\"26.7\",\" (previous value: 26.7 °C)\",\"°C\",\"Sensor near window\",\"change of +10% relative to previous value\",\"above 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\",\" (response time 5 minutes)\"][[\"device\",\"state\",\"sourceId\",\"value\",\"previousValue\",\"changeFrom\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"warningResponseTime\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
@@ -355,7 +370,7 @@
 		"alarmMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}) {{alarmResponseTime}}",
+			"default": "State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -381,7 +396,7 @@
 		},
 		"alarmPreview": {
 			"type": "staticText",
-			"text": "${(String(data.alarmTitleTemplate || '') ? String(data.alarmTitleTemplate || '') + String.fromCharCode(10) + String(data.alarmMessageTemplate || '') : String(data.alarmMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"alarmResponseTime\"].indexOf(key) < 0 ? match : [\"Keller\",\"Luftfeuchtigkeit\",\"0_userdata.0.keller.luftfeuchtigkeit\",\"82\",\"%\",\"Lüften empfohlen\",\"größer als 70 %\",\"größer als 80 %\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\",\" (Ansprechzeit 10 Minuten)\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"alarmResponseTime\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"text": "${(String(data.alarmTitleTemplate || '') ? String(data.alarmTitleTemplate || '') + String.fromCharCode(10) + String(data.alarmMessageTemplate || '') : String(data.alarmMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"previousValue\",\"changeFrom\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"alarmResponseTime\"].indexOf(key) < 0 ? match : [\"Basement\",\"Humidity\",\"0_userdata.0.keller.luftfeuchtigkeit\",\"82\",\"75\",\" (previous value: 75 %)\",\"%\",\"Ventilation recommended\",\"above 70 %\",\"change of +10% relative to previous value\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\",\" (response time 10 minutes)\"][[\"device\",\"state\",\"sourceId\",\"value\",\"previousValue\",\"changeFrom\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"alarmResponseTime\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
@@ -411,7 +426,7 @@
 		"timeoutTitleTemplate": {
 			"type": "text",
 			"label": "Title",
-			"default": "Aktualisierungs-Timeout: {{device}} - {{state}}",
+			"default": "Update timeout: {{device}} - {{state}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -422,7 +437,7 @@
 		"timeoutMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "Der State {{state}} vom Gerät {{device}} hat sich mindestens {{timeoutMinutes}} Minuten nicht gemeldet. Letzte Aktualisierung: {{lastUpdate}} ({{remark}})",
+			"default": "State {{state}} on device {{device}} has not reported for at least {{timeoutMinutes}} minutes. Last update: {{lastUpdate}} ({{remark}})",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -448,7 +463,7 @@
 		},
 		"timeoutPreview": {
 			"type": "staticText",
-			"text": "${(String(data.timeoutTitleTemplate || '') ? String(data.timeoutTitleTemplate || '') + String.fromCharCode(10) + String(data.timeoutMessageTemplate || '') : String(data.timeoutMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Heizung\",\"Vorlauftemperatur\",\"0_userdata.0.heizung.vorlauftemperatur\",\"21.7\",\"°C\",\"Letzte Aktualisierung prüfen\",\"kleiner als 15 °C\",\"größer als 35 °C\",\"60\",\"19.09.2026 13:32:10\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"text": "${(String(data.timeoutTitleTemplate || '') ? String(data.timeoutTitleTemplate || '') + String.fromCharCode(10) + String(data.timeoutMessageTemplate || '') : String(data.timeoutMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Heating\",\"Flow temperature\",\"0_userdata.0.heizung.vorlauftemperatur\",\"21.7\",\"°C\",\"Check the last update\",\"below 15 °C\",\"above 35 °C\",\"60\",\"19.09.2026 13:32:10\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
@@ -478,7 +493,7 @@
 		"invalidSourceTitleTemplate": {
 			"type": "text",
 			"label": "Title",
-			"default": "Ungültige oder gelöschte Quelle: {{device}} - {{state}}",
+			"default": "Invalid or deleted source: {{device}} - {{state}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -489,7 +504,7 @@
 		"invalidSourceMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})",
+			"default": "Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -515,7 +530,7 @@
 		},
 		"invalidSourcePreview": {
 			"type": "staticText",
-			"text": "${(String(data.invalidSourceTitleTemplate || '') ? String(data.invalidSourceTitleTemplate || '') + String.fromCharCode(10) + String(data.invalidSourceMessageTemplate || '') : String(data.invalidSourceMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Alarmanlage\",\"Fensterkontakt\",\"zigbee.0.ab12cd34.contact\",\"false\",\"\",\"Quelle im Adapter gelöscht\",\"kleiner als 18 °C\",\"größer als 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"text": "${(String(data.invalidSourceTitleTemplate || '') ? String(data.invalidSourceTitleTemplate || '') + String.fromCharCode(10) + String(data.invalidSourceMessageTemplate || '') : String(data.invalidSourceMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"invalidResponseTime\"].indexOf(key) < 0 ? match : [\"Alarm system\",\"Window contact\",\"zigbee.0.ab12cd34.contact\",\"false\",\"\",\"Source deleted in adapter\",\"below 18 °C\",\"above 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\",\" (response time 10 seconds)\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"invalidResponseTime\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
@@ -545,7 +560,7 @@
 		"invalidValueTitleTemplate": {
 			"type": "text",
 			"label": "Title",
-			"default": "Ungültigen Wert erkannt",
+			"default": "Invalid value detected",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -556,7 +571,7 @@
 		"invalidValueMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "Ungültiger Wert bei Gerät: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}})",
+			"default": "Invalid value at device: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -582,7 +597,7 @@
 		},
 		"invalidValuePreview": {
 			"type": "staticText",
-			"text": "${(String(data.invalidValueTitleTemplate || '') ? String(data.invalidValueTitleTemplate || '') + String.fromCharCode(10) + String(data.invalidValueMessageTemplate || '') : String(data.invalidValueMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Rauchmelder Heizraum\",\"Rauch\",\"lorawan.1.bridge.devices.sensor.smoke\",\"unavailable\",\"\",\"Ungültiger Wert vom Sensor\",\"außerhalb 18 - 26\",\"größer als 30\",\"60\",\"23.09.2026 14:31:45\",\"23.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"text": "${(String(data.invalidValueTitleTemplate || '') ? String(data.invalidValueTitleTemplate || '') + String.fromCharCode(10) + String(data.invalidValueMessageTemplate || '') : String(data.invalidValueMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\",\"invalidResponseTime\"].indexOf(key) < 0 ? match : [\"Boiler room smoke detector\",\"Smoke\",\"lorawan.1.bridge.devices.sensor.smoke\",\"unavailable\",\"\",\"Invalid value from sensor\",\"outside 18 - 26\",\"above 30\",\"60\",\"23.09.2026 14:31:45\",\"23.09.2026 14:32:10\",\" (response time 10 seconds)\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"invalidResponseTime\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
@@ -612,7 +627,7 @@
 		"recoveredTitleTemplate": {
 			"type": "text",
 			"label": "Title",
-			"default": "Grenzwertverletzung behoben: {{device}} - {{state}}",
+			"default": "Limit violation cleared: {{device}} - {{state}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -623,7 +638,7 @@
 		"recoveredMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "Der State {{state}} vom Gerät {{device}} ist nach einer Grenzwertverletzung wieder in Ordnung: {{value}} {{unit}} ({{remark}})",
+			"default": "The limit violation at {{device}} / {{state}} is cleared: {{value}} {{unit}} ({{remark}})",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -649,7 +664,7 @@
 		},
 		"recoveredPreview": {
 			"type": "staticText",
-			"text": "${(String(data.recoveredTitleTemplate || '') ? String(data.recoveredTitleTemplate || '') + String.fromCharCode(10) + String(data.recoveredMessageTemplate || '') : String(data.recoveredMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Waschküche\",\"Leckagesensor\",\"0_userdata.0.waschkueche.leckage\",\"trocken\",\"\",\"Sensor zurückgesetzt\",\"kleiner als 18 °C\",\"größer als 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
+			"text": "${(String(data.recoveredTitleTemplate || '') ? String(data.recoveredTitleTemplate || '') + String.fromCharCode(10) + String(data.recoveredMessageTemplate || '') : String(data.recoveredMessageTemplate || '')).replace(new RegExp(String.fromCharCode(123,123) + '\\\\s*([a-zA-Z][a-zA-Z0-9_]*)\\\\s*' + String.fromCharCode(125,125), 'g'), (match,key) => ([\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key) < 0 ? match : [\"Laundry room\",\"Leak sensor\",\"0_userdata.0.waschkueche.leckage\",\"dry\",\"\",\"Sensor reset\",\"below 18 °C\",\"above 30 °C\",\"60\",\"19.09.2026 14:31:45\",\"19.09.2026 14:32:10\"][[\"device\",\"state\",\"sourceId\",\"value\",\"unit\",\"remark\",\"warningLimits\",\"alarmLimits\",\"timeoutMinutes\",\"lastUpdate\",\"triggeredAt\"].indexOf(key)])).replaceAll('  ', ' ').trim()}",
 			"noTranslation": true,
 			"newLine": true,
 			"xs": 12,
@@ -679,7 +694,7 @@
 		"timeoutRecoveredTitleTemplate": {
 			"type": "text",
 			"label": "Title",
-			"default": "Aktualisierungs-Timeout beendet: {{device}} - {{state}}",
+			"default": "Update timeout ended: {{device}} - {{state}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -690,7 +705,7 @@
 		"timeoutRecoveredMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "Der State {{state}} vom Gerät {{device}} meldet sich nach dem Timeout wieder: {{value}} {{unit}} ({{remark}})",
+			"default": "{{device}} / {{state}} is reporting again after the update timeout: {{value}} {{unit}} ({{remark}})",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -713,7 +728,7 @@
 		"invalidRecoveredTitleTemplate": {
 			"type": "text",
 			"label": "Title",
-			"default": "Gültige Daten empfangen: {{device}} - {{state}}",
+			"default": "Valid data received again: {{device}} - {{state}}",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,
@@ -724,7 +739,7 @@
 		"invalidRecoveredMessageTemplate": {
 			"type": "text",
 			"label": "Notification",
-			"default": "{{device}} / {{state}} liefert wieder gültige Daten: {{value}} {{unit}} ({{remark}})",
+			"default": "{{device}} / {{state}} is providing valid data again: {{value}} {{unit}} ({{remark}})",
 			"newLine": true,
 			"xs": 12,
 			"sm": 12,

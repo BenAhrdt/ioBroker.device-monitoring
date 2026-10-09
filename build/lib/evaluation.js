@@ -22,7 +22,9 @@ __export(evaluation_exports, {
   evaluateLimit: () => evaluateLimit,
   getWatchStatus: () => getWatchStatus,
   isUpdateTimedOut: () => isUpdateTimedOut,
-  parseFiniteNumber: () => parseFiniteNumber
+  parseAbsoluteChange: () => parseAbsoluteChange,
+  parseFiniteNumber: () => parseFiniteNumber,
+  parsePercentage: () => parsePercentage
 });
 module.exports = __toCommonJS(evaluation_exports);
 function parseFiniteNumber(value) {
@@ -35,6 +37,14 @@ function parseFiniteNumber(value) {
   const parsed = Number(value.trim().replace(",", "."));
   return Number.isFinite(parsed) ? parsed : void 0;
 }
+function parsePercentage(value) {
+  const parsed = parseFiniteNumber(value);
+  return parsed !== void 0 && parsed >= 0 ? parsed : void 0;
+}
+function parseAbsoluteChange(value) {
+  const parsed = parseFiniteNumber(value);
+  return parsed !== void 0 && parsed >= 0 ? parsed : void 0;
+}
 function createFunctionTemplate(watched) {
   return {
     warning: { ...watched.warning },
@@ -42,8 +52,21 @@ function createFunctionTemplate(watched) {
     staleWarning: { ...watched.staleWarning }
   };
 }
-function evaluateLimit(value, limit) {
+function evaluateLimit(value, limit, previousValue) {
   if (!limit.enabled) {
+    return false;
+  }
+  if (limit.mode === "percentage" || limit.mode === "absolute") {
+    if (typeof value !== "number" || !Number.isFinite(value) || typeof previousValue !== "number" || !Number.isFinite(previousValue) || limit.mode === "percentage" && previousValue === 0) {
+      return false;
+    }
+    const change = limit.mode === "percentage" ? (value - previousValue) / Math.abs(previousValue) * 100 : value - previousValue;
+    if (change > 0) {
+      return limit.positiveChangeEnabled === true && (limit.mode === "percentage" ? limit.positiveChangePercent : limit.positiveChangeValue) !== void 0 && change >= (limit.mode === "percentage" ? limit.positiveChangePercent : limit.positiveChangeValue);
+    }
+    if (change < 0) {
+      return limit.negativeChangeEnabled === true && (limit.mode === "percentage" ? limit.negativeChangePercent : limit.negativeChangeValue) !== void 0 && -change >= (limit.mode === "percentage" ? limit.negativeChangePercent : limit.negativeChangeValue);
+    }
     return false;
   }
   if (typeof value === "boolean") {
@@ -70,17 +93,26 @@ function getWatchStatus(value, warning, alarm, stale = false, activation, now = 
   if ((typeof value !== "number" || !Number.isFinite(value)) && typeof value !== "boolean") {
     return "invalidValue";
   }
-  if (isLimitActive(value, alarm, activation == null ? void 0 : activation.alarmSince, now)) {
+  if (isLimitActive(value, alarm, activation == null ? void 0 : activation.alarmSince, now, activation == null ? void 0 : activation.alarmPercentageViolation)) {
     return "alarm";
   }
-  if (isLimitActive(value, warning, activation == null ? void 0 : activation.warningSince, now)) {
+  if (isLimitActive(value, warning, activation == null ? void 0 : activation.warningSince, now, activation == null ? void 0 : activation.warningPercentageViolation)) {
     return "warning";
   }
   return "ok";
 }
-function isLimitActive(value, limit, since, now) {
-  if (!evaluateLimit(value, limit)) {
+function isLimitActive(value, limit, since, now, changeViolation = false) {
+  if (!limit.enabled) {
     return false;
+  }
+  const changeMode = limit.mode === "percentage" || limit.mode === "absolute";
+  if (!changeMode && !evaluateLimit(value, limit)) {
+    return false;
+  }
+  if (changeMode) {
+    if (typeof value !== "number" || !Number.isFinite(value) || !changeViolation) {
+      return false;
+    }
   }
   const responseDelayMinutes = limit.responseDelayMinutes;
   if (typeof responseDelayMinutes !== "number" || !Number.isFinite(responseDelayMinutes) || responseDelayMinutes <= 0) {
@@ -99,6 +131,8 @@ function isUpdateTimedOut(state, configuration, now = Date.now()) {
   evaluateLimit,
   getWatchStatus,
   isUpdateTimedOut,
-  parseFiniteNumber
+  parseAbsoluteChange,
+  parseFiniteNumber,
+  parsePercentage
 });
 //# sourceMappingURL=evaluation.js.map

@@ -50,7 +50,7 @@
     "Warning notification template": "Warning notification template",
     "device-monitoring adapter settings": "Device Monitoring settings",
     "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID; {{function}} configured function name.": "{{device}} device name; {{state}} monitored state name; {{sourceId}} full ioBroker source ID; {{function}} configured function name.",
-    "{{value}} current or last value; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.": "{{value}} current or last value; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.",
+    "{{value}} current or last value; {{previousValue}} previous numeric value for a change warning or alarm; {{changeFrom}} optional localized previous-value suffix; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.": "{{value}} current or last value; {{previousValue}} previous numeric value for a change warning or alarm; {{changeFrom}} optional localized previous-value suffix; {{unit}} source unit; {{remark}} optional note; {{triggeredAt}} time of this notification.",
     "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{warningResponseTime}} optional warning response-time suffix; {{alarmResponseTime}} optional alarm response-time suffix; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.": "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{warningResponseTime}} optional warning response-time suffix; {{alarmResponseTime}} optional alarm response-time suffix; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.",
     "Notification quiet period": "Notification quiet period",
     "Pause notifications during a quiet period": "Pause notifications during a quiet period",
@@ -67,5 +67,8 @@
     "Duration of the quiet period in minutes.": "Duration of the quiet period in minutes.",
     "Recovered after limit violation": "Recovered after limit violation",
     "Recovered after update timeout": "Recovered after update timeout",
-    "Recovered after invalid source or value": "Recovered after invalid source or value"
+    "Recovered after invalid source or value": "Recovered after invalid source or value",
+    "Response time for invalid sources and values (seconds)": "Response time for invalid sources and values (seconds)",
+    "Wait this long before an invalid source or value becomes active and generates a notification. Set to 0 for immediate activation.": "Wait this long before an invalid source or value becomes active and generates a notification. Set to 0 for immediate activation.",
+    "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{warningResponseTime}} optional warning response-time suffix; {{alarmResponseTime}} optional alarm response-time suffix; {{invalidResponseTime}} optional invalid source/value response-time suffix; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update.": "{{warningLimits}} warning limits; {{alarmLimits}} alarm limits; {{warningResponseTime}} optional warning response-time suffix; {{alarmResponseTime}} optional alarm response-time suffix; {{invalidResponseTime}} optional invalid source/value response-time suffix; {{timeoutMinutes}} configured timeout; {{lastUpdate}} time of last source update."
 }

@@ -18,6 +18,7 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var message_templates_exports = {};
 __export(message_templates_exports, {
+  formatInvalidResponseTimeSuffix: () => formatInvalidResponseTimeSuffix,
   formatResponseTimeSuffix: () => formatResponseTimeSuffix
 });
 module.exports = __toCommonJS(message_templates_exports);
@@ -27,8 +28,16 @@ function formatResponseTimeSuffix(minutes, language) {
   }
   return language === "de" ? ` (Ansprechzeit ${minutes} Minuten)` : ` (Response time ${minutes} minutes)`;
 }
+function formatInvalidResponseTimeSuffix(seconds, language) {
+  if (typeof seconds !== "number" || !Number.isFinite(seconds) || seconds <= 0) {
+    return "";
+  }
+  const unit = seconds === 1 ? language === "de" ? "Sekunde" : "second" : language === "de" ? "Sekunden" : "seconds";
+  return language === "de" ? ` (Ansprechzeit ${seconds} ${unit})` : ` (Response time ${seconds} ${unit})`;
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  formatInvalidResponseTimeSuffix,
   formatResponseTimeSuffix
 });
 //# sourceMappingURL=message-templates.js.map

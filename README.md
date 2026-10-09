@@ -75,6 +75,7 @@ The JSON object contains these fields:
 | `sourceId` | Source state ID |
 | `remark` | Configured remark for the monitored state |
 | `value`, `unit` | Current source value and its unit |
+| `previousValue` | Previous numeric value for a change-based warning or alarm; omitted for other events |
 | `triggeredAt` | Event time as a Unix timestamp in milliseconds |
 | `lastUpdate` | Last source update time as a Unix timestamp in milliseconds, or `null` |
 | `timeoutMinutes` | Configured timeout duration; present for timeout events only |
@@ -89,7 +90,9 @@ The Notifications section can enable recurring reminders. The schedule is config
 
 Warning and alarm limits can optionally have a response time in minutes. The corresponding status and notification become active only when the limit remains violated for the configured duration. If the value returns to normal before that, no warning or alarm is generated. The adapter schedules the activation for the exact due time instead of waiting for the periodic refresh. The start of a pending violation is stored below the monitored state's expert data and survives adapter restarts. If a source state changes while the adapter is stopped and is still active at restart, the change is caught up and can be added to an active notification collection.
 
-Warning and alarm message templates can use `{{warningResponseTime}}` and `{{alarmResponseTime}}`. Each placeholder contains an optional localized suffix such as ` (Ansprechzeit 5 Minuten)` and is empty when no positive response time is configured. The default places it directly after the message with a space, for example: `... ({{remark}}) {{warningResponseTime}}`.
+Warning and alarm message templates can use `{{warningResponseTime}}` and `{{alarmResponseTime}}`. Each placeholder contains an optional localized suffix such as ` (Ansprechzeit 5 Minuten)` and is empty when no positive response time is configured. Change-based warning and alarm messages also provide `{{previousValue}}` and `{{changeFrom}}`; the latter is an optional localized suffix such as ` (vorheriger Wert: 1 °C)` and is empty for other event types. The default appends the previous-value suffix at the very end of the message, for example: `... ({{remark}}){{warningResponseTime}}{{changeFrom}}`.
+
+Invalid sources and invalid values use the global `invalidResponseTimeSeconds` setting (default: 10 seconds). The invalid status and its notification become active only after this duration; set it to `0` for immediate activation. Invalid-source and invalid-value templates can use `{{invalidResponseTime}}` for the localized response-time suffix.
 
 ### Example
 `http://192.168.0.222:8081/#tab-objects/select/device-monitoring.0.info.message`
@@ -128,13 +131,14 @@ Warning and alarm message templates can use `{{warningResponseTime}}` and `{{ala
 <img width="591" height="1280" alt="image" src="https://github.com/user-attachments/assets/f6c94e61-a233-4c17-8792-f898b34e80e3" />
 
 
-
-### DISCLAIMER
-
 ## Changelog
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Add configurable absolute and percentage-change warning and alarm thresholds against the previous numeric value, with separate positive and negative directions and at least one direction always active; percentage thresholds are non-negative and not capped at 100%. Change-based notifications include the previous value. Add a global 10-second response time for invalid sources and values.
+* (BenAhrdt) Use English defaults for notification templates and previews, localize dynamic Device Manager conflict messages, and remove the empty disclaimer section.
+
 ### 0.0.37 (2026-10-03)
 * (BenAhrdt) Restore the ioBroker-recommended workflow concurrency configuration for repository checks.
 

@@ -9,8 +9,11 @@ import {
 	getWatchStatus,
 	isUpdateTimedOut,
 	parseFiniteNumber,
+	parseAbsoluteChange,
+	parsePercentage,
 	type DeviceConfiguration,
 	type FunctionTemplate,
+	type InvalidStatusSignature,
 	type LimitActivationState,
 	type LimitConfiguration,
 	type LimitMode,
@@ -19,7 +22,7 @@ import {
 } from './lib/evaluation';
 import { configurationBackupNeedsUpdate } from './lib/configuration-backup';
 import type { MonitoringData } from './lib/monitoring-data';
-import { formatResponseTimeSuffix } from './lib/message-templates';
+import { formatInvalidResponseTimeSuffix, formatResponseTimeSuffix } from './lib/message-templates';
 import {
 	createNotificationCollectionSummaryMessage,
 	createSummaryReminderMessage,
@@ -50,6 +53,127 @@ import {
 type RecommendedLanguage = 'ru' | 'pt' | 'nl' | 'fr' | 'it' | 'es' | 'pl' | 'uk' | 'zh-cn';
 
 const recommendedTranslations: Record<string, Record<RecommendedLanguage, string>> = {
+	'absolute change': {
+		ru: 'Абсолютное изменение',
+		pt: 'Alteração absoluta',
+		nl: 'Absolute wijziging',
+		fr: 'Variation absolue',
+		it: 'Variazione assoluta',
+		es: 'Cambio absoluto',
+		pl: 'Zmiana bezwzględna',
+		uk: 'Абсолютна зміна',
+		'zh-cn': '绝对变化',
+	},
+	'Positive change value': {
+		ru: 'Величина положительного изменения',
+		pt: 'Valor da alteração positiva',
+		nl: 'Waarde van positieve wijziging',
+		fr: 'Valeur de la variation positive',
+		it: 'Valore della variazione positiva',
+		es: 'Valor del cambio positivo',
+		pl: 'Wartość zmiany dodatniej',
+		uk: 'Величина позитивної зміни',
+		'zh-cn': '正向变化值',
+	},
+	'Negative change value': {
+		ru: 'Величина отрицательного изменения',
+		pt: 'Valor da alteração negativa',
+		nl: 'Waarde van negatieve wijziging',
+		fr: 'Valeur de la variation négative',
+		it: 'Valore della variazione negativa',
+		es: 'Valor del cambio negativo',
+		pl: 'Wartość zmiany ujemnej',
+		uk: 'Величина негативної зміни',
+		'zh-cn': '负向变化值',
+	},
+	'Enter a non-negative value.': {
+		ru: 'Введите неотрицательное значение.',
+		pt: 'Introduza um valor não negativo.',
+		nl: 'Voer een niet-negatieve waarde in.',
+		fr: 'Saisissez une valeur non négative.',
+		it: 'Inserire un valore non negativo.',
+		es: 'Introduzca un valor no negativo.',
+		pl: 'Wprowadź wartość nieujemną.',
+		uk: 'Введіть невід’ємне значення.',
+		'zh-cn': '请输入非负值。',
+	},
+	'percentage change': {
+		ru: 'Процентное изменение',
+		pt: 'Alteração percentual',
+		nl: 'Procentuele wijziging',
+		fr: 'Variation en pourcentage',
+		it: 'Variazione percentuale',
+		es: 'Cambio porcentual',
+		pl: 'Zmiana procentowa',
+		uk: 'Відсоткова зміна',
+		'zh-cn': '百分比变化',
+	},
+	'Positive change': {
+		ru: 'Положительное изменение',
+		pt: 'Alteração positiva',
+		nl: 'Positieve wijziging',
+		fr: 'Variation positive',
+		it: 'Variazione positiva',
+		es: 'Cambio positivo',
+		pl: 'Zmiana dodatnia',
+		uk: 'Позитивна зміна',
+		'zh-cn': '正向变化',
+	},
+	'Negative change': {
+		ru: 'Отрицательное изменение',
+		pt: 'Alteração negativa',
+		nl: 'Negatieve wijziging',
+		fr: 'Variation négative',
+		it: 'Variazione negativa',
+		es: 'Cambio negativo',
+		pl: 'Zmiana ujemna',
+		uk: 'Негативна зміна',
+		'zh-cn': '负向变化',
+	},
+	'Positive change (%)': {
+		ru: 'Положительное изменение (%)',
+		pt: 'Alteração positiva (%)',
+		nl: 'Positieve wijziging (%)',
+		fr: 'Variation positive (%)',
+		it: 'Variazione positiva (%)',
+		es: 'Cambio positivo (%)',
+		pl: 'Zmiana dodatnia (%)',
+		uk: 'Позитивна зміна (%)',
+		'zh-cn': '正向变化 (%)',
+	},
+	'Negative change (%)': {
+		ru: 'Отрицательное изменение (%)',
+		pt: 'Alteração negativa (%)',
+		nl: 'Negatieve wijziging (%)',
+		fr: 'Variation négative (%)',
+		it: 'Variazione negativa (%)',
+		es: 'Cambio negativo (%)',
+		pl: 'Zmiana ujemna (%)',
+		uk: 'Негативна зміна (%)',
+		'zh-cn': '负向变化 (%)',
+	},
+	'Enter a non-negative percentage.': {
+		ru: 'Введите неотрицательное процентное значение.',
+		pt: 'Introduza uma percentagem não negativa.',
+		nl: 'Voer een niet-negatief percentage in.',
+		fr: 'Saisissez un pourcentage non négatif.',
+		it: 'Inserire una percentuale non negativa.',
+		es: 'Introduzca un porcentaje no negativo.',
+		pl: 'Wprowadź nieujemną wartość procentową.',
+		uk: 'Введіть невід’ємне відсоткове значення.',
+		'zh-cn': '请输入非负百分比。',
+	},
+	'Select at least one change direction.': {
+		ru: 'Выберите хотя бы одно направление изменения.',
+		pt: 'Selecione pelo menos uma direção de alteração.',
+		nl: 'Selecteer ten minste één wijzigingsrichting.',
+		fr: 'Sélectionnez au moins une direction de variation.',
+		it: 'Selezionare almeno una direzione di variazione.',
+		es: 'Seleccione al menos una dirección de cambio.',
+		pl: 'Wybierz co najmniej jeden kierunek zmiany.',
+		uk: 'Виберіть принаймні один напрямок зміни.',
+		'zh-cn': '请至少选择一个变化方向。',
+	},
 	Warning: {
 		ru: 'Предупреждение',
 		pt: 'Aviso',
@@ -459,6 +583,8 @@ interface NotificationMessage {
 	remark: string;
 	value: ioBroker.StateValue;
 	unit: string;
+	/** Previous numeric value for a change-based warning or alarm, when available. */
+	previousValue?: number;
 	triggeredAt: number;
 	lastUpdate: number | null;
 	timeoutMinutes?: number;
@@ -493,26 +619,28 @@ function isNotificationLevelValue(value: unknown): value is number {
 	return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 4;
 }
 
+const DEFAULT_INVALID_RESPONSE_TIME_SECONDS = 10;
+
 const DEFAULT_MESSAGE_TEMPLATES: Record<MessageTemplateType, { en: string; de: string }> = {
 	warning: {
-		en: 'State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}) {{warningResponseTime}}',
-		de: 'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}) {{warningResponseTime}}',
+		en: 'State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}{{changeFrom}}',
+		de: 'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}){{warningResponseTime}}{{changeFrom}}',
 	},
 	alarm: {
-		en: 'State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}) {{alarmResponseTime}}',
-		de: 'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}) {{alarmResponseTime}}',
+		en: 'State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
+		de: 'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}){{alarmResponseTime}}{{changeFrom}}',
 	},
 	timeout: {
 		en: 'State {{state}} on device {{device}} has not reported for at least {{timeoutMinutes}} minutes. Last update: {{lastUpdate}} ({{remark}})',
 		de: 'Der State {{state}} vom Gerät {{device}} hat sich mindestens {{timeoutMinutes}} Minuten nicht gemeldet. Letzte Aktualisierung: {{lastUpdate}} ({{remark}})',
 	},
 	invalidSource: {
-		en: 'Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}})',
-		de: 'Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})',
+		en: 'Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		de: 'Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
 	},
 	invalidValue: {
-		en: 'Invalid value at device: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}})',
-		de: 'Ungültiger Wert bei Gerät: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}})',
+		en: 'Invalid value at device: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
+		de: 'Ungültiger Wert bei Gerät: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}}){{invalidResponseTime}}',
 	},
 	recovered: {
 		en: 'The limit violation at {{device}} / {{state}} is cleared: {{value}} {{unit}} ({{remark}})',
@@ -559,6 +687,10 @@ const LEGACY_DEFAULT_MESSAGE_TEMPLATES: Partial<Record<MessageTemplateType, read
 		'State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}})',
 		'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}){{warningResponseTime}}',
 		'State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}){{warningResponseTime}}',
+		'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}) {{warningResponseTime}}',
+		'State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}) {{warningResponseTime}}',
+		'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Warngrenze ({{warningLimits}}) verletzt ({{remark}}){{changeFrom}} {{warningResponseTime}}',
+		'State {{state}} on device {{device}} violated its configured warning condition ({{warningLimits}}) with {{value}} {{unit}}. ({{remark}}){{changeFrom}} {{warningResponseTime}}',
 	],
 	alarm: [
 		'Alarm bei {{device}} / {{state}}: {{value}} {{unit}}',
@@ -569,6 +701,10 @@ const LEGACY_DEFAULT_MESSAGE_TEMPLATES: Partial<Record<MessageTemplateType, read
 		'State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}})',
 		'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}){{alarmResponseTime}}',
 		'State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}){{alarmResponseTime}}',
+		'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}) {{alarmResponseTime}}',
+		'State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}) {{alarmResponseTime}}',
+		'Der State {{state}} vom Gerät {{device}} hat mit {{value}} {{unit}} die konfigurierte Alarmgrenze ({{alarmLimits}}) verletzt ({{remark}}){{changeFrom}} {{alarmResponseTime}}',
+		'State {{state}} on device {{device}} violated its configured alarm condition ({{alarmLimits}}) with {{value}} {{unit}}. ({{remark}}){{changeFrom}} {{alarmResponseTime}}',
 	],
 	timeout: [
 		'Keine Aktualisierung bei {{device}} / {{state}} seit {{timeoutMinutes}} Minuten. Letzter Wert: {{value}} {{unit}} (letzte Aktualisierung: {{lastUpdate}})',
@@ -577,6 +713,14 @@ const LEGACY_DEFAULT_MESSAGE_TEMPLATES: Partial<Record<MessageTemplateType, read
 	invalidSource: [
 		'Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}}',
 		'Invalid or deleted source for {{device}} / {{state}}: {{sourceId}}',
+		'Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}})',
+		'Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}})',
+		'Ungültige oder gelöschte Quelle bei {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+		'Invalid or deleted source for {{device}} / {{state}}: {{sourceId}} ({{remark}}){{invalidResponseTime}}',
+	],
+	invalidValue: [
+		'Ungültiger Wert bei Gerät: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}})',
+		'Invalid value at device: {{device}} / {{state}}: {{sourceId}} ({{sourceId}}) ({{remark}})',
 	],
 	recovered: [
 		'{{device}} / {{state}} ist wieder in Ordnung: {{value}} {{unit}}',
@@ -841,7 +985,8 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 							targetGroups.set(key, group);
 						}
 
-						const conflictMessages: string[] = [];
+						const conflictMessagesEnglish: string[] = [];
+						const conflictMessagesGerman: string[] = [];
 						for (const group of targetGroups.values()) {
 							const names = group.entries.map(entry => String(entry.name).trim().toLocaleLowerCase());
 							const displayTarget =
@@ -858,20 +1003,31 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 								),
 							];
 							for (const name of duplicateNames) {
-								conflictMessages.push(`${name} – mehrfach im Zielgerät ${displayTarget}`);
+								conflictMessagesEnglish.push(
+									`${name} – multiple times in target device ${displayTarget}`,
+								);
+								conflictMessagesGerman.push(`${name} – mehrfach im Zielgerät ${displayTarget}`);
 							}
 							for (const name of names.filter(Boolean).filter(name => existingNames.has(name))) {
-								conflictMessages.push(`${name} – bereits vorhanden im Zielgerät ${displayTarget}`);
+								conflictMessagesEnglish.push(
+									`${name} – already present in target device ${displayTarget}`,
+								);
+								conflictMessagesGerman.push(
+									`${name} – bereits vorhanden im Zielgerät ${displayTarget}`,
+								);
 							}
 							if (names.some(name => !name)) {
-								conflictMessages.push(`(leer) – Anzeigename fehlt im Zielgerät ${displayTarget}`);
+								conflictMessagesEnglish.push(
+									`(empty) – display name missing in target device ${displayTarget}`,
+								);
+								conflictMessagesGerman.push(`(leer) – Anzeigename fehlt im Zielgerät ${displayTarget}`);
 							}
 						}
-						if (conflictMessages.length) {
+						if (conflictMessagesEnglish.length) {
 							await context.showMessage(
 								t(
-									`Resolve these display-name conflicts before adding:\n${conflictMessages.join('\n')}`,
-									`Bitte löse diese Anzeigenamen-Konflikte vor dem Hinzufügen:\n${conflictMessages.join('\n')}`,
+									`Resolve these display-name conflicts before adding:\n${conflictMessagesEnglish.join('\n')}`,
+									`Bitte löse diese Anzeigenamen-Konflikte vor dem Hinzufügen:\n${conflictMessagesGerman.join('\n')}`,
 								),
 							);
 							return { refresh: false };
@@ -1061,7 +1217,13 @@ function deviceForm(): any {
 	};
 }
 function defaultLimit(mode: LimitMode): LimitConfiguration {
-	return { enabled: false, mode, booleanValue: true };
+	return {
+		enabled: false,
+		mode,
+		booleanValue: true,
+		positiveChangeEnabled: true,
+		negativeChangeEnabled: false,
+	};
 }
 function defaultFormLimit(mode: LimitMode): any {
 	return { ...defaultLimit(mode), booleanValue: 'true' };
@@ -1091,7 +1253,7 @@ function stateSearchForm(candidates: StateCandidate[]): any {
 				type: 'select',
 				label: t('Existing role', 'Vorhandene Rolle'),
 				options: [
-					{ value: '', label: 'Alle Rollen / All roles' },
+					{ value: '', label: t('All roles', 'Alle Rollen') },
 					...roles.map(value => ({ value, label: value })),
 				],
 				noTranslation: true,
@@ -1523,8 +1685,96 @@ function stateForm(
 				{ value: 'above', label: t('above the limit', 'über dem Grenzwert liegt') },
 				{ value: 'outside', label: t('outside the allowed range', 'außerhalb des erlaubten Bereichs liegt') },
 				{ value: 'inside', label: t('inside the forbidden range', 'im verbotenen Bereich liegt') },
+				{ value: 'percentage', label: t('percentage change', 'prozentuale Änderung') },
+				{ value: 'absolute', label: t('absolute change', 'absolute Änderung') },
 			],
 			hidden: combineHidden(`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource})`),
+			...visibilityDependencies,
+		},
+		[key(`${prefix}.positiveChangeEnabled`)]: {
+			type: 'checkbox',
+			label: t('Positive change', 'Positive Änderung'),
+			newLine: true,
+			xs: 4,
+			disabled: `(${data(`${prefix}.mode`)} === 'percentage' || ${data(`${prefix}.mode`)} === 'absolute') && ${data(`${prefix}.negativeChangeEnabled`)} !== true`,
+			validator: `return (${data(`${prefix}.mode`)} !== 'percentage' && ${data(`${prefix}.mode`)} !== 'absolute') || ${data(`${prefix}.positiveChangeEnabled`)} === true || ${data(`${prefix}.negativeChangeEnabled`)} === true`,
+			validatorErrorText: t(
+				'Select at least one change direction.',
+				'Bitte mindestens eine Änderungsrichtung auswählen.',
+			),
+			validatorNoSaveOnError: true,
+			hidden: combineHidden(
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || (${data(`${prefix}.mode`)} !== 'percentage' && ${data(`${prefix}.mode`)} !== 'absolute')`,
+			),
+			...visibilityDependencies,
+		},
+		[key(`${prefix}.positiveChangePercent`)]: {
+			type: 'text',
+			label: t('Positive change (%)', 'Positive Änderung (%)'),
+			help: t('Enter a non-negative percentage.', 'Einen nicht-negativen Prozentwert eingeben.'),
+			validator: `return ${data(`${prefix}.mode`)} !== 'percentage' || ${data(`${prefix}.positiveChangeEnabled`)} !== true || (() => { const value = String(${data(`${prefix}.positiveChangePercent`)} ?? '').trim(); const parsed = Number(value.replace(',', '.')); return value !== '' && Number.isFinite(parsed) && parsed >= 0; })()`,
+			validatorErrorText: t('Enter a non-negative percentage.', 'Einen nicht-negativen Prozentwert eingeben.'),
+			validatorNoSaveOnError: true,
+			xs: 8,
+			hidden: combineHidden(
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} !== 'percentage' || ${data(`${prefix}.positiveChangeEnabled`)} !== true`,
+			),
+			...visibilityDependencies,
+		},
+		[key(`${prefix}.positiveChangeValue`)]: {
+			type: 'text',
+			label: t('Positive change value', 'Wert der positiven Änderung'),
+			help: t('Enter a non-negative value.', 'Einen nicht-negativen Wert eingeben.'),
+			validator: `return ${data(`${prefix}.mode`)} !== 'absolute' || ${data(`${prefix}.positiveChangeEnabled`)} !== true || (() => { const value = String(${data(`${prefix}.positiveChangeValue`)} ?? '').trim(); const parsed = Number(value.replace(',', '.')); return value !== '' && Number.isFinite(parsed) && parsed >= 0; })()`,
+			validatorErrorText: t('Enter a non-negative value.', 'Bitte einen nicht-negativen Wert eingeben.'),
+			validatorNoSaveOnError: true,
+			xs: 8,
+			hidden: combineHidden(
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} !== 'absolute' || ${data(`${prefix}.positiveChangeEnabled`)} !== true`,
+			),
+			...visibilityDependencies,
+		},
+		[key(`${prefix}.negativeChangeEnabled`)]: {
+			type: 'checkbox',
+			label: t('Negative change', 'Negative Änderung'),
+			newLine: true,
+			xs: 4,
+			disabled: `(${data(`${prefix}.mode`)} === 'percentage' || ${data(`${prefix}.mode`)} === 'absolute') && ${data(`${prefix}.positiveChangeEnabled`)} !== true`,
+			validator: `return (${data(`${prefix}.mode`)} !== 'percentage' && ${data(`${prefix}.mode`)} !== 'absolute') || ${data(`${prefix}.positiveChangeEnabled`)} === true || ${data(`${prefix}.negativeChangeEnabled`)} === true`,
+			validatorErrorText: t(
+				'Select at least one change direction.',
+				'Bitte mindestens eine Änderungsrichtung auswählen.',
+			),
+			validatorNoSaveOnError: true,
+			hidden: combineHidden(
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || (${data(`${prefix}.mode`)} !== 'percentage' && ${data(`${prefix}.mode`)} !== 'absolute')`,
+			),
+			...visibilityDependencies,
+		},
+		[key(`${prefix}.negativeChangeValue`)]: {
+			type: 'text',
+			label: t('Negative change value', 'Wert der negativen Änderung'),
+			help: t('Enter a non-negative value.', 'Einen nicht-negativen Wert eingeben.'),
+			validator: `return ${data(`${prefix}.mode`)} !== 'absolute' || ${data(`${prefix}.negativeChangeEnabled`)} !== true || (() => { const value = String(${data(`${prefix}.negativeChangeValue`)} ?? '').trim(); const parsed = Number(value.replace(',', '.')); return value !== '' && Number.isFinite(parsed) && parsed >= 0; })()`,
+			validatorErrorText: t('Enter a non-negative value.', 'Bitte einen nicht-negativen Wert eingeben.'),
+			validatorNoSaveOnError: true,
+			xs: 8,
+			hidden: combineHidden(
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} !== 'absolute' || ${data(`${prefix}.negativeChangeEnabled`)} !== true`,
+			),
+			...visibilityDependencies,
+		},
+		[key(`${prefix}.negativeChangePercent`)]: {
+			type: 'text',
+			label: t('Negative change (%)', 'Negative Änderung (%)'),
+			help: t('Enter a non-negative percentage.', 'Einen nicht-negativen Prozentwert eingeben.'),
+			validator: `return ${data(`${prefix}.mode`)} !== 'percentage' || ${data(`${prefix}.negativeChangeEnabled`)} !== true || (() => { const value = String(${data(`${prefix}.negativeChangePercent`)} ?? '').trim(); const parsed = Number(value.replace(',', '.')); return value !== '' && Number.isFinite(parsed) && parsed >= 0; })()`,
+			validatorErrorText: t('Enter a non-negative percentage.', 'Einen nicht-negativen Prozentwert eingeben.'),
+			validatorNoSaveOnError: true,
+			xs: 8,
+			hidden: combineHidden(
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} !== 'percentage' || ${data(`${prefix}.negativeChangeEnabled`)} !== true`,
+			),
 			...visibilityDependencies,
 		},
 		[key(`${prefix}.booleanValue`)]: {
@@ -1555,7 +1805,7 @@ function stateForm(
 			newLine: true,
 			xs: 6,
 			hidden: combineHidden(
-				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'above'`,
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'above' || ${data(`${prefix}.mode`)} === 'percentage' || ${data(`${prefix}.mode`)} === 'absolute'`,
 			),
 			...visibilityDependencies,
 		},
@@ -1574,7 +1824,7 @@ function stateForm(
 			validatorNoSaveOnError: true,
 			xs: 6,
 			hidden: combineHidden(
-				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below'`,
+				`${data(`${prefix}.enabled`)} !== true || !(${numericSource}) || (${mixedSource}) || ${data(`${prefix}.mode`)} === 'below' || ${data(`${prefix}.mode`)} === 'percentage' || ${data(`${prefix}.mode`)} === 'absolute'`,
 			),
 			...visibilityDependencies,
 		},
@@ -1656,6 +1906,18 @@ function stateForm(
 						'alarm.booleanValue',
 						'alarm.min',
 						'alarm.max',
+						'warning.positiveChangeEnabled',
+						'warning.negativeChangeEnabled',
+						'warning.positiveChangePercent',
+						'warning.negativeChangePercent',
+						'warning.positiveChangeValue',
+						'warning.negativeChangeValue',
+						'alarm.positiveChangeEnabled',
+						'alarm.negativeChangeEnabled',
+						'alarm.positiveChangePercent',
+						'alarm.negativeChangePercent',
+						'alarm.positiveChangeValue',
+						'alarm.negativeChangeValue',
 						'warning.responseDelayMinutes',
 						'alarm.responseDelayMinutes',
 						'staleWarning.enabled',
@@ -1760,8 +2022,84 @@ function bulkTypeLimitFields(
 				{ value: 'above', label: t('above the limit', 'über dem Grenzwert liegt') },
 				{ value: 'outside', label: t('outside the allowed range', 'außerhalb des erlaubten Bereichs liegt') },
 				{ value: 'inside', label: t('inside the forbidden range', 'innerhalb des verbotenen Bereichs liegt') },
+				{ value: 'percentage', label: t('percentage change', 'prozentuale Änderung') },
+				{ value: 'absolute', label: t('absolute change', 'absolute Änderung') },
 			],
 			hidden: `!(${visible}) || data.${root}.enabled !== true`,
+			...visibilityDependencies,
+		};
+		fields[`${root}.positiveChangeEnabled`] = {
+			type: 'checkbox',
+			label: t('Positive change', 'Positive Änderung'),
+			newLine: true,
+			xs: 4,
+			disabled: `(data.${root}.mode === 'percentage' || data.${root}.mode === 'absolute') && data.${root}.negativeChangeEnabled !== true`,
+			validator: `return (data.${root}.mode !== 'percentage' && data.${root}.mode !== 'absolute') || data.${root}.positiveChangeEnabled === true || data.${root}.negativeChangeEnabled === true`,
+			validatorErrorText: t(
+				'Select at least one change direction.',
+				'Bitte mindestens eine Änderungsrichtung auswählen.',
+			),
+			validatorNoSaveOnError: true,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || (data.${root}.mode !== 'percentage' && data.${root}.mode !== 'absolute')`,
+			...visibilityDependencies,
+		};
+		fields[`${root}.positiveChangePercent`] = {
+			type: 'text',
+			label: t('Positive change (%)', 'Positive Änderung (%)'),
+			help: t('Enter a non-negative percentage.', 'Einen nicht-negativen Prozentwert eingeben.'),
+			validator: `return data.${root}.mode !== 'percentage' || data.${root}.positiveChangeEnabled !== true || (() => { const value = String(data.${root}.positiveChangePercent ?? '').trim(); const parsed = Number(value.replace(',', '.')); return value !== '' && Number.isFinite(parsed) && parsed >= 0; })()`,
+			validatorErrorText: t('Enter a non-negative percentage.', 'Einen nicht-negativen Prozentwert eingeben.'),
+			validatorNoSaveOnError: true,
+			xs: 8,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode !== 'percentage' || data.${root}.positiveChangeEnabled !== true`,
+			...visibilityDependencies,
+		};
+		fields[`${root}.positiveChangeValue`] = {
+			type: 'text',
+			label: t('Positive change value', 'Wert der positiven Änderung'),
+			help: t('Enter a non-negative value.', 'Einen nicht-negativen Wert eingeben.'),
+			validator: `return data.${root}.mode !== 'absolute' || data.${root}.positiveChangeEnabled !== true || (() => { const value = String(data.${root}.positiveChangeValue ?? '').trim(); const parsed = Number(value.replace(',', '.')); return value !== '' && Number.isFinite(parsed) && parsed >= 0; })()`,
+			validatorErrorText: t('Enter a non-negative value.', 'Bitte einen nicht-negativen Wert eingeben.'),
+			validatorNoSaveOnError: true,
+			xs: 8,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode !== 'absolute' || data.${root}.positiveChangeEnabled !== true`,
+			...visibilityDependencies,
+		};
+		fields[`${root}.negativeChangeEnabled`] = {
+			type: 'checkbox',
+			label: t('Negative change', 'Negative Änderung'),
+			newLine: true,
+			xs: 4,
+			disabled: `(data.${root}.mode === 'percentage' || data.${root}.mode === 'absolute') && data.${root}.positiveChangeEnabled !== true`,
+			validator: `return (data.${root}.mode !== 'percentage' && data.${root}.mode !== 'absolute') || data.${root}.positiveChangeEnabled === true || data.${root}.negativeChangeEnabled === true`,
+			validatorErrorText: t(
+				'Select at least one change direction.',
+				'Bitte mindestens eine Änderungsrichtung auswählen.',
+			),
+			validatorNoSaveOnError: true,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || (data.${root}.mode !== 'percentage' && data.${root}.mode !== 'absolute')`,
+			...visibilityDependencies,
+		};
+		fields[`${root}.negativeChangeValue`] = {
+			type: 'text',
+			label: t('Negative change value', 'Wert der negativen Änderung'),
+			help: t('Enter a non-negative value.', 'Einen nicht-negativen Wert eingeben.'),
+			validator: `return data.${root}.mode !== 'absolute' || data.${root}.negativeChangeEnabled !== true || (() => { const value = String(data.${root}.negativeChangeValue ?? '').trim(); const parsed = Number(value.replace(',', '.')); return value !== '' && Number.isFinite(parsed) && parsed >= 0; })()`,
+			validatorErrorText: t('Enter a non-negative value.', 'Bitte einen nicht-negativen Wert eingeben.'),
+			validatorNoSaveOnError: true,
+			xs: 8,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode !== 'absolute' || data.${root}.negativeChangeEnabled !== true`,
+			...visibilityDependencies,
+		};
+		fields[`${root}.negativeChangePercent`] = {
+			type: 'text',
+			label: t('Negative change (%)', 'Negative Änderung (%)'),
+			help: t('Enter a non-negative percentage.', 'Einen nicht-negativen Prozentwert eingeben.'),
+			validator: `return data.${root}.mode !== 'percentage' || data.${root}.negativeChangeEnabled !== true || (() => { const value = String(data.${root}.negativeChangePercent ?? '').trim(); const parsed = Number(value.replace(',', '.')); return value !== '' && Number.isFinite(parsed) && parsed >= 0; })()`,
+			validatorErrorText: t('Enter a non-negative percentage.', 'Einen nicht-negativen Prozentwert eingeben.'),
+			validatorNoSaveOnError: true,
+			xs: 8,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode !== 'percentage' || data.${root}.negativeChangeEnabled !== true`,
 			...visibilityDependencies,
 		};
 		fields[`${root}.min`] = {
@@ -1779,7 +2117,7 @@ function bulkTypeLimitFields(
 			validatorNoSaveOnError: true,
 			newLine: true,
 			xs: 6,
-			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'above'`,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'above' || data.${root}.mode === 'percentage' || data.${root}.mode === 'absolute'`,
 			...visibilityDependencies,
 		};
 		fields[`${root}.max`] = {
@@ -1796,7 +2134,7 @@ function bulkTypeLimitFields(
 			),
 			validatorNoSaveOnError: true,
 			xs: 6,
-			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'below'`,
+			hidden: `!(${visible}) || data.${root}.enabled !== true || data.${root}.mode === 'below' || data.${root}.mode === 'percentage' || data.${root}.mode === 'absolute'`,
 			...visibilityDependencies,
 		};
 	} else {
@@ -2424,12 +2762,22 @@ class DeviceMonitoring extends utils.Adapter {
 	private normalizeState(data: any, id: string): WatchedStateConfiguration {
 		const limit = (input: any, fallback: LimitMode): LimitConfiguration => {
 			const responseDelayMinutes = parseFiniteNumber(input?.responseDelayMinutes);
+			const positiveChangeEnabled = input?.positiveChangeEnabled === true;
+			const negativeChangeEnabled = input?.negativeChangeEnabled === true;
 			return {
 				enabled: input?.enabled === true,
-				mode: ['below', 'above', 'outside', 'inside'].includes(input?.mode) ? input.mode : fallback,
+				mode: ['below', 'above', 'outside', 'inside', 'percentage', 'absolute'].includes(input?.mode)
+					? input.mode
+					: fallback,
 				booleanValue: input?.booleanValue === false || input?.booleanValue === 'false' ? false : true,
 				min: parseFiniteNumber(input?.min),
 				max: parseFiniteNumber(input?.max),
+				positiveChangeEnabled: positiveChangeEnabled || !negativeChangeEnabled,
+				negativeChangeEnabled,
+				positiveChangePercent: parsePercentage(input?.positiveChangePercent),
+				negativeChangePercent: parsePercentage(input?.negativeChangePercent),
+				positiveChangeValue: parseAbsoluteChange(input?.positiveChangeValue),
+				negativeChangeValue: parseAbsoluteChange(input?.negativeChangeValue),
 				responseDelayMinutes:
 					responseDelayMinutes !== undefined && responseDelayMinutes > 0 ? responseDelayMinutes : undefined,
 			};
@@ -2780,30 +3128,34 @@ class DeviceMonitoring extends utils.Adapter {
 				continue;
 			}
 			const mode = (input: unknown): LimitMode =>
-				['below', 'above', 'outside', 'inside'].includes(String(input)) ? (input as LimitMode) : 'outside';
+				['below', 'above', 'outside', 'inside', 'percentage', 'absolute'].includes(String(input))
+					? (input as LimitMode)
+					: 'outside';
+			const normalizeLimit = (input: any): LimitConfiguration => {
+				const positiveChangeEnabled = input?.positiveChangeEnabled === true;
+				const negativeChangeEnabled = input?.negativeChangeEnabled === true;
+				const responseDelayMinutes = parseFiniteNumber(input?.responseDelayMinutes);
+				return {
+					enabled: input?.enabled === true,
+					mode: mode(input?.mode),
+					booleanValue: input?.booleanValue === false || input?.booleanValue === 'false' ? false : true,
+					min: parseFiniteNumber(input?.min),
+					max: parseFiniteNumber(input?.max),
+					positiveChangeEnabled: positiveChangeEnabled || !negativeChangeEnabled,
+					negativeChangeEnabled,
+					positiveChangePercent: parsePercentage(input?.positiveChangePercent),
+					negativeChangePercent: parsePercentage(input?.negativeChangePercent),
+					positiveChangeValue: parseAbsoluteChange(input?.positiveChangeValue),
+					negativeChangeValue: parseAbsoluteChange(input?.negativeChangeValue),
+					responseDelayMinutes:
+						responseDelayMinutes !== undefined && responseDelayMinutes > 0
+							? responseDelayMinutes
+							: undefined,
+				};
+			};
 			templates[functionName] = {
-				warning: {
-					enabled: template.warning?.enabled === true,
-					mode: mode(template.warning?.mode),
-					booleanValue:
-						template.warning?.booleanValue === false || template.warning?.booleanValue === 'false'
-							? false
-							: true,
-					min: parseFiniteNumber(template.warning?.min),
-					max: parseFiniteNumber(template.warning?.max),
-					responseDelayMinutes: parseFiniteNumber(template.warning?.responseDelayMinutes),
-				},
-				alarm: {
-					enabled: template.alarm?.enabled === true,
-					mode: mode(template.alarm?.mode),
-					booleanValue:
-						template.alarm?.booleanValue === false || template.alarm?.booleanValue === 'false'
-							? false
-							: true,
-					min: parseFiniteNumber(template.alarm?.min),
-					max: parseFiniteNumber(template.alarm?.max),
-					responseDelayMinutes: parseFiniteNumber(template.alarm?.responseDelayMinutes),
-				},
+				warning: normalizeLimit(template.warning),
+				alarm: normalizeLimit(template.alarm),
 				staleWarning: {
 					enabled: template.staleWarning?.enabled === true,
 					minutes: parseFiniteNumber(template.staleWarning?.minutes) || 60,
@@ -2942,6 +3294,7 @@ class DeviceMonitoring extends utils.Adapter {
 						: undefined;
 			const warningSince = parseSince(parsed.warningSince);
 			const alarmSince = parseSince(parsed.alarmSince);
+			const invalidSince = parseSince(parsed.invalidSince);
 			if (warningSince === undefined || alarmSince === undefined) {
 				return undefined;
 			}
@@ -2950,6 +3303,22 @@ class DeviceMonitoring extends utils.Adapter {
 				alarmSince,
 				...(typeof parsed.warningSignature === 'string' ? { warningSignature: parsed.warningSignature } : {}),
 				...(typeof parsed.alarmSignature === 'string' ? { alarmSignature: parsed.alarmSignature } : {}),
+				...(typeof parsed.warningPercentageViolation === 'boolean'
+					? { warningPercentageViolation: parsed.warningPercentageViolation }
+					: {}),
+				...(typeof parsed.alarmPercentageViolation === 'boolean'
+					? { alarmPercentageViolation: parsed.alarmPercentageViolation }
+					: {}),
+				...(typeof parsed.warningPreviousValue === 'number' && Number.isFinite(parsed.warningPreviousValue)
+					? { warningPreviousValue: parsed.warningPreviousValue }
+					: {}),
+				...(typeof parsed.alarmPreviousValue === 'number' && Number.isFinite(parsed.alarmPreviousValue)
+					? { alarmPreviousValue: parsed.alarmPreviousValue }
+					: {}),
+				...(invalidSince !== undefined ? { invalidSince } : {}),
+				...(parsed.invalidSignature === 'invalidSource' || parsed.invalidSignature === 'invalidValue'
+					? { invalidSignature: parsed.invalidSignature }
+					: {}),
 			};
 		} catch {
 			return undefined;
@@ -3555,8 +3924,37 @@ class DeviceMonitoring extends utils.Adapter {
 			booleanValue: limit.booleanValue,
 			min: limit.min,
 			max: limit.max,
+			positiveChangeEnabled:
+				limit.mode === 'percentage' || limit.mode === 'absolute' ? limit.positiveChangeEnabled : undefined,
+			negativeChangeEnabled:
+				limit.mode === 'percentage' || limit.mode === 'absolute' ? limit.negativeChangeEnabled : undefined,
+			positiveChangePercent: limit.mode === 'percentage' ? limit.positiveChangePercent : undefined,
+			negativeChangePercent: limit.mode === 'percentage' ? limit.negativeChangePercent : undefined,
+			positiveChangeValue: limit.mode === 'absolute' ? limit.positiveChangeValue : undefined,
+			negativeChangeValue: limit.mode === 'absolute' ? limit.negativeChangeValue : undefined,
 			responseDelayMinutes: limit.responseDelayMinutes,
 		});
+	}
+	private getInvalidResponseTimeSeconds(): number {
+		const config = this.config as ioBroker.AdapterConfig & { invalidResponseTimeSeconds?: unknown };
+		const configured = parseFiniteNumber(config.invalidResponseTimeSeconds);
+		return configured !== undefined && configured >= 0 ? configured : DEFAULT_INVALID_RESPONSE_TIME_SECONDS;
+	}
+	private isInvalidResponseActive(
+		activation: LimitActivationState | undefined,
+		signature: InvalidStatusSignature,
+		now = Date.now(),
+	): boolean {
+		const delay = this.getInvalidResponseTimeSeconds();
+		if (delay <= 0) {
+			return true;
+		}
+		return (
+			activation?.invalidSignature === signature &&
+			typeof activation.invalidSince === 'number' &&
+			Number.isFinite(activation.invalidSince) &&
+			now - activation.invalidSince >= delay * 1000
+		);
 	}
 	private scheduleLimitActivation(
 		device: DeviceConfiguration,
@@ -3585,6 +3983,13 @@ class DeviceMonitoring extends utils.Adapter {
 			.map(entry => entry.since + entry.delay * 60_000)
 			.filter(dueAt => dueAt > now)
 			.sort((a, b) => a - b);
+		if (activation.invalidSignature && typeof activation.invalidSince === 'number') {
+			const invalidDelay = this.getInvalidResponseTimeSeconds();
+			if (invalidDelay > 0) {
+				dueTimes.push(activation.invalidSince + invalidDelay * 1000);
+			}
+		}
+		dueTimes.sort((a, b) => a - b);
 		const dueAt = dueTimes[0];
 		if (dueAt === undefined) {
 			return;
@@ -3620,11 +4025,21 @@ class DeviceMonitoring extends utils.Adapter {
 		sourceState: ioBroker.State | null | undefined,
 		previousData: Partial<MonitoringData>,
 		sameSource: boolean,
+		sourceChanged: boolean,
 		now = Date.now(),
 	): LimitActivationState {
 		const previous = sameSource ? this.limitActivationStates.get(key) || previousData.limitViolation : undefined;
 		const warningSignature = this.limitSignature(watched.warning);
 		const alarmSignature = this.limitSignature(watched.alarm);
+		const previousValue =
+			sameSource && typeof previousData.value === 'number' && Number.isFinite(previousData.value)
+				? previousData.value
+				: undefined;
+		const invalidSignature: InvalidStatusSignature | undefined = this.invalidSources.has(watched.sourceId)
+			? 'invalidSource'
+			: (typeof value !== 'number' || !Number.isFinite(value)) && typeof value !== 'boolean'
+				? 'invalidValue'
+				: undefined;
 		const sourceTimestamp =
 			typeof sourceState?.ts === 'number' &&
 			Number.isFinite(sourceState.ts) &&
@@ -3646,21 +4061,62 @@ class DeviceMonitoring extends utils.Adapter {
 			}
 			return previousSince ?? sourceTimestamp;
 		};
+		const evaluateChange = (
+			limit: LimitConfiguration,
+			previousViolation: boolean | undefined,
+			previousChangeValue: number | undefined,
+			previousSignature: string | undefined,
+			currentSignature: string,
+		): { violation: boolean; previousValue?: number } => {
+			if (limit.mode !== 'percentage' && limit.mode !== 'absolute') {
+				return { violation: false };
+			}
+			if (!sourceChanged || (previousSignature !== undefined && previousSignature !== currentSignature)) {
+				return previousSignature === currentSignature && previousViolation === true
+					? { violation: true, previousValue: previousChangeValue }
+					: { violation: false };
+			}
+			const violation = evaluateLimit(value, limit, previousValue);
+			return violation && previousValue !== undefined ? { violation: true, previousValue } : { violation: false };
+		};
+		const warningChange = evaluateChange(
+			watched.warning,
+			previous?.warningPercentageViolation,
+			previous?.warningPreviousValue,
+			previous?.warningSignature,
+			warningSignature,
+		);
+		const alarmChange = evaluateChange(
+			watched.alarm,
+			previous?.alarmPercentageViolation,
+			previous?.alarmPreviousValue,
+			previous?.alarmSignature,
+			alarmSignature,
+		);
+		const warningViolation =
+			watched.warning.mode === 'percentage' || watched.warning.mode === 'absolute'
+				? warningChange.violation
+				: evaluateLimit(value, watched.warning, previousValue);
+		const alarmViolation =
+			watched.alarm.mode === 'percentage' || watched.alarm.mode === 'absolute'
+				? alarmChange.violation
+				: evaluateLimit(value, watched.alarm, previousValue);
 		return {
-			warningSince: since(
-				evaluateLimit(value, watched.warning),
-				previous?.warningSince,
-				previous?.warningSignature,
-				warningSignature,
-			),
-			alarmSince: since(
-				evaluateLimit(value, watched.alarm),
-				previous?.alarmSince,
-				previous?.alarmSignature,
-				alarmSignature,
-			),
+			warningSince: since(warningViolation, previous?.warningSince, previous?.warningSignature, warningSignature),
+			alarmSince: since(alarmViolation, previous?.alarmSince, previous?.alarmSignature, alarmSignature),
 			warningSignature,
 			alarmSignature,
+			warningPercentageViolation: warningChange.violation,
+			alarmPercentageViolation: alarmChange.violation,
+			warningPreviousValue: warningChange.previousValue,
+			alarmPreviousValue: alarmChange.previousValue,
+			invalidSince:
+				invalidSignature === undefined
+					? null
+					: !sameSource || previous?.invalidSignature !== invalidSignature
+						? now
+						: (previous?.invalidSince ?? now),
+			...(invalidSignature ? { invalidSignature } : {}),
 		};
 	}
 	private getWatchedStatus(
@@ -3670,15 +4126,30 @@ class DeviceMonitoring extends utils.Adapter {
 		key?: string,
 		activation?: LimitActivationState,
 	): WatchStatus {
-		return this.invalidSources.has(watched.sourceId)
-			? 'invalid'
-			: getWatchStatus(
-					state?.val ?? null,
-					watched.warning,
-					watched.alarm,
-					updateTimeout,
-					activation ?? (key ? this.limitActivationStates.get(key) : undefined),
-				);
+		const currentActivation = activation ?? (key ? this.limitActivationStates.get(key) : undefined);
+		const currentValue = state?.val ?? null;
+		const invalidValue =
+			currentValue === null ||
+			((typeof currentValue !== 'number' || !Number.isFinite(currentValue)) && typeof currentValue !== 'boolean');
+		const invalidSignature: InvalidStatusSignature | undefined = this.invalidSources.has(watched.sourceId)
+			? 'invalidSource'
+			: invalidValue
+				? 'invalidValue'
+				: undefined;
+		const invalidActive = invalidSignature
+			? this.isInvalidResponseActive(currentActivation, invalidSignature)
+			: false;
+		if (invalidSignature === 'invalidSource') {
+			return invalidActive ? 'invalid' : updateTimeout ? 'timeout' : 'ok';
+		}
+		const status = getWatchStatus(
+			state?.val ?? null,
+			watched.warning,
+			watched.alarm,
+			updateTimeout,
+			currentActivation,
+		);
+		return status === 'invalidValue' && !invalidActive ? 'ok' : status;
 	}
 	private async updateDeviceSummary(device: DeviceConfiguration): Promise<void> {
 		const status = await this.getDeviceStatus(device);
@@ -3794,9 +4265,9 @@ class DeviceMonitoring extends utils.Adapter {
 		const key = `${device.id}.${watched.id}`;
 		const base = `devices.${device.id}.${watched.id}`;
 		const value = sourceState?.val ?? null;
+		const previousData = await this.readMonitoringData(base, watched.sourceId);
 		// Keep the current source value up to date even if a later metadata or history write fails.
 		await this.setStateChangedAsync(`${base}.value`, { val: value, ack: true });
-		const previousData = await this.readMonitoringData(base, watched.sourceId);
 		const sameSource = !this.resetUpdateHistories.has(base) && previousData.sourceId === watched.sourceId;
 		let updateHistory = sameSource ? parseUpdateHistory(previousData.updateHistory) : [];
 		if (sameSource && !updateHistory.length) {
@@ -3833,6 +4304,14 @@ class DeviceMonitoring extends utils.Adapter {
 		const updateInterval = lastUpdate === null || previousUpdate === null ? null : lastUpdate - previousUpdate;
 		const averageUpdateInterval = averageInterval(updateHistory);
 		const updateTimedOut = isUpdateTimedOut(sourceState, watched.staleWarning);
+		const sourceChanged =
+			!sameSource ||
+			!Object.is(value, previousData.value) ||
+			(typeof timestamp === 'number' &&
+				Number.isFinite(timestamp) &&
+				typeof previousData.lastUpdate === 'number' &&
+				Number.isFinite(previousData.lastUpdate) &&
+				timestamp > previousData.lastUpdate);
 		const averageValue = timeWeightedAverage(
 			valueHistory,
 			watched.staleWarning.enabled ? watched.staleWarning.minutes * 60_000 : undefined,
@@ -3844,6 +4323,7 @@ class DeviceMonitoring extends utils.Adapter {
 			sourceState,
 			previousData,
 			sameSource,
+			sourceChanged,
 		);
 		this.limitActivationStates.set(key, limitViolation);
 		this.scheduleLimitActivation(device, watched, key, limitViolation);
@@ -3944,7 +4424,13 @@ class DeviceMonitoring extends utils.Adapter {
 					entry.delay > 0 &&
 					entry.since + entry.delay * 60_000 <= Date.now(),
 			);
-		if (!sourceChangedWhileStopped && !delayedLimitCompletedWhileStopped) {
+		const invalidCompletedWhileStopped =
+			previousStatus === 'ok' &&
+			(current.status === 'invalid' || current.status === 'invalidValue') &&
+			typeof previousData.limitViolation?.invalidSince === 'number' &&
+			(this.getInvalidResponseTimeSeconds() <= 0 ||
+				previousData.limitViolation.invalidSince + this.getInvalidResponseTimeSeconds() * 1000 <= Date.now());
+		if (!sourceChangedWhileStopped && !delayedLimitCompletedWhileStopped && !invalidCompletedWhileStopped) {
 			return undefined;
 		}
 		return {
@@ -3986,8 +4472,31 @@ class DeviceMonitoring extends utils.Adapter {
 				data,
 				transition.category,
 				transition.recoveryCause,
+				previousData,
 			);
 		}
+	}
+	private getNotificationPreviousValue(
+		watched: WatchedStateConfiguration,
+		category: NotificationCategory,
+		data: MonitoringData,
+		previousData?: Partial<MonitoringData>,
+	): number | undefined {
+		const limit =
+			category === 'deviceWarning' ? watched.warning : category === 'deviceAlarm' ? watched.alarm : undefined;
+		if (!limit || (limit.mode !== 'percentage' && limit.mode !== 'absolute')) {
+			return undefined;
+		}
+		const storedValue =
+			category === 'deviceWarning'
+				? data.limitViolation?.warningPreviousValue
+				: data.limitViolation?.alarmPreviousValue;
+		if (typeof storedValue === 'number' && Number.isFinite(storedValue)) {
+			return storedValue;
+		}
+		return typeof previousData?.value === 'number' && Number.isFinite(previousData.value)
+			? previousData.value
+			: undefined;
 	}
 	private async publishStatusTransition(
 		device: DeviceConfiguration,
@@ -3996,6 +4505,7 @@ class DeviceMonitoring extends utils.Adapter {
 		data: MonitoringData,
 		category: NotificationCategory,
 		recoveryCause?: RecoveryCause,
+		previousData?: Partial<MonitoringData>,
 	): Promise<void> {
 		if (!this.isNotificationEnabled(category)) {
 			return;
@@ -4015,6 +4525,15 @@ class DeviceMonitoring extends utils.Adapter {
 		}
 		const templateType = this.getMessageTemplateType(category, recoveryCause);
 		const now = Date.now();
+		const previousValue = this.getNotificationPreviousValue(watched, category, data, previousData);
+		const previousValueText = previousValue === undefined ? '' : String(previousValue);
+		const changeFrom =
+			previousValue === undefined
+				? ''
+				: this.localize(
+						` (previous value: ${previousValueText}${data.unit ? ` ${data.unit}` : ''})`,
+						` (vorheriger Wert: ${previousValueText}${data.unit ? ` ${data.unit}` : ''})`,
+					);
 		const messageValues = {
 			device: device.name,
 			state: watched.name,
@@ -4022,11 +4541,17 @@ class DeviceMonitoring extends utils.Adapter {
 			function: watched.function,
 			value: data.value === null ? '—' : String(data.value),
 			unit: data.unit,
+			previousValue: previousValueText,
+			changeFrom,
 			remark: watched.remark?.trim() || '',
 			warningLimits: this.formatLimitDescription(watched.warning, data.value, data.unit),
 			alarmLimits: this.formatLimitDescription(watched.alarm, data.value, data.unit),
 			warningResponseTime: formatResponseTimeSuffix(watched.warning.responseDelayMinutes, this.displayLanguage),
 			alarmResponseTime: formatResponseTimeSuffix(watched.alarm.responseDelayMinutes, this.displayLanguage),
+			invalidResponseTime: formatInvalidResponseTimeSuffix(
+				this.getInvalidResponseTimeSeconds(),
+				this.displayLanguage,
+			),
 			timeoutMinutes: String(watched.staleWarning.minutes),
 			lastUpdate: data.lastUpdate === null ? '—' : timestampDisplay(data.lastUpdate),
 			triggeredAt: timestampDisplay(now),
@@ -4054,6 +4579,7 @@ class DeviceMonitoring extends utils.Adapter {
 			unit: data.unit,
 			triggeredAt: now,
 			lastUpdate: data.lastUpdate,
+			...(previousValue !== undefined ? { previousValue } : {}),
 			...(category === 'deviceTimeout' ? { timeoutMinutes: watched.staleWarning.minutes } : {}),
 			message: messageText,
 		};
@@ -4101,6 +4627,36 @@ class DeviceMonitoring extends utils.Adapter {
 				return this.localize(`outside ${min} - ${max}`, `außerhalb ${min} - ${max}`);
 			case 'inside':
 				return this.localize(`inside ${min} - ${max}`, `innerhalb ${min} - ${max}`);
+			case 'percentage': {
+				const directions: string[] = [];
+				if (limit.positiveChangeEnabled && limit.positiveChangePercent !== undefined) {
+					directions.push(`+${limit.positiveChangePercent}%`);
+				}
+				if (limit.negativeChangeEnabled && limit.negativeChangePercent !== undefined) {
+					directions.push(`-${limit.negativeChangePercent}%`);
+				}
+				return directions.length
+					? this.localize(
+							`change by ${directions.join(' or ')} relative to the previous value`,
+							`Änderung um ${directions.join(' oder ')} relativ zum vorherigen Wert`,
+						)
+					: this.localize('percentage change', 'prozentuale Änderung');
+			}
+			case 'absolute': {
+				const directions: string[] = [];
+				if (limit.positiveChangeEnabled && limit.positiveChangeValue !== undefined) {
+					directions.push(`+${limit.positiveChangeValue}${suffix}`);
+				}
+				if (limit.negativeChangeEnabled && limit.negativeChangeValue !== undefined) {
+					directions.push(`-${limit.negativeChangeValue}${suffix}`);
+				}
+				return directions.length
+					? this.localize(
+							`change by ${directions.join(' or ')} relative to the previous value`,
+							`Änderung um ${directions.join(' oder ')} relativ zum vorherigen Wert`,
+						)
+					: this.localize('absolute change', 'absolute Änderung');
+			}
 		}
 		return '—';
 	}
