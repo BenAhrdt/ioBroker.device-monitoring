@@ -1,4 +1,7 @@
 # Older changelog entries
+## 0.0.34 (2026-10-03)
+* (BenAhrdt) Synchronize the supported admin translations with the current configuration strings and remove obsolete notification-template entries.
+
 ## 0.0.33 (2026-10-02)
 * (BenAhrdt) Configure multiple notification quiet periods with optional end-of-pause summaries.
 

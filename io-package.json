@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.38",
+    "version": "0.0.39",
     "news": {
+      "0.0.39": {
+        "en": "Restore language-dependent notification templates, quiet-period names, and notification previews in the adapter defaults; migrate built-in English/German values without overwriting custom templates.",
+        "de": "Stellt sprachabhängige Meldevorlagen, Namen und Vorschauen in den Adapterstandards wieder her; migriert englische und deutsche Werte, ohne eigene Vorlagen zu überschreiben.",
+        "ru": "Восстановите в настройках адаптера по умолчанию зависящие от языка шаблоны уведомлений, имена периодов покоя и предварительный просмотр уведомлений; перенесите встроенные значения на английском и немецком языках без перезаписи пользовательских шаблонов.",
+        "pt": "Restaure modelos de notificação dependentes do idioma, nomes de períodos silenciosos e prévias nos padrões do adaptador; migre valores internos de inglês/alemão sem sobrescrever modelos personalizados.",
+        "nl": "Zet taalafhankelijke meldingssjablonen, namen van stille perioden en voorvertoningen van meldingen terug in de standaardinstellingen van de adapter; migreer ingebouwde Engelse/Duitse waarden zonder aangepaste sjablonen te overschrijven.",
+        "fr": "Restaurez les modèles de notifications selon la langue, les noms des périodes calmes et l'aperçu des notifications par défaut ; migrez les valeurs anglais/allemand intégrées sans remplacer les modèles personnalisés.",
+        "it": "Ripristina i modelli di notifica, i nomi silenziosi e le anteprime delle notifiche nei valori predefiniti dell'adattatore; migra i valori incorporati inglese/tedesco senza sovrascrivere i modelli personalizzati.",
+        "es": "Restaure las plantillas de notificaciones, los nombres de los períodos de inactividad y las vistas previas de las notificaciones en los valores predeterminados del adaptador; migre los valores integrados del inglés y el alemán sin sobrescribir",
+        "pl": "Przywróć zależne od języka szablony powiadomień, nazwy okresu cichego i podglądy powiadomień w domyślnych ustawieniach adaptera; migruj wbudowane wartości angielskie/niemieckie bez nadpisywania niestandardowych szablonów.",
+        "uk": "Відновити мовно-залежні шаблони сповіщень, імена тихих періодів та попередній перегляд сповіщень у типових налаштуваннях адаптера; перенести вбудовані значення англійської/німецької мови без перезапису користувацьких шаблонів.",
+        "zh-cn": "在适配器默认设置中恢复与语言相关的通知模板、静默时段名称和通知预览；在不覆盖自定义模板的情况下迁移内置的英语/德语值。"
+      },
       "0.0.38": {
         "en": "Add configurable absolute and percentage-change warning and alarm thresholds against the previous numeric value, with separate positive and negative directions and at least one direction always active; percentage thresholds are non-negative and not capped at 100%. Change-based notifications include the previous value. Add a global 10-second response time for invalid sources and values.\nUse English defaults for notification templates and previews, localize dynamic Device Manager conflict messages, and remove the empty disclaimer section.",
         "de": "Fügen Sie konfigurierbare absolute und prozentuale Warn- und Alarmschwellenwerte zum vorherigen numerischen Wert hinzu, wobei mindestens eine Richtung immer aktiv ist. Die Schwellenwerte sind nicht negativ und nicht auf 100% begrenzt. Änderungsmeldungen enthalten den vorherigen Wert. Gib 10 Sekunden Reaktionszeit für ungültige Quellen und Werte.\nBenutze englische Standardwerte für Vorlagen und Vorschauen, lokalisiere dynamische Device Manager-Konfliktmeldungen und entferne den leeren Disclaimer.",
@@ -80,19 +93,6 @@
         "pl": "Skonfiguruj wiele okresów cichych powiadomień za pomocą opcjonalnych podsumowań zakończenia pauzy.",
         "uk": "Налаштуйте кілька тихих періодів сповіщень за допомогою необов'язкових підсумків закінчення паузи.",
         "zh-cn": "使用可选的暂停结束摘要配置多个通知静默期。"
-      },
-      "0.0.32": {
-        "en": "Accept decimal values entered with either a point or comma for warning and alarm limits.\nAdd optional warning and alarm response-time suffixes to message-template placeholders.",
-        "de": "Akzeptieren Sie Dezimalwerte mit Punkt oder Komma für Warn- und Alarmgrenzen.\nFügen Sie optionale Warn- und Alarm-Suffixe zu Platzhaltern in Nachrichtenvorlagen hinzu.",
-        "ru": "Допускайте десятичные значения, вводимые с точкой или запятой, в качестве предельных значений предупреждений и аварийных сигналов.\nДобавьте дополнительные суффиксы времени отклика предупреждений и аварийных сигналов в заполнители шаблонов сообщений.",
-        "pt": "Aceite valores decimais inseridos com ponto ou vírgula para limites de aviso e alarme.\nAdicione sufixos opcionais de aviso e alarme aos espaços reservados do modelo.",
-        "nl": "Accepteer decimale waarden die zijn ingevoerd met een punt of een komma voor waarschuwings- en alarmlimieten.\nVoeg optionele achtervoegsels voor waarschuwingen en de reactietijd van alarmen toe aan tijdelijke aanduidingen voor berichtsjablonen.",
-        "fr": "Acceptez les décimales saisies avec un point ou une virgule pour les limites d'alerte.\nAjoutez des suffixes facultatifs d'avertissement et d'alarme aux espaces réservés des modèles de message.",
-        "it": "Accetti i valori decimali inseriti con punto o virgola per i limiti di avviso e allarme.\nAggiungi suffissi opzionali di avviso e risposta ai segnaposti dei modelli di messaggio.",
-        "es": "Aceptar valores decimales introducidos con punto o coma para los límites de aviso y alarma.\nAñada sufijos opcionales de aviso y alarma a los marcadores de las plantillas de mensajes.",
-        "pl": "Zaakceptuj wartości dziesiętne wprowadzone z punktem lub przecinkiem dla ograniczeń ostrzegawczych i alarmowych.\nDodaj opcjonalne przyrostki ostrzeżenia i czasu reakcji alarmu do symbolów zastępczych szablonów wiadomości.",
-        "uk": "Приймайте десяткові значення, введені крапкою або комою для обмежень попередження та тривоги.\nДодайте додаткові суфікси попередження та часу відгуку на нагадування до заповнювачів шаблонів повідомлень.",
-        "zh-cn": "接受用点或逗号输入的十进制值，表示警告和警报限制。\n向消息模板占位符添加可选的警告和警报响应时间后缀。"
       }
     },
     "titleLang": {
