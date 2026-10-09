@@ -135,7 +135,7 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.38 (2026-10-09)
 * (BenAhrdt) Add configurable absolute and percentage-change warning and alarm thresholds against the previous numeric value, with separate positive and negative directions and at least one direction always active; percentage thresholds are non-negative and not capped at 100%. Change-based notifications include the previous value. Add a global 10-second response time for invalid sources and values.
 * (BenAhrdt) Use English defaults for notification templates and previews, localize dynamic Device Manager conflict messages, and remove the empty disclaimer section.
 
@@ -150,9 +150,6 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 
 ### 0.0.34 (2026-10-03)
 * (BenAhrdt) Synchronize the supported admin translations with the current configuration strings and remove obsolete notification-template entries.
-
-### 0.0.33 (2026-10-02)
-* (BenAhrdt) Configure multiple notification quiet periods with optional end-of-pause summaries.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 
