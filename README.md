@@ -130,6 +130,8 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 
 <img width="591" height="1280" alt="image" src="https://github.com/user-attachments/assets/f6c94e61-a233-4c17-8792-f898b34e80e3" />
 
+## ioBroker Forum Link
+[https://forum.iobroker.net/test-adapter-device-monitoring](https://forum.iobroker.net/topic/85477/test-adapter-device-monitoring?_=1791737589435)
 
 ## Changelog
 <!--
@@ -152,6 +154,9 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 * (BenAhrdt) Complete the supported admin translations for recurring reminders, notification quiet periods, and recovery states.
 
 [Older changelog entries](CHANGELOG_OLD.md)
+
+## Collaboration
+The adapter was developed in collaboration with Joerg Froehner
 
 ## License
 MIT License
