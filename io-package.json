@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.40",
+    "version": "0.0.41",
     "news": {
+      "0.0.41": {
+        "en": "Ignore same-value acknowledgement duplicates in update intervals; provide the standard functions `value.battery (standard)` (warning below 15, alarm below 10, 15-minute timeout), `indicator.alarm (standard)`, and `indicator.maintenance (standard)`, including role-based defaults for bulk state search. Function templates can be explicitly applied to all assigned monitored states.",
+        "de": "Ignoriere Bestätigungsduplikate mit gleichem Wert in Aktualisierungsintervallen; biete die Standardfunktionen `value.battery (standard) `(Warnung unter 15, Alarm unter 10, 15-Minuten-Timeout), `indicator.alarm (standard)` und `indicator.maintenance (standard) `an, einschließlich rollenbasierter Standardwerte für die Bulk-Statussuche. Funktionsvorlagen gelten explizit für alle überwachten Staaten.",
+        "ru": "Игнорируйте дубликаты подтверждения одинаковых значений в интервалах обновления; используйте стандартные функции value.battery (стандартное) (предупреждение ниже 15, сигнал тревоги ниже 10, тайм-аут 15 минут), indicator.alarm (стандарт) и indicator.maintenance (standard), включая значения по умолчанию на основе ролей для массового поиска состояний. Шаблоны функций можно явно применять ко всем назначенным отслеживаемым состояниям.",
+        "pt": "Ignore confirmações de mesmo valor em intervalos de atualização; forneça as funções padrão `value.battery (standard) `(aviso abaixo de 15, alarme abaixo de 10, tempo limite de 15 minutos), `indicator.alarm (standard)` e `indicator.maintenance (standard) `, incluindo padrões baseados em funções para busca de estado em massa. Os modelos de função podem ser aplicados a todos os estados monitorados.",
+        "nl": "Negeer duplicaten die dezelfde waarde bevestigen tijdens de update-intervallen; zorg voor de standaardfuncties `value.battery (standaard) `(waarschuwing onder de 15, alarm onder de 10, time-out van 15 minuten), `indicator.alarm (standaard)` en `indicator.maintenance (standaard) `, inclusief op rollen gebaseerde standaardinstellingen voor bulkzoekopdrachten naar staten. Functiesjablonen kunnen expliciet worden toegepast op alle toegewezen bewaakte staten.",
+        "fr": "Ignorez les accusés de réception de même valeur lors des mises à jour ; fournissez les fonctions standard « value.battery (standard) » (avertissement inférieur à 15, alarme inférieure à 10, délai d'attente de 15 minutes), « indicator.alarm (standard) » et « indicator.maintenance (standard) », y compris des valeurs par défaut basées sur les rôles pour la recherche d'état en masse. Les modèles de fonctions peuvent être appliqués explicitement à tous les états surveillés.",
+        "it": "Ignori i duplicati di conferma dello stesso valore negli intervalli di aggiornamento; fornisca le funzioni standard `value.battery (standard) `(avviso sotto 15, allarme sotto 10, timeout di 15 minuti), `indicator.alarm (standard)` e `indicator.maintenance (standard) `, incluse le impostazioni predefinite basate sui ruoli per la ricerca di massa. I modelli di funzione si applicano a tutti gli stati monitorati assegnati.",
+        "es": "Ignore los acuses de recibo duplicados del mismo valor en los intervalos de actualización; proporcione las funciones estándar `valor.battery (standard) `(aviso por debajo de 15, alarma por debajo de 10, tiempo de espera de 15 minutos), `indicator.alarm (standard)` e `indicator.maintenance (standard) `, incluidos los valores por defecto para la búsqueda masiva de estados. Las plantillas de funciones se pueden aplicar explícitamente a todos los estados monitorizados.",
+        "pl": "Ignoruj duplikaty potwierdzania tej samej wartości w interwałach aktualizacji; podaj standardowe funkcje „value.battery (standard)” (ostrzeżenie poniżej 15, alarm poniżej 10, limit czasu 15-minutowego), „indicator.alarm (standard)” i „indicator.maintenance (standard)”, w tym domyślne ustawienia oparte na rolach dla wyszukiwania zbiorczego stanu. Szablony funkcji mogą być wyraźnie stosowane do wszystkich przypisanych monitorowanych stanów.",
+        "uk": "Ігнорувати дублікати підтвердження тих самих значень у інтервалах оновлення; надайте стандартні функції `value.battery (standard) `(попередження нижче 15, сигнал тривоги нижче 10, 15-хвилинний тайм-аут), `indicator.alert (стандартний)` та `indicator.maintenance (standard) `, включаючи значення за замовчуванням на основі ролей для масового пошуку стану. Шаблони функцій можуть бути явно застосовані до всіх призначених контрольованих станів.",
+        "zh-cn": "忽略更新间隔内重复的同值确认；提供标准函数 “value.battery（标准）”（警告低于 15，警报低于 10，15 分钟超时）、“indicator.alarm（标准）” 和 “indicator.maintence（标准）”，包括基于角色的批量状态搜索默认值。函数模板可以明确应用于所有分配的监控状态。"
+      },
       "0.0.40": {
         "en": "Improve bulk state-search suggestions: reuse configured state names and source-area target devices, then suggest source device or channel names without artificial global name suffixes.",
         "de": "Verbessern Sie die Suche nach Bundesstaaten: Wiederverwenden Sie konfigurierte Bundesstaaten und Quellzielgeräte und schlagen Sie dann Quellnamen ohne globale Suffixe vor.",
@@ -80,19 +93,6 @@
         "pl": "Ukończ obsługiwane tłumaczenia administratora dla powtarzających się przypomnień, okresów cichych powiadomień i stanów odzyskiwania.",
         "uk": "Виконайте підтримувані переклади адміністратора для повторюваних нагадувань, періодів тиші сповіщень та станів відновлення.",
         "zh-cn": "完成对定期提醒、通知静默期和恢复状态的支持的管理员翻译。"
-      },
-      "0.0.34": {
-        "en": "Synchronize the supported admin translations with the current configuration strings and remove obsolete notification-template entries.",
-        "de": "Synchronisieren Sie die unterstützten Admin-Übersetzungen mit der aktuellen Konfiguration und löschen Sie veraltete Meldevorlagen.",
-        "ru": "Синхронизируйте поддерживаемые переводы администраторов со строками текущей конфигурации и удалите устаревшие записи в шаблонах уведомлений.",
-        "pt": "Sincronize as traduções de admin suportadas com as configurações atuais e remova entradas obsoletas do modelo de notificação.",
-        "nl": "Synchroniseer de ondersteunde beheerdersvertalingen met de huidige configuratiereeksen en verwijder verouderde items in het meldingssjabloon.",
-        "fr": "Synchronisez les traductions d'administration prises en charge avec les chaînes de configuration actuelles et supprimez les modèles de notifications obsolètes.",
-        "it": "Sincronizza le traduzioni admin supportate con le stringhe di configurazione correnti e rimuovi i modelli di notifica obsoleti.",
-        "es": "Sincronice las traducciones administrativas admitidas con las cadenas de configuración actuales y elimine las entradas obsoletas de la plantilla de notificaciones",
-        "pl": "Synchronizuj obsługiwane tłumaczenia administratora z bieżącymi łańcuchami konfiguracji i usuń przestarzałe wpisy szablonu powiadomień.",
-        "uk": "Синхронізуйте підтримувані переклади адміністратора з поточними рядками конфігурації та видаліть застарілі записи шаблону повідомлень.",
-        "zh-cn": "将支持的管理员翻译与当前配置字符串同步，并删除过时的通知模板条目。"
       }
     },
     "titleLang": {

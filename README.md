@@ -137,7 +137,7 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.41 (2026-10-12)
 * (BenAhrdt) Ignore same-value acknowledgement duplicates in update intervals; provide the standard functions `value.battery (standard)` (warning below 15, alarm below 10, 15-minute timeout), `indicator.alarm (standard)`, and `indicator.maintenance (standard)`, including role-based defaults for bulk state search. Function templates can be explicitly applied to all assigned monitored states.
 
 ### 0.0.40 (2026-10-12)
@@ -152,9 +152,6 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 
 ### 0.0.37 (2026-10-03)
 * (BenAhrdt) Restore the ioBroker-recommended workflow concurrency configuration for repository checks.
-
-### 0.0.36 (2026-10-03)
-* (BenAhrdt) Keep main-branch test logs available when a release follows a regular push.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 
