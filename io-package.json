@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.39",
+    "version": "0.0.40",
     "news": {
+      "0.0.40": {
+        "en": "Improve bulk state-search suggestions: reuse configured state names and source-area target devices, then suggest source device or channel names without artificial global name suffixes.",
+        "de": "Verbessern Sie die Suche nach Bundesstaaten: Wiederverwenden Sie konfigurierte Bundesstaaten und Quellzielgeräte und schlagen Sie dann Quellnamen ohne globale Suffixe vor.",
+        "ru": "Улучшите рекомендации по массовому поиску состояний: повторно используйте настроенные названия штатов и целевые устройства из исходной области, а затем предлагайте имена исходных устройств или каналов без искусственных суффиксов глобальных имен.",
+        "pt": "Melhore as sugestões de busca em massa: reutilize nomes de estados e dispositivos de destino configurados e sugira nomes de canais sem sufixos artificiais globais.",
+        "nl": "Suggesties voor bulkzoekopdrachten naar staten verbeteren: gebruik geconfigureerde staatsnamen en doelapparaten uit het brongebied opnieuw en stel vervolgens bronapparaat- of kanaalnamen voor zonder kunstmatige algemene naamachtervoegsels.",
+        "fr": "Améliorez les suggestions de recherche d'états en masse : réutilisez les noms d'état configurés et les appareils cibles de la zone source, puis suggérez des noms d'appareils ou de chaînes sans suffixe global artificiel.",
+        "it": "Migliora i suggerimenti per la ricerca di massa: riutilizza i nomi di stato configurati e i dispositivi di destinazione, poi suggerisce i nomi dei canali senza suffissi globali artificiali.",
+        "es": "Mejore las sugerencias de búsqueda masiva de estados: reutilice los nombres de estado y los dispositivos de destino del área de origen y, a continuación, sugiera nombres de dispositivos o canales sin sufijos globales artificiales.",
+        "pl": "Ulepsz sugestie dotyczące wyszukiwania zbiorczego stanu: użyj ponownie skonfigurowanych nazw stanów i urządzeń docelowych obszaru źródłowego, a następnie sugeruj nazwy urządzeń źródłowych lub kanałów bez sztucznych przyrostków nazw globalnych.",
+        "uk": "Покращення пропозицій щодо масового пошуку стану: повторно використовуйте налаштовані назви станів та цільові пристрої вихідної області, а потім пропонуйте назви вихідних пристроїв або каналів без штучних суфіксів глобальних імен.",
+        "zh-cn": "改进批量状态搜索建议：重复使用已配置的状态名称和源区域目标设备，然后建议不使用人为的全局名称后缀的源设备或频道名称。"
+      },
       "0.0.39": {
         "en": "Restore language-dependent notification templates, quiet-period names, and notification previews in the adapter defaults; migrate built-in English/German values without overwriting custom templates.",
         "de": "Stellt sprachabhängige Meldevorlagen, Namen und Vorschauen in den Adapterstandards wieder her; migriert englische und deutsche Werte, ohne eigene Vorlagen zu überschreiben.",
@@ -80,19 +93,6 @@
         "pl": "Synchronizuj obsługiwane tłumaczenia administratora z bieżącymi łańcuchami konfiguracji i usuń przestarzałe wpisy szablonu powiadomień.",
         "uk": "Синхронізуйте підтримувані переклади адміністратора з поточними рядками конфігурації та видаліть застарілі записи шаблону повідомлень.",
         "zh-cn": "将支持的管理员翻译与当前配置字符串同步，并删除过时的通知模板条目。"
-      },
-      "0.0.33": {
-        "en": "Configure multiple notification quiet periods with optional end-of-pause summaries.",
-        "de": "Konfigurieren Sie mehrere Wartezeiten mit optionalen Pausenübersichten.",
-        "ru": "Настройте несколько периодов тишины уведомлений с дополнительными сводками по окончании паузы.",
-        "pt": "Configure vários períodos de silêncio com resumos opcionais de fim de pausa.",
-        "nl": "Configureer meerdere stilteperioden voor meldingen met optionele samenvattingen van het einde van de pauze.",
-        "fr": "Configurez plusieurs périodes de silence avec des résumés de fin de pause en option.",
-        "it": "Configura più periodi di silenzio per le notifiche con riepiloghi opzionali.",
-        "es": "Configure varios períodos de inactividad de notificaciones con resúmenes de fin de pausa opcionales.",
-        "pl": "Skonfiguruj wiele okresów cichych powiadomień za pomocą opcjonalnych podsumowań zakończenia pauzy.",
-        "uk": "Налаштуйте кілька тихих періодів сповіщень за допомогою необов'язкових підсумків закінчення паузи.",
-        "zh-cn": "使用可选的暂停结束摘要配置多个通知静默期。"
       }
     },
     "titleLang": {

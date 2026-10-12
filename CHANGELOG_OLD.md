@@ -1,4 +1,7 @@
 # Older changelog entries
+## 0.0.35 (2026-10-03)
+* (BenAhrdt) Complete the supported admin translations for recurring reminders, notification quiet periods, and recovery states.
+
 ## 0.0.34 (2026-10-03)
 * (BenAhrdt) Synchronize the supported admin translations with the current configuration strings and remove obsolete notification-template entries.
 
