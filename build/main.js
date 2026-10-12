@@ -973,7 +973,9 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
             }
             const deviceConfigurations = this.adapter.getDeviceConfigurations();
             const devices = deviceConfigurations.map(({ id, name }) => ({ id, name }));
-            const defaultData = defaultBulkStateForm(matching);
+            const functionTemplates = this.adapter.getFunctionTemplates();
+            const selectedRole = typeof filter.roleCustom === "string" && filter.roleCustom.trim() ? filter.roleCustom : typeof filter.role === "string" ? filter.role : "";
+            const defaultData = defaultBulkStateForm(matching, functionTemplates, selectedRole);
             const selectionToken = this.adapter.createBulkSelectionSession(defaultData);
             let data;
             try {
@@ -982,7 +984,7 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
                   matching,
                   devices,
                   deviceConfigurations,
-                  this.adapter.getFunctionTemplates(),
+                  functionTemplates,
                   this.adapter.getFunctionNames(),
                   selectionToken
                 ),
@@ -1293,6 +1295,13 @@ function defaultLimit(mode) {
 function defaultFormLimit(mode) {
   return { ...defaultLimit(mode), booleanValue: "true" };
 }
+function templateFormLimit(limit) {
+  return {
+    ...defaultFormLimit(limit.mode),
+    ...limit,
+    booleanValue: limit.booleanValue === false ? "false" : "true"
+  };
+}
 function defaultStateForm(validSourceIds, sourceTypes) {
   return {
     name: "",
@@ -1301,6 +1310,8 @@ function defaultStateForm(validSourceIds, sourceTypes) {
     _validSourceIds: validSourceIds,
     _sourceTypes: sourceTypes,
     function: "",
+    _saveAsTemplate: false,
+    _applyFunctionTemplate: false,
     warning: defaultFormLimit("outside"),
     alarm: defaultFormLimit("outside"),
     staleWarning: { enabled: false, minutes: 60 }
@@ -1387,7 +1398,11 @@ function filterStateCandidates(candidates, filter) {
     (candidate) => includes(candidate.role, selectedRole) && includes(candidate.name, filter.name) && includes(candidate.id, filter.id) && (!selectedType || candidate.type === selectedType) && (filter.includeExisting === true || !candidate.alreadyAdded)
   );
 }
-function defaultBulkStateForm(candidates) {
+function defaultBulkStateForm(candidates, functionTemplates, selectedRole = "") {
+  const suggestedFunctions = candidates.map((candidate) => (0, import_evaluation.defaultFunctionForRole)(candidate.role));
+  const explicitlySuggestedFunction = (0, import_evaluation.defaultFunctionForRole)(selectedRole);
+  const defaultFunction = explicitlySuggestedFunction || (suggestedFunctions.length > 0 && suggestedFunctions.every((name) => name === suggestedFunctions[0]) ? suggestedFunctions[0] : "");
+  const defaultTemplate = defaultFunction ? functionTemplates[defaultFunction] : void 0;
   return {
     states: candidates.map((candidate) => ({
       selected: !candidate.alreadyAdded,
@@ -1399,15 +1414,16 @@ function defaultBulkStateForm(candidates) {
       targetDevice: candidate.suggestedTargetDevice,
       _validation: ""
     })),
-    function: "",
+    function: defaultFunction,
     _saveAsTemplate: false,
-    warning: defaultFormLimit("outside"),
-    alarm: defaultFormLimit("outside"),
+    _applyFunctionTemplate: false,
+    warning: defaultTemplate ? templateFormLimit(defaultTemplate.warning) : defaultFormLimit("outside"),
+    alarm: defaultTemplate ? templateFormLimit(defaultTemplate.alarm) : defaultFormLimit("outside"),
     numberWarning: defaultFormLimit("outside"),
     numberAlarm: defaultFormLimit("outside"),
     booleanWarning: defaultFormLimit("outside"),
     booleanAlarm: defaultFormLimit("outside"),
-    staleWarning: { enabled: false, minutes: 60 }
+    staleWarning: defaultTemplate ? { ...defaultTemplate.staleWarning } : { enabled: false, minutes: 60 }
   };
 }
 function bulkStateForm(candidates, devices, deviceConfigurations, functionTemplates, functionNames, selectionToken) {
@@ -1439,6 +1455,8 @@ function bulkStateForm(candidates, devices, deviceConfigurations, functionTempla
   settings.function.hiddenDependsOn = selectionHiddenDependsOn;
   settings._saveAsTemplate.hidden = mixedSource;
   settings._saveAsTemplate.hiddenDependsOn = selectionHiddenDependsOn;
+  settings._applyFunctionTemplate.hidden = mixedSource;
+  settings._applyFunctionTemplate.hiddenDependsOn = selectionHiddenDependsOn;
   const mixedSettings = {
     mixedSettingsHeader: {
       type: "staticText",
@@ -1943,6 +1961,20 @@ function stateForm(functionTemplates, functionNames, states, stateId, sourceType
         newLine: true,
         xs: 12
       },
+      [key("_applyFunctionTemplate")]: {
+        type: "checkbox",
+        label: t(
+          "Apply this function template to all monitored states using this function",
+          "Diese Funktionsvorlage auf alle \xDCberwachungs-States mit dieser Funktion anwenden"
+        ),
+        help: t(
+          "Only use this when the settings should replace individual adjustments of all states using this function.",
+          "Nur aktivieren, wenn die Einstellungen individuelle Anpassungen aller States mit dieser Funktion ersetzen sollen."
+        ),
+        hidden: combineHidden(`${data("_saveAsTemplate")} !== true`),
+        newLine: true,
+        xs: 12
+      },
       ...limits("warning", t("Warning limits", "Warngrenzen"), "#d6a500"),
       ...limits("alarm", t("Alarm limits", "Alarmgrenzen"), "#c62828"),
       [key("staleWarningHeader")]: {
@@ -2179,13 +2211,14 @@ function statesForm(states, functionTemplates, functionNames) {
 }
 class DeviceMonitoring extends utils.Adapter {
   devices = [];
-  functionTemplates = {};
+  functionTemplates = (0, import_evaluation.createDefaultFunctionTemplates)();
   nextDeviceNumber = 1;
   subscribed = /* @__PURE__ */ new Set();
   notificationLevelSubscriptions = /* @__PURE__ */ new Set();
   invalidSources = /* @__PURE__ */ new Set();
   sourceUnits = /* @__PURE__ */ new Map();
   updateHistoryQueues = /* @__PURE__ */ new Map();
+  lastSourceUpdates = /* @__PURE__ */ new Map();
   notificationStatuses = /* @__PURE__ */ new Map();
   notificationLastSent = /* @__PURE__ */ new Map();
   limitActivationStates = /* @__PURE__ */ new Map();
@@ -2773,7 +2806,7 @@ class DeviceMonitoring extends utils.Adapter {
       name: String(data.name || id).trim(),
       sourceId: String(data.sourceId || "").trim(),
       remark: String(data.remark || "").trim(),
-      function: String(data.function || "").trim(),
+      function: (0, import_evaluation.migrateStandardFunctionName)(String(data.function || "").trim()),
       warning: limit(data.warning, "outside"),
       alarm: limit(data.alarm, "outside"),
       staleWarning: {
@@ -2783,11 +2816,24 @@ class DeviceMonitoring extends utils.Adapter {
     };
   }
   saveFunctionTemplate(data) {
-    const functionName = String((data == null ? void 0 : data.function) || "").trim();
-    if (!functionName || (data == null ? void 0 : data._saveAsTemplate) !== true) {
+    const functionName = (0, import_evaluation.migrateStandardFunctionName)(String((data == null ? void 0 : data.function) || "").trim());
+    if (!functionName) {
       return;
     }
-    this.functionTemplates[functionName] = (0, import_evaluation.createFunctionTemplate)(this.normalizeState(data, "template"));
+    let template = this.functionTemplates[functionName];
+    if ((data == null ? void 0 : data._saveAsTemplate) === true) {
+      template = (0, import_evaluation.createFunctionTemplate)(this.normalizeState(data, "template"));
+      this.functionTemplates[functionName] = template;
+    }
+    if ((data == null ? void 0 : data._applyFunctionTemplate) === true && template) {
+      for (const device of this.devices) {
+        for (const watched of device.states) {
+          if (watched.function === functionName) {
+            Object.assign(watched, (0, import_evaluation.applyFunctionTemplate)(watched, template));
+          }
+        }
+      }
+    }
   }
   normalizeDevices(value) {
     if (!Array.isArray(value)) {
@@ -2830,6 +2876,11 @@ class DeviceMonitoring extends utils.Adapter {
     for (const key of this.limitActivationStates.keys()) {
       if (!activeLimitKeys.has(key)) {
         this.limitActivationStates.delete(key);
+      }
+    }
+    for (const key of this.lastSourceUpdates.keys()) {
+      if (!activeLimitKeys.has(key)) {
+        this.lastSourceUpdates.delete(key);
       }
     }
     const activeCardDetails = new Set(
@@ -2900,7 +2951,10 @@ class DeviceMonitoring extends utils.Adapter {
     if (!devices.length) {
       return false;
     }
-    this.functionTemplates = this.normalizeFunctionTemplates(backup.functionTemplates);
+    this.functionTemplates = {
+      ...(0, import_evaluation.createDefaultFunctionTemplates)(),
+      ...(0, import_evaluation.migrateStandardFunctionTemplates)(this.normalizeFunctionTemplates(backup.functionTemplates))
+    };
     this.devices = devices;
     if (rebuild) {
       await this.rebuildObjects();
@@ -3090,7 +3144,10 @@ class DeviceMonitoring extends utils.Adapter {
     if (typeof ((_a = folder == null ? void 0 : folder.native) == null ? void 0 : _a.nextDeviceNumber) === "number" && folder.native.nextDeviceNumber > 0) {
       this.nextDeviceNumber = Math.floor(folder.native.nextDeviceNumber);
     }
-    this.functionTemplates = this.normalizeFunctionTemplates((_b = folder == null ? void 0 : folder.native) == null ? void 0 : _b.functionTemplates);
+    this.functionTemplates = {
+      ...(0, import_evaluation.createDefaultFunctionTemplates)(),
+      ...(0, import_evaluation.migrateStandardFunctionTemplates)(this.normalizeFunctionTemplates((_b = folder == null ? void 0 : folder.native) == null ? void 0 : _b.functionTemplates))
+    };
     return this.normalizeDevices((_c = folder == null ? void 0 : folder.native) == null ? void 0 : _c.devices);
   }
   normalizeFunctionTemplates(value) {
@@ -4056,13 +4113,30 @@ ${event.message}` : event.message;
     const base = `devices.${device.id}.${watched.id}`;
     const value = (_a = sourceState == null ? void 0 : sourceState.val) != null ? _a : null;
     const previousData = await this.readMonitoringData(base, watched.sourceId);
+    const sourceUpdate = sourceState && typeof sourceState.ts === "number" && Number.isFinite(sourceState.ts) && sourceState.ts > 0 ? {
+      value: sourceState.val,
+      ack: sourceState.ack,
+      timestamp: sourceState.ts,
+      sourceId: watched.sourceId
+    } : void 0;
+    const previousSourceUpdate = this.lastSourceUpdates.get(key);
+    const acknowledgementDuplicate = sourceUpdate ? (0, import_update_history.isAcknowledgementDuplicate)(
+      (previousSourceUpdate == null ? void 0 : previousSourceUpdate.sourceId) === watched.sourceId ? previousSourceUpdate : void 0,
+      sourceUpdate
+    ) : false;
+    if (sourceUpdate) {
+      this.lastSourceUpdates.set(key, sourceUpdate);
+    }
+    if (acknowledgementDuplicate) {
+      return;
+    }
     await this.setStateChangedAsync(`${base}.value`, { val: value, ack: true });
     const sameSource = !this.resetUpdateHistories.has(base) && previousData.sourceId === watched.sourceId;
     let updateHistory = sameSource ? (0, import_update_history.parseUpdateHistory)(previousData.updateHistory) : [];
     if (sameSource && !updateHistory.length) {
       updateHistory = [previousData.previousUpdate, previousData.lastUpdate].filter((entry) => typeof entry === "number" && Number.isFinite(entry) && entry > 0).sort((a, b) => a - b);
     }
-    const timestamp = sourceState == null ? void 0 : sourceState.ts;
+    const timestamp = sourceUpdate == null ? void 0 : sourceUpdate.timestamp;
     const lastTimestamp = updateHistory.at(-1);
     if (typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0 && (lastTimestamp === void 0 || timestamp > lastTimestamp)) {
       updateHistory = [...updateHistory, timestamp].slice(-import_update_history.UPDATE_HISTORY_SIZE);

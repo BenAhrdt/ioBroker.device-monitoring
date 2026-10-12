@@ -5,6 +5,11 @@ import * as schedule from 'node-schedule';
 import type { Job } from 'node-schedule';
 import {
 	createFunctionTemplate,
+	createDefaultFunctionTemplates,
+	defaultFunctionForRole,
+	applyFunctionTemplate,
+	migrateStandardFunctionName,
+	migrateStandardFunctionTemplates,
 	evaluateLimit,
 	getWatchStatus,
 	isUpdateTimedOut,
@@ -47,6 +52,8 @@ import {
 	parseUpdateHistory,
 	parseValueHistory,
 	timeWeightedAverage,
+	isAcknowledgementDuplicate,
+	type SourceUpdateMetadata,
 	UPDATE_HISTORY_SIZE,
 } from './lib/update-history';
 import {
@@ -1113,7 +1120,14 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 
 						const deviceConfigurations = this.adapter.getDeviceConfigurations();
 						const devices = deviceConfigurations.map(({ id, name }) => ({ id, name }));
-						const defaultData = defaultBulkStateForm(matching);
+						const functionTemplates = this.adapter.getFunctionTemplates();
+						const selectedRole =
+							typeof filter.roleCustom === 'string' && filter.roleCustom.trim()
+								? filter.roleCustom
+								: typeof filter.role === 'string'
+									? filter.role
+									: '';
+						const defaultData = defaultBulkStateForm(matching, functionTemplates, selectedRole);
 						const selectionToken = this.adapter.createBulkSelectionSession(defaultData);
 						let data: any;
 						try {
@@ -1122,7 +1136,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 									matching,
 									devices,
 									deviceConfigurations,
-									this.adapter.getFunctionTemplates(),
+									functionTemplates,
 									this.adapter.getFunctionNames(),
 									selectionToken,
 								),
@@ -1463,6 +1477,13 @@ function defaultLimit(mode: LimitMode): LimitConfiguration {
 function defaultFormLimit(mode: LimitMode): any {
 	return { ...defaultLimit(mode), booleanValue: 'true' };
 }
+function templateFormLimit(limit: LimitConfiguration): any {
+	return {
+		...defaultFormLimit(limit.mode),
+		...limit,
+		booleanValue: limit.booleanValue === false ? 'false' : 'true',
+	};
+}
 function defaultStateForm(validSourceIds: string[], sourceTypes: Record<string, string>): any {
 	return {
 		name: '',
@@ -1471,6 +1492,8 @@ function defaultStateForm(validSourceIds: string[], sourceTypes: Record<string, 
 		_validSourceIds: validSourceIds,
 		_sourceTypes: sourceTypes,
 		function: '',
+		_saveAsTemplate: false,
+		_applyFunctionTemplate: false,
 		warning: defaultFormLimit('outside'),
 		alarm: defaultFormLimit('outside'),
 		staleWarning: { enabled: false, minutes: 60 },
@@ -1566,7 +1589,19 @@ function filterStateCandidates(candidates: StateCandidate[], filter: any): State
 			(filter.includeExisting === true || !candidate.alreadyAdded),
 	);
 }
-function defaultBulkStateForm(candidates: StateCandidate[]): any {
+function defaultBulkStateForm(
+	candidates: StateCandidate[],
+	functionTemplates: Record<string, FunctionTemplate>,
+	selectedRole = '',
+): any {
+	const suggestedFunctions = candidates.map(candidate => defaultFunctionForRole(candidate.role));
+	const explicitlySuggestedFunction = defaultFunctionForRole(selectedRole);
+	const defaultFunction =
+		explicitlySuggestedFunction ||
+		(suggestedFunctions.length > 0 && suggestedFunctions.every(name => name === suggestedFunctions[0])
+			? suggestedFunctions[0]
+			: '');
+	const defaultTemplate = defaultFunction ? functionTemplates[defaultFunction] : undefined;
 	return {
 		states: candidates.map(candidate => ({
 			selected: !candidate.alreadyAdded,
@@ -1578,15 +1613,16 @@ function defaultBulkStateForm(candidates: StateCandidate[]): any {
 			targetDevice: candidate.suggestedTargetDevice,
 			_validation: '',
 		})),
-		function: '',
+		function: defaultFunction,
 		_saveAsTemplate: false,
-		warning: defaultFormLimit('outside'),
-		alarm: defaultFormLimit('outside'),
+		_applyFunctionTemplate: false,
+		warning: defaultTemplate ? templateFormLimit(defaultTemplate.warning) : defaultFormLimit('outside'),
+		alarm: defaultTemplate ? templateFormLimit(defaultTemplate.alarm) : defaultFormLimit('outside'),
 		numberWarning: defaultFormLimit('outside'),
 		numberAlarm: defaultFormLimit('outside'),
 		booleanWarning: defaultFormLimit('outside'),
 		booleanAlarm: defaultFormLimit('outside'),
-		staleWarning: { enabled: false, minutes: 60 },
+		staleWarning: defaultTemplate ? { ...defaultTemplate.staleWarning } : { enabled: false, minutes: 60 },
 	};
 }
 function bulkStateForm(
@@ -1627,6 +1663,8 @@ function bulkStateForm(
 	settings.function.hiddenDependsOn = selectionHiddenDependsOn;
 	settings._saveAsTemplate.hidden = mixedSource;
 	settings._saveAsTemplate.hiddenDependsOn = selectionHiddenDependsOn;
+	settings._applyFunctionTemplate.hidden = mixedSource;
+	settings._applyFunctionTemplate.hiddenDependsOn = selectionHiddenDependsOn;
 	const mixedSettings = {
 		mixedSettingsHeader: {
 			type: 'staticText',
@@ -2161,6 +2199,20 @@ function stateForm(
 				newLine: true,
 				xs: 12,
 			},
+			[key('_applyFunctionTemplate')]: {
+				type: 'checkbox',
+				label: t(
+					'Apply this function template to all monitored states using this function',
+					'Diese Funktionsvorlage auf alle Überwachungs-States mit dieser Funktion anwenden',
+				),
+				help: t(
+					'Only use this when the settings should replace individual adjustments of all states using this function.',
+					'Nur aktivieren, wenn die Einstellungen individuelle Anpassungen aller States mit dieser Funktion ersetzen sollen.',
+				),
+				hidden: combineHidden(`${data('_saveAsTemplate')} !== true`),
+				newLine: true,
+				xs: 12,
+			},
 			...limits('warning', t('Warning limits', 'Warngrenzen'), '#d6a500'),
 			...limits('alarm', t('Alarm limits', 'Alarmgrenzen'), '#c62828'),
 			[key('staleWarningHeader')]: {
@@ -2413,13 +2465,14 @@ function statesForm(
 }
 class DeviceMonitoring extends utils.Adapter {
 	private devices: DeviceConfiguration[] = [];
-	private functionTemplates: Record<string, FunctionTemplate> = {};
+	private functionTemplates: Record<string, FunctionTemplate> = createDefaultFunctionTemplates();
 	private nextDeviceNumber = 1;
 	private subscribed = new Set<string>();
 	private notificationLevelSubscriptions = new Set<string>();
 	private invalidSources = new Set<string>();
 	private sourceUnits = new Map<string, string>();
 	private updateHistoryQueues = new Map<string, Promise<void>>();
+	private lastSourceUpdates = new Map<string, SourceUpdateMetadata & { sourceId: string }>();
 	private notificationStatuses = new Map<string, NotificationStatusSnapshot>();
 	private notificationLastSent = new Map<string, number>();
 	private limitActivationStates = new Map<string, LimitActivationState>();
@@ -3029,7 +3082,7 @@ class DeviceMonitoring extends utils.Adapter {
 			name: String(data.name || id).trim(),
 			sourceId: String(data.sourceId || '').trim(),
 			remark: String(data.remark || '').trim(),
-			function: String(data.function || '').trim(),
+			function: migrateStandardFunctionName(String(data.function || '').trim()),
 			warning: limit(data.warning, 'outside'),
 			alarm: limit(data.alarm, 'outside'),
 			staleWarning: {
@@ -3039,11 +3092,24 @@ class DeviceMonitoring extends utils.Adapter {
 		};
 	}
 	private saveFunctionTemplate(data: any): void {
-		const functionName = String(data?.function || '').trim();
-		if (!functionName || data?._saveAsTemplate !== true) {
+		const functionName = migrateStandardFunctionName(String(data?.function || '').trim());
+		if (!functionName) {
 			return;
 		}
-		this.functionTemplates[functionName] = createFunctionTemplate(this.normalizeState(data, 'template'));
+		let template = this.functionTemplates[functionName];
+		if (data?._saveAsTemplate === true) {
+			template = createFunctionTemplate(this.normalizeState(data, 'template'));
+			this.functionTemplates[functionName] = template;
+		}
+		if (data?._applyFunctionTemplate === true && template) {
+			for (const device of this.devices) {
+				for (const watched of device.states) {
+					if (watched.function === functionName) {
+						Object.assign(watched, applyFunctionTemplate(watched, template));
+					}
+				}
+			}
+		}
 	}
 	private normalizeDevices(value: unknown): DeviceConfiguration[] {
 		if (!Array.isArray(value)) {
@@ -3089,6 +3155,11 @@ class DeviceMonitoring extends utils.Adapter {
 		for (const key of this.limitActivationStates.keys()) {
 			if (!activeLimitKeys.has(key)) {
 				this.limitActivationStates.delete(key);
+			}
+		}
+		for (const key of this.lastSourceUpdates.keys()) {
+			if (!activeLimitKeys.has(key)) {
+				this.lastSourceUpdates.delete(key);
 			}
 		}
 		const activeCardDetails = new Set(
@@ -3160,7 +3231,10 @@ class DeviceMonitoring extends utils.Adapter {
 		if (!devices.length) {
 			return false;
 		}
-		this.functionTemplates = this.normalizeFunctionTemplates(backup.functionTemplates);
+		this.functionTemplates = {
+			...createDefaultFunctionTemplates(),
+			...migrateStandardFunctionTemplates(this.normalizeFunctionTemplates(backup.functionTemplates)),
+		};
 		this.devices = devices;
 		if (rebuild) {
 			await this.rebuildObjects();
@@ -3355,7 +3429,10 @@ class DeviceMonitoring extends utils.Adapter {
 		if (typeof folder?.native?.nextDeviceNumber === 'number' && folder.native.nextDeviceNumber > 0) {
 			this.nextDeviceNumber = Math.floor(folder.native.nextDeviceNumber);
 		}
-		this.functionTemplates = this.normalizeFunctionTemplates(folder?.native?.functionTemplates);
+		this.functionTemplates = {
+			...createDefaultFunctionTemplates(),
+			...migrateStandardFunctionTemplates(this.normalizeFunctionTemplates(folder?.native?.functionTemplates)),
+		};
 		return this.normalizeDevices(folder?.native?.devices);
 	}
 	private normalizeFunctionTemplates(value: unknown): Record<string, FunctionTemplate> {
@@ -4514,6 +4591,28 @@ class DeviceMonitoring extends utils.Adapter {
 		const base = `devices.${device.id}.${watched.id}`;
 		const value = sourceState?.val ?? null;
 		const previousData = await this.readMonitoringData(base, watched.sourceId);
+		const sourceUpdate =
+			sourceState && typeof sourceState.ts === 'number' && Number.isFinite(sourceState.ts) && sourceState.ts > 0
+				? ({
+						value: sourceState.val,
+						ack: sourceState.ack,
+						timestamp: sourceState.ts,
+						sourceId: watched.sourceId,
+					} satisfies SourceUpdateMetadata & { sourceId: string })
+				: undefined;
+		const previousSourceUpdate = this.lastSourceUpdates.get(key);
+		const acknowledgementDuplicate = sourceUpdate
+			? isAcknowledgementDuplicate(
+					previousSourceUpdate?.sourceId === watched.sourceId ? previousSourceUpdate : undefined,
+					sourceUpdate,
+				)
+			: false;
+		if (sourceUpdate) {
+			this.lastSourceUpdates.set(key, sourceUpdate);
+		}
+		if (acknowledgementDuplicate) {
+			return;
+		}
 		// Keep the current source value up to date even if a later metadata or history write fails.
 		await this.setStateChangedAsync(`${base}.value`, { val: value, ack: true });
 		const sameSource = !this.resetUpdateHistories.has(base) && previousData.sourceId === watched.sourceId;
@@ -4523,7 +4622,7 @@ class DeviceMonitoring extends utils.Adapter {
 				.filter((entry): entry is number => typeof entry === 'number' && Number.isFinite(entry) && entry > 0)
 				.sort((a, b) => a - b);
 		}
-		const timestamp = sourceState?.ts;
+		const timestamp = sourceUpdate?.timestamp;
 		const lastTimestamp = updateHistory.at(-1);
 		if (
 			typeof timestamp === 'number' &&

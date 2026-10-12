@@ -2,6 +2,7 @@ import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import {
 	averageInterval,
+	isAcknowledgementDuplicate,
 	intervalDisplay,
 	parseUpdateHistory,
 	parseValueHistory,
@@ -10,6 +11,15 @@ import {
 } from './update-history';
 
 describe('update history', () => {
+	it('ignores a same-value acknowledgement event only within one second', () => {
+		const previous = { value: 15, ack: false, timestamp: 10_000 };
+
+		expect(isAcknowledgementDuplicate(previous, { value: 15, ack: true, timestamp: 10_999 })).to.equal(true);
+		expect(isAcknowledgementDuplicate(previous, { value: 15, ack: true, timestamp: 11_000 })).to.equal(false);
+		expect(isAcknowledgementDuplicate(previous, { value: 16, ack: true, timestamp: 10_500 })).to.equal(false);
+		expect(isAcknowledgementDuplicate(previous, { value: 15, ack: false, timestamp: 10_500 })).to.equal(false);
+	});
+
 	it('omits empty trailing interval units', () => {
 		expect(intervalDisplay(10 * 60_000)).to.equal('10m');
 		expect(intervalDisplay(2 * 3_600_000)).to.equal('2h');

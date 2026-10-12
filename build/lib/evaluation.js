@@ -18,10 +18,18 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var evaluation_exports = {};
 __export(evaluation_exports, {
+  BATTERY_FUNCTION: () => BATTERY_FUNCTION,
+  INDICATOR_ALARM_FUNCTION: () => INDICATOR_ALARM_FUNCTION,
+  INDICATOR_MAINTENANCE_FUNCTION: () => INDICATOR_MAINTENANCE_FUNCTION,
+  applyFunctionTemplate: () => applyFunctionTemplate,
+  createDefaultFunctionTemplates: () => createDefaultFunctionTemplates,
   createFunctionTemplate: () => createFunctionTemplate,
+  defaultFunctionForRole: () => defaultFunctionForRole,
   evaluateLimit: () => evaluateLimit,
   getWatchStatus: () => getWatchStatus,
   isUpdateTimedOut: () => isUpdateTimedOut,
+  migrateStandardFunctionName: () => migrateStandardFunctionName,
+  migrateStandardFunctionTemplates: () => migrateStandardFunctionTemplates,
   parseAbsoluteChange: () => parseAbsoluteChange,
   parseFiniteNumber: () => parseFiniteNumber,
   parsePercentage: () => parsePercentage
@@ -45,11 +53,90 @@ function parseAbsoluteChange(value) {
   const parsed = parseFiniteNumber(value);
   return parsed !== void 0 && parsed >= 0 ? parsed : void 0;
 }
+const BATTERY_FUNCTION = "value.battery (standard)";
+const INDICATOR_ALARM_FUNCTION = "indicator.alarm (standard)";
+const INDICATOR_MAINTENANCE_FUNCTION = "indicator.maintenance (standard)";
+const LEGACY_STANDARD_FUNCTION_NAMES = {
+  "Battery and Intervall": BATTERY_FUNCTION,
+  "Battery and Intervall (standard)": BATTERY_FUNCTION,
+  "Indicator Error": INDICATOR_ALARM_FUNCTION,
+  "Indicator Error (standard)": INDICATOR_ALARM_FUNCTION,
+  "Indicator Alarm (standard)": INDICATOR_ALARM_FUNCTION,
+  "Indicator Maintenance (standard)": INDICATOR_MAINTENANCE_FUNCTION
+};
+function migrateStandardFunctionName(name) {
+  return LEGACY_STANDARD_FUNCTION_NAMES[name] || name;
+}
+function migrateStandardFunctionTemplates(templates) {
+  const migrated = { ...templates };
+  for (const [legacyName, currentName] of Object.entries(LEGACY_STANDARD_FUNCTION_NAMES)) {
+    if (migrated[legacyName]) {
+      if (!migrated[currentName]) {
+        migrated[currentName] = migrated[legacyName];
+      }
+      delete migrated[legacyName];
+    }
+  }
+  const batteryTemplate = migrated[BATTERY_FUNCTION];
+  if ((batteryTemplate == null ? void 0 : batteryTemplate.alarm) && batteryTemplate.alarm.enabled === false && batteryTemplate.alarm.mode === "outside" && batteryTemplate.alarm.min === void 0 && batteryTemplate.alarm.max === void 0) {
+    migrated[BATTERY_FUNCTION] = {
+      ...batteryTemplate,
+      alarm: { ...batteryTemplate.alarm, enabled: true, mode: "below", min: 10 }
+    };
+  }
+  return migrated;
+}
+function createDefaultFunctionTemplates() {
+  const inactiveLimit = () => ({
+    enabled: false,
+    mode: "outside",
+    booleanValue: true,
+    positiveChangeEnabled: true,
+    negativeChangeEnabled: false
+  });
+  return {
+    [BATTERY_FUNCTION]: {
+      warning: { ...inactiveLimit(), enabled: true, mode: "below", min: 15 },
+      alarm: { ...inactiveLimit(), enabled: true, mode: "below", min: 10 },
+      staleWarning: { enabled: true, minutes: 15 }
+    },
+    [INDICATOR_ALARM_FUNCTION]: {
+      warning: inactiveLimit(),
+      alarm: { ...inactiveLimit(), enabled: true, booleanValue: true },
+      staleWarning: { enabled: false, minutes: 60 }
+    },
+    [INDICATOR_MAINTENANCE_FUNCTION]: {
+      warning: { ...inactiveLimit(), enabled: true, booleanValue: true },
+      alarm: inactiveLimit(),
+      staleWarning: { enabled: false, minutes: 60 }
+    }
+  };
+}
+function defaultFunctionForRole(role) {
+  switch (role.trim().toLocaleLowerCase()) {
+    case "value.battery":
+      return BATTERY_FUNCTION;
+    case "indicator.alarm":
+      return INDICATOR_ALARM_FUNCTION;
+    case "indicator.maintenance":
+      return INDICATOR_MAINTENANCE_FUNCTION;
+    default:
+      return "";
+  }
+}
 function createFunctionTemplate(watched) {
   return {
     warning: { ...watched.warning },
     alarm: { ...watched.alarm },
     staleWarning: { ...watched.staleWarning }
+  };
+}
+function applyFunctionTemplate(watched, template) {
+  return {
+    ...watched,
+    warning: { ...template.warning },
+    alarm: { ...template.alarm },
+    staleWarning: { ...template.staleWarning }
   };
 }
 function evaluateLimit(value, limit, previousValue) {
@@ -127,10 +214,18 @@ function isUpdateTimedOut(state, configuration, now = Date.now()) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  BATTERY_FUNCTION,
+  INDICATOR_ALARM_FUNCTION,
+  INDICATOR_MAINTENANCE_FUNCTION,
+  applyFunctionTemplate,
+  createDefaultFunctionTemplates,
   createFunctionTemplate,
+  defaultFunctionForRole,
   evaluateLimit,
   getWatchStatus,
   isUpdateTimedOut,
+  migrateStandardFunctionName,
+  migrateStandardFunctionTemplates,
   parseAbsoluteChange,
   parseFiniteNumber,
   parsePercentage

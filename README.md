@@ -137,6 +137,9 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Ignore same-value acknowledgement duplicates in update intervals; provide the standard functions `value.battery (standard)` (warning below 15, alarm below 10, 15-minute timeout), `indicator.alarm (standard)`, and `indicator.maintenance (standard)`, including role-based defaults for bulk state search. Function templates can be explicitly applied to all assigned monitored states.
+
 ### 0.0.40 (2026-10-12)
 * (BenAhrdt) Improve bulk state-search suggestions: reuse configured state names and source-area target devices, then suggest source device or channel names without artificial global name suffixes.
 

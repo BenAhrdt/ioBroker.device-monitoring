@@ -18,15 +18,25 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var update_history_exports = {};
 __export(update_history_exports, {
+  ACKNOWLEDGEMENT_DUPLICATE_WINDOW: () => ACKNOWLEDGEMENT_DUPLICATE_WINDOW,
   UPDATE_HISTORY_SIZE: () => UPDATE_HISTORY_SIZE,
   averageInterval: () => averageInterval,
   intervalDisplay: () => intervalDisplay,
+  isAcknowledgementDuplicate: () => isAcknowledgementDuplicate,
   parseUpdateHistory: () => parseUpdateHistory,
   parseValueHistory: () => parseValueHistory,
   timeWeightedAverage: () => timeWeightedAverage
 });
 module.exports = __toCommonJS(update_history_exports);
 const UPDATE_HISTORY_SIZE = 10;
+const ACKNOWLEDGEMENT_DUPLICATE_WINDOW = 1e3;
+function isAcknowledgementDuplicate(previous, current) {
+  if (!previous || !Object.is(previous.value, current.value) || previous.ack === current.ack) {
+    return false;
+  }
+  const elapsed = current.timestamp - previous.timestamp;
+  return elapsed >= 0 && elapsed < ACKNOWLEDGEMENT_DUPLICATE_WINDOW;
+}
 function intervalDisplay(milliseconds) {
   const seconds = Math.max(0, Math.round(milliseconds / 1e3));
   const days = Math.floor(seconds / 86400);
@@ -94,9 +104,11 @@ function timeWeightedAverage(samples, maxGapMilliseconds) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  ACKNOWLEDGEMENT_DUPLICATE_WINDOW,
   UPDATE_HISTORY_SIZE,
   averageInterval,
   intervalDisplay,
+  isAcknowledgementDuplicate,
   parseUpdateHistory,
   parseValueHistory,
   timeWeightedAverage

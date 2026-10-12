@@ -1,4 +1,15 @@
 export const UPDATE_HISTORY_SIZE = 10;
+export const ACKNOWLEDGEMENT_DUPLICATE_WINDOW = 1_000;
+
+/** Source update metadata used to identify an acknowledgement duplicate. */
+export interface SourceUpdateMetadata {
+	/** Source value. */
+	value: ioBroker.StateValue;
+	/** Source acknowledgement flag. */
+	ack: boolean;
+	/** Source timestamp in milliseconds. */
+	timestamp: number;
+}
 
 /** A numeric value and the source timestamp at which it was observed. */
 export interface NumericValueSample {
@@ -6,6 +17,24 @@ export interface NumericValueSample {
 	timestamp: number;
 	/** Numeric source value. */
 	value: number;
+}
+
+/**
+ * Determines whether a second source event is only the acknowledgement of the
+ * preceding event and must not become a separate update.
+ *
+ * @param previous Previous source event for the monitored state.
+ * @param current Current source event.
+ */
+export function isAcknowledgementDuplicate(
+	previous: SourceUpdateMetadata | undefined,
+	current: SourceUpdateMetadata,
+): boolean {
+	if (!previous || !Object.is(previous.value, current.value) || previous.ack === current.ack) {
+		return false;
+	}
+	const elapsed = current.timestamp - previous.timestamp;
+	return elapsed >= 0 && elapsed < ACKNOWLEDGEMENT_DUPLICATE_WINDOW;
 }
 
 /**

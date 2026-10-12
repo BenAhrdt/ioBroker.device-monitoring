@@ -2,6 +2,11 @@ import { expect } from 'chai';
 import { describe, it } from 'mocha';
 import {
 	createFunctionTemplate,
+	createDefaultFunctionTemplates,
+	defaultFunctionForRole,
+	applyFunctionTemplate,
+	migrateStandardFunctionName,
+	migrateStandardFunctionTemplates,
 	evaluateLimit,
 	getWatchStatus,
 	isUpdateTimedOut,
@@ -170,6 +175,67 @@ describe('function template', () => {
 		warning: limit('above', undefined, warningAt),
 		alarm: limit('above', undefined, warningAt + 10),
 		staleWarning: { enabled: false, minutes: 60 },
+	});
+
+	it('provides the standard battery and indicator functions', () => {
+		const templates = createDefaultFunctionTemplates();
+
+		expect(templates['value.battery (standard)'].warning).to.include({
+			enabled: true,
+			mode: 'below',
+			min: 15,
+		});
+		expect(templates['value.battery (standard)'].alarm).to.include({
+			enabled: true,
+			mode: 'below',
+			min: 10,
+		});
+		expect(templates['value.battery (standard)'].staleWarning).to.deep.equal({
+			enabled: true,
+			minutes: 15,
+		});
+		expect(templates['indicator.alarm (standard)'].alarm).to.include({ enabled: true, booleanValue: true });
+		expect(templates['indicator.maintenance (standard)'].warning).to.include({
+			enabled: true,
+			booleanValue: true,
+		});
+	});
+
+	it('maps standard roles to their default functions', () => {
+		expect(defaultFunctionForRole('value.battery')).to.equal('value.battery (standard)');
+		expect(defaultFunctionForRole('indicator.alarm')).to.equal('indicator.alarm (standard)');
+		expect(defaultFunctionForRole('indicator.maintenance')).to.equal('indicator.maintenance (standard)');
+		expect(defaultFunctionForRole('value.temperature')).to.equal('');
+	});
+
+	it('migrates earlier standard function names', () => {
+		expect(migrateStandardFunctionName('Indicator Error (standard)')).to.equal('indicator.alarm (standard)');
+		const migrated = migrateStandardFunctionTemplates({
+			'Battery and Intervall': {
+				...createDefaultFunctionTemplates()['value.battery (standard)'],
+				alarm: {
+					enabled: false,
+					mode: 'outside',
+					booleanValue: true,
+					positiveChangeEnabled: true,
+					negativeChangeEnabled: false,
+				},
+			},
+		});
+		expect(migrated).to.have.property('value.battery (standard)');
+		expect(migrated).not.to.have.property('Battery and Intervall');
+		expect(migrated['value.battery (standard)'].alarm).to.include({ enabled: true, mode: 'below', min: 10 });
+	});
+
+	it('applies a template without changing the monitored state identity', () => {
+		const configured = state('state', 'value.battery (standard)', 50);
+		const template = createDefaultFunctionTemplates()['value.battery (standard)'];
+		const applied = applyFunctionTemplate(configured, template);
+
+		expect(applied).to.include({ id: 'state', name: 'state', sourceId: 'source.state' });
+		expect(applied.warning).to.include({ enabled: true, mode: 'below', min: 15 });
+		expect(applied.alarm).to.include({ enabled: true, mode: 'below', min: 10 });
+		expect(applied.staleWarning).to.deep.equal({ enabled: true, minutes: 15 });
 	});
 
 	it('stores the complete monitoring configuration', () => {

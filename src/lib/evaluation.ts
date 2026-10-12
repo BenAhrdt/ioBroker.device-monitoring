@@ -143,6 +143,106 @@ export interface FunctionTemplate {
 	staleWarning: StaleWarningConfiguration;
 }
 
+export const BATTERY_FUNCTION = 'value.battery (standard)';
+export const INDICATOR_ALARM_FUNCTION = 'indicator.alarm (standard)';
+export const INDICATOR_MAINTENANCE_FUNCTION = 'indicator.maintenance (standard)';
+const LEGACY_STANDARD_FUNCTION_NAMES: Record<string, string> = {
+	'Battery and Intervall': BATTERY_FUNCTION,
+	'Battery and Intervall (standard)': BATTERY_FUNCTION,
+	'Indicator Error': INDICATOR_ALARM_FUNCTION,
+	'Indicator Error (standard)': INDICATOR_ALARM_FUNCTION,
+	'Indicator Alarm (standard)': INDICATOR_ALARM_FUNCTION,
+	'Indicator Maintenance (standard)': INDICATOR_MAINTENANCE_FUNCTION,
+};
+
+/**
+ * Migrates an adapter-provided function name from an earlier unreleased naming scheme.
+ *
+ * @param name Function name to migrate.
+ */
+export function migrateStandardFunctionName(name: string): string {
+	return LEGACY_STANDARD_FUNCTION_NAMES[name] || name;
+}
+
+/**
+ * Migrates persisted function templates from an earlier unreleased naming scheme.
+ *
+ * @param templates Function templates to migrate.
+ */
+export function migrateStandardFunctionTemplates(
+	templates: Record<string, FunctionTemplate>,
+): Record<string, FunctionTemplate> {
+	const migrated = { ...templates };
+	for (const [legacyName, currentName] of Object.entries(LEGACY_STANDARD_FUNCTION_NAMES)) {
+		if (migrated[legacyName]) {
+			if (!migrated[currentName]) {
+				migrated[currentName] = migrated[legacyName];
+			}
+			delete migrated[legacyName];
+		}
+	}
+	const batteryTemplate = migrated[BATTERY_FUNCTION];
+	if (
+		batteryTemplate?.alarm &&
+		batteryTemplate.alarm.enabled === false &&
+		batteryTemplate.alarm.mode === 'outside' &&
+		batteryTemplate.alarm.min === undefined &&
+		batteryTemplate.alarm.max === undefined
+	) {
+		migrated[BATTERY_FUNCTION] = {
+			...batteryTemplate,
+			alarm: { ...batteryTemplate.alarm, enabled: true, mode: 'below', min: 10 },
+		};
+	}
+	return migrated;
+}
+
+/** Returns the adapter-provided monitoring templates. */
+export function createDefaultFunctionTemplates(): Record<string, FunctionTemplate> {
+	const inactiveLimit = (): LimitConfiguration => ({
+		enabled: false,
+		mode: 'outside',
+		booleanValue: true,
+		positiveChangeEnabled: true,
+		negativeChangeEnabled: false,
+	});
+	return {
+		[BATTERY_FUNCTION]: {
+			warning: { ...inactiveLimit(), enabled: true, mode: 'below', min: 15 },
+			alarm: { ...inactiveLimit(), enabled: true, mode: 'below', min: 10 },
+			staleWarning: { enabled: true, minutes: 15 },
+		},
+		[INDICATOR_ALARM_FUNCTION]: {
+			warning: inactiveLimit(),
+			alarm: { ...inactiveLimit(), enabled: true, booleanValue: true },
+			staleWarning: { enabled: false, minutes: 60 },
+		},
+		[INDICATOR_MAINTENANCE_FUNCTION]: {
+			warning: { ...inactiveLimit(), enabled: true, booleanValue: true },
+			alarm: inactiveLimit(),
+			staleWarning: { enabled: false, minutes: 60 },
+		},
+	};
+}
+
+/**
+ * Returns the default function for the supported ioBroker role shortcuts.
+ *
+ * @param role ioBroker role to map.
+ */
+export function defaultFunctionForRole(role: string): string {
+	switch (role.trim().toLocaleLowerCase()) {
+		case 'value.battery':
+			return BATTERY_FUNCTION;
+		case 'indicator.alarm':
+			return INDICATOR_ALARM_FUNCTION;
+		case 'indicator.maintenance':
+			return INDICATOR_MAINTENANCE_FUNCTION;
+		default:
+			return '';
+	}
+}
+
 /**
  * Extracts reusable settings from a monitored state.
  *
@@ -154,6 +254,24 @@ export function createFunctionTemplate(watched: WatchedStateConfiguration): Func
 		warning: { ...watched.warning },
 		alarm: { ...watched.alarm },
 		staleWarning: { ...watched.staleWarning },
+	};
+}
+
+/**
+ * Applies a function template while preserving the monitored state's identity and source settings.
+ *
+ * @param watched Monitored state to update.
+ * @param template Function template to apply.
+ */
+export function applyFunctionTemplate(
+	watched: WatchedStateConfiguration,
+	template: FunctionTemplate,
+): WatchedStateConfiguration {
+	return {
+		...watched,
+		warning: { ...template.warning },
+		alarm: { ...template.alarm },
+		staleWarning: { ...template.staleWarning },
 	};
 }
 
