@@ -8,9 +8,17 @@ import {
 	parseAbsoluteChange,
 	parseFiniteNumber,
 	parsePercentage,
+	type DeviceConfiguration,
 	type LimitConfiguration,
 	type WatchedStateConfiguration,
 } from './lib/evaluation';
+import {
+	monitoredSourceSuggestions,
+	sourceHierarchy,
+	suggestStateName,
+	suggestTargetDevice,
+	type StateSuggestionObjects,
+} from './lib/state-suggestions';
 
 const limit = (mode: LimitConfiguration['mode'], min?: number, max?: number): LimitConfiguration => ({
 	enabled: true,
@@ -175,6 +183,69 @@ describe('function template', () => {
 			alarm: { enabled: true, mode: 'above', min: undefined, max: 30 },
 			staleWarning: { enabled: true, minutes: 45 },
 		});
+	});
+});
+
+describe('bulk state suggestions', () => {
+	const state = (sourceId: string, name: string): WatchedStateConfiguration => ({
+		id: name.toLowerCase(),
+		name,
+		sourceId,
+		function: '',
+		warning: { enabled: false, mode: 'outside' },
+		alarm: { enabled: false, mode: 'outside' },
+		staleWarning: { enabled: false, minutes: 60 },
+	});
+	const device = (id: string, name: string, states: WatchedStateConfiguration[] = []): DeviceConfiguration => ({
+		id,
+		name,
+		states,
+	});
+
+	it('uses an existing display name and otherwise the source state name without global suffixes', () => {
+		const existingSource = 'demo.0.Haus.Wohnzimmer.temperature';
+		const objects: StateSuggestionObjects = {
+			[existingSource]: { type: 'state', common: { name: 'temperature' } },
+			'demo.0.Haus.Wohnzimmer.humidity': { type: 'state', common: { name: 'humidity' } },
+		};
+		const monitored = monitoredSourceSuggestions(
+			[device('device_001', 'Wohnzimmer', [state(existingSource, 'Raumtemperatur')])],
+			objects,
+		);
+
+		expect(suggestStateName(existingSource, 'temperature', monitored)).to.equal('Raumtemperatur');
+		expect(suggestStateName('demo.0.Haus.Wohnzimmer.humidity', 'humidity', monitored)).to.equal('humidity');
+	});
+
+	it('keeps an existing source grouping and falls back from device to channel names', () => {
+		const existingSource = 'demo.0.Haus.Wohnzimmer.temperature';
+		const sameChannelSource = 'demo.0.Haus.Wohnzimmer.humidity';
+		const deviceSource = 'demo.0.Garten.Sensor.moisture';
+		const channelOnlySource = 'demo.0.Keller.Sensor.level';
+		const objects: StateSuggestionObjects = {
+			'demo.0.Haus': { type: 'device', common: { name: 'Haus' } },
+			'demo.0.Haus.Wohnzimmer': { type: 'channel', common: { name: 'Wohnzimmer' } },
+			[existingSource]: { type: 'state', common: { name: 'temperature' } },
+			[sameChannelSource]: { type: 'state', common: { name: 'humidity' } },
+			'demo.0.Garten': { type: 'device', common: { name: 'Garten' } },
+			'demo.0.Garten.Sensor': { type: 'channel', common: { name: 'Sensor' } },
+			[deviceSource]: { type: 'state', common: { name: 'moisture' } },
+			'demo.0.Keller': { type: 'device', common: { name: '' } },
+			'demo.0.Keller.Sensor': { type: 'channel', common: { name: 'Keller-Sensor' } },
+			[channelOnlySource]: { type: 'state', common: { name: 'level' } },
+		};
+		const devices = [device('device_001', 'Überwachung', [state(existingSource, 'Raumtemperatur')])];
+		const monitored = monitoredSourceSuggestions(devices, objects);
+
+		expect(sourceHierarchy(existingSource, objects)).to.deep.include({
+			channelId: 'demo.0.Haus.Wohnzimmer',
+			deviceId: 'demo.0.Haus',
+			channelName: 'Wohnzimmer',
+			deviceName: 'Haus',
+		});
+		expect(suggestTargetDevice(sameChannelSource, objects, monitored, devices)).to.equal('device_001');
+		expect(suggestTargetDevice(deviceSource, objects, monitored, devices)).to.equal('Garten');
+		expect(suggestTargetDevice(channelOnlySource, objects, monitored, devices)).to.equal('Keller-Sensor');
 	});
 });
 

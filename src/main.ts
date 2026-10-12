@@ -49,6 +49,12 @@ import {
 	timeWeightedAverage,
 	UPDATE_HISTORY_SIZE,
 } from './lib/update-history';
+import {
+	monitoredSourceSuggestions,
+	suggestStateName,
+	suggestTargetDevice,
+	type StateSuggestionObjects,
+} from './lib/state-suggestions';
 
 type RecommendedLanguage = 'ru' | 'pt' | 'nl' | 'fr' | 'it' | 'es' | 'pl' | 'uk' | 'zh-cn';
 
@@ -1032,6 +1038,7 @@ interface StateCandidate {
 	type: string;
 	role: string;
 	alreadyAdded: boolean;
+	suggestedTargetDevice: string;
 }
 
 type SupportedSourceType = 'number' | 'boolean';
@@ -1044,25 +1051,6 @@ const supportedSourceType = (value: unknown): SupportedSourceType | undefined =>
 		return 'boolean';
 	}
 	return undefined;
-};
-
-const translatedObjectName = (value: unknown, fallback: string): string => {
-	if (typeof value === 'string' && value.trim()) {
-		return value.trim();
-	}
-	if (value && typeof value === 'object') {
-		const translations = value as Record<string, unknown>;
-		for (const language of ['de', 'en', 'ru']) {
-			if (typeof translations[language] === 'string' && translations[language].trim()) {
-				return translations[language].trim();
-			}
-		}
-		const first = Object.values(translations).find(item => typeof item === 'string' && item.trim());
-		if (typeof first === 'string') {
-			return first.trim();
-		}
-	}
-	return fallback;
 };
 
 class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, string> {
@@ -1125,7 +1113,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 
 						const deviceConfigurations = this.adapter.getDeviceConfigurations();
 						const devices = deviceConfigurations.map(({ id, name }) => ({ id, name }));
-						const defaultData = defaultBulkStateForm(matching, deviceConfigurations);
+						const defaultData = defaultBulkStateForm(matching);
 						const selectionToken = this.adapter.createBulkSelectionSession(defaultData);
 						let data: any;
 						try {
@@ -1578,22 +1566,7 @@ function filterStateCandidates(candidates: StateCandidate[], filter: any): State
 			(filter.includeExisting === true || !candidate.alreadyAdded),
 	);
 }
-function sourceParentId(sourceId: string): string {
-	const separator = sourceId.lastIndexOf('.');
-	return separator > 0 ? sourceId.slice(0, separator) : '';
-}
-function inferBulkTargetDevice(candidate: StateCandidate, devices: DeviceConfiguration[]): string {
-	if (devices.length === 1) {
-		return devices[0].id;
-	}
-	const parentId = sourceParentId(candidate.id);
-	if (!parentId) {
-		return '';
-	}
-	const matches = devices.filter(device => device.states.some(state => sourceParentId(state.sourceId) === parentId));
-	return matches.length === 1 ? matches[0].id : '';
-}
-function defaultBulkStateForm(candidates: StateCandidate[], devices: DeviceConfiguration[]): any {
+function defaultBulkStateForm(candidates: StateCandidate[]): any {
 	return {
 		states: candidates.map(candidate => ({
 			selected: !candidate.alreadyAdded,
@@ -1602,7 +1575,7 @@ function defaultBulkStateForm(candidates: StateCandidate[], devices: DeviceConfi
 			sourceId: candidate.id,
 			role: candidate.role || '—',
 			type: candidate.type || '—',
-			targetDevice: inferBulkTargetDevice(candidate, devices),
+			targetDevice: candidate.suggestedTargetDevice,
 			_validation: '',
 		})),
 		function: '',
@@ -1715,8 +1688,8 @@ function bulkStateForm(
 					`States, Zielgeräte, Anzeigenamen und Bemerkungen anpassen (${candidates.length} Treffer)`,
 				),
 				help: t(
-					'All eligible results are selected initially. Target devices are suggested from matching source paths. Display-name conflicts are listed after clicking Apply.',
-					'Alle geeigneten Treffer sind zunächst ausgewählt. Zielgeräte werden möglichst aus passenden State-Pfaden vorgeschlagen. Anzeigenamen-Konflikte werden nach Klick auf OK aufgelistet.',
+					'All eligible results are selected initially. Existing names and source device/channel names are suggested when possible; existing source groups keep their target device. Display-name conflicts are listed after clicking Apply.',
+					'Alle geeigneten Treffer sind zunächst ausgewählt. Vorhandene Namen sowie Geräte-/Channelnamen werden möglichst vorgeschlagen; bestehende Quellgruppen behalten ihr Zielgerät. Anzeigenamen-Konflikte werden nach Klick auf OK aufgelistet.',
 				),
 				newLine: true,
 				xs: 12,
@@ -2881,24 +2854,28 @@ class DeviceMonitoring extends utils.Adapter {
 		return { native: current };
 	}
 	public async getStateCandidates(): Promise<StateCandidate[]> {
-		const objects = await this.getForeignObjectsAsync('*', 'state');
-		const monitoredSources = new Set(this.devices.flatMap(device => device.states.map(state => state.sourceId)));
-		const usedNames = new Map<string, number>();
+		const [stateObjects, channelObjects, deviceObjects] = await Promise.all([
+			this.getForeignObjectsAsync('*', 'state'),
+			this.getForeignObjectsAsync('*', 'channel'),
+			this.getForeignObjectsAsync('*', 'device'),
+		]);
+		const objects = {
+			...deviceObjects,
+			...channelObjects,
+			...stateObjects,
+		} as StateSuggestionObjects;
+		const monitoredSources = monitoredSourceSuggestions(this.devices, objects);
 		return Object.entries(objects)
-			.filter(([, object]) => !!supportedSourceType(object.common?.type))
+			.filter(([, object]) => object.type === 'state' && !!supportedSourceType(object.common?.type))
 			.map(([id, object]) => {
 				const fallback = id.split('.').pop() || id;
-				const baseName = translatedObjectName(object.common?.name, fallback);
-				const key = baseName.toLocaleLowerCase();
-				const occurrence = (usedNames.get(key) || 0) + 1;
-				usedNames.set(key, occurrence);
-				const name = occurrence === 1 ? baseName : `${baseName} (${occurrence})`;
 				return {
 					id,
-					name,
+					name: suggestStateName(id, object.common?.name ?? fallback, monitoredSources),
 					type: supportedSourceType(object.common?.type) || '',
-					role: String(object.common?.role || ''),
-					alreadyAdded: monitoredSources.has(id),
+					role: typeof object.common?.role === 'string' ? object.common.role : '',
+					alreadyAdded: monitoredSources.some(source => source.sourceId === id),
+					suggestedTargetDevice: suggestTargetDevice(id, objects, monitoredSources, this.devices),
 				};
 			})
 			.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));

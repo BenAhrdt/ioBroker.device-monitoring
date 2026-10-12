@@ -137,6 +137,9 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Improve bulk state-search suggestions: reuse configured state names and source-area target devices, then suggest source device or channel names without artificial global name suffixes.
+
 ### 0.0.39 (2026-10-09)
 * (BenAhrdt) Restore language-dependent notification templates, quiet-period names, and notification previews in the adapter defaults; migrate built-in English/German values without overwriting custom templates.
 

@@ -31,6 +31,7 @@ var import_message_templates = require("./lib/message-templates");
 var import_reminders = require("./lib/reminders");
 var import_notifications = require("./lib/notifications");
 var import_update_history = require("./lib/update-history");
+var import_state_suggestions = require("./lib/state-suggestions");
 const recommendedTranslations = {
   "absolute change": {
     ru: "\u0410\u0431\u0441\u043E\u043B\u044E\u0442\u043D\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435",
@@ -912,24 +913,6 @@ const supportedSourceType = (value) => {
   }
   return void 0;
 };
-const translatedObjectName = (value, fallback) => {
-  if (typeof value === "string" && value.trim()) {
-    return value.trim();
-  }
-  if (value && typeof value === "object") {
-    const translations = value;
-    for (const language of ["de", "en", "ru"]) {
-      if (typeof translations[language] === "string" && translations[language].trim()) {
-        return translations[language].trim();
-      }
-    }
-    const first = Object.values(translations).find((item) => typeof item === "string" && item.trim());
-    if (typeof first === "string") {
-      return first.trim();
-    }
-  }
-  return fallback;
-};
 class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
   constructor(adapter) {
     super(adapter, true);
@@ -990,7 +973,7 @@ class DeviceMonitoringManagement extends import_dm_utils.DeviceManagement {
             }
             const deviceConfigurations = this.adapter.getDeviceConfigurations();
             const devices = deviceConfigurations.map(({ id, name }) => ({ id, name }));
-            const defaultData = defaultBulkStateForm(matching, deviceConfigurations);
+            const defaultData = defaultBulkStateForm(matching);
             const selectionToken = this.adapter.createBulkSelectionSession(defaultData);
             let data;
             try {
@@ -1404,22 +1387,7 @@ function filterStateCandidates(candidates, filter) {
     (candidate) => includes(candidate.role, selectedRole) && includes(candidate.name, filter.name) && includes(candidate.id, filter.id) && (!selectedType || candidate.type === selectedType) && (filter.includeExisting === true || !candidate.alreadyAdded)
   );
 }
-function sourceParentId(sourceId) {
-  const separator = sourceId.lastIndexOf(".");
-  return separator > 0 ? sourceId.slice(0, separator) : "";
-}
-function inferBulkTargetDevice(candidate, devices) {
-  if (devices.length === 1) {
-    return devices[0].id;
-  }
-  const parentId = sourceParentId(candidate.id);
-  if (!parentId) {
-    return "";
-  }
-  const matches = devices.filter((device) => device.states.some((state) => sourceParentId(state.sourceId) === parentId));
-  return matches.length === 1 ? matches[0].id : "";
-}
-function defaultBulkStateForm(candidates, devices) {
+function defaultBulkStateForm(candidates) {
   return {
     states: candidates.map((candidate) => ({
       selected: !candidate.alreadyAdded,
@@ -1428,7 +1396,7 @@ function defaultBulkStateForm(candidates, devices) {
       sourceId: candidate.id,
       role: candidate.role || "\u2014",
       type: candidate.type || "\u2014",
-      targetDevice: inferBulkTargetDevice(candidate, devices),
+      targetDevice: candidate.suggestedTargetDevice,
       _validation: ""
     })),
     function: "",
@@ -1531,8 +1499,8 @@ function bulkStateForm(candidates, devices, deviceConfigurations, functionTempla
           `States, Zielger\xE4te, Anzeigenamen und Bemerkungen anpassen (${candidates.length} Treffer)`
         ),
         help: t(
-          "All eligible results are selected initially. Target devices are suggested from matching source paths. Display-name conflicts are listed after clicking Apply.",
-          "Alle geeigneten Treffer sind zun\xE4chst ausgew\xE4hlt. Zielger\xE4te werden m\xF6glichst aus passenden State-Pfaden vorgeschlagen. Anzeigenamen-Konflikte werden nach Klick auf OK aufgelistet."
+          "All eligible results are selected initially. Existing names and source device/channel names are suggested when possible; existing source groups keep their target device. Display-name conflicts are listed after clicking Apply.",
+          "Alle geeigneten Treffer sind zun\xE4chst ausgew\xE4hlt. Vorhandene Namen sowie Ger\xE4te-/Channelnamen werden m\xF6glichst vorgeschlagen; bestehende Quellgruppen behalten ihr Zielger\xE4t. Anzeigenamen-Konflikte werden nach Klick auf OK aufgelistet."
         ),
         newLine: true,
         xs: 12,
@@ -2637,26 +2605,30 @@ class DeviceMonitoring extends utils.Adapter {
     return { native: current };
   }
   async getStateCandidates() {
-    const objects = await this.getForeignObjectsAsync("*", "state");
-    const monitoredSources = new Set(this.devices.flatMap((device) => device.states.map((state) => state.sourceId)));
-    const usedNames = /* @__PURE__ */ new Map();
+    const [stateObjects, channelObjects, deviceObjects] = await Promise.all([
+      this.getForeignObjectsAsync("*", "state"),
+      this.getForeignObjectsAsync("*", "channel"),
+      this.getForeignObjectsAsync("*", "device")
+    ]);
+    const objects = {
+      ...deviceObjects,
+      ...channelObjects,
+      ...stateObjects
+    };
+    const monitoredSources = (0, import_state_suggestions.monitoredSourceSuggestions)(this.devices, objects);
     return Object.entries(objects).filter(([, object]) => {
       var _a;
-      return !!supportedSourceType((_a = object.common) == null ? void 0 : _a.type);
+      return object.type === "state" && !!supportedSourceType((_a = object.common) == null ? void 0 : _a.type);
     }).map(([id, object]) => {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       const fallback = id.split(".").pop() || id;
-      const baseName = translatedObjectName((_a = object.common) == null ? void 0 : _a.name, fallback);
-      const key = baseName.toLocaleLowerCase();
-      const occurrence = (usedNames.get(key) || 0) + 1;
-      usedNames.set(key, occurrence);
-      const name = occurrence === 1 ? baseName : `${baseName} (${occurrence})`;
       return {
         id,
-        name,
-        type: supportedSourceType((_b = object.common) == null ? void 0 : _b.type) || "",
-        role: String(((_c = object.common) == null ? void 0 : _c.role) || ""),
-        alreadyAdded: monitoredSources.has(id)
+        name: (0, import_state_suggestions.suggestStateName)(id, (_b = (_a = object.common) == null ? void 0 : _a.name) != null ? _b : fallback, monitoredSources),
+        type: supportedSourceType((_c = object.common) == null ? void 0 : _c.type) || "",
+        role: typeof ((_d = object.common) == null ? void 0 : _d.role) === "string" ? object.common.role : "",
+        alreadyAdded: monitoredSources.some((source) => source.sourceId === id),
+        suggestedTargetDevice: (0, import_state_suggestions.suggestTargetDevice)(id, objects, monitoredSources, this.devices)
       };
     }).sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   }
