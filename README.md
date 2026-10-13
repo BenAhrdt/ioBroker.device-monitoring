@@ -130,6 +130,9 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 
 <img width="591" height="1280" alt="image" src="https://github.com/user-attachments/assets/f6c94e61-a233-4c17-8792-f898b34e80e3" />
 
+### Adapter wiki
+[Link to Adapter wiki](https://github.com/BenAhrdt/ioBroker.device-monitoring/wiki)
+
 ## ioBroker Forum Link
 [https://forum.iobroker.net/test-adapter-device-monitoring](https://forum.iobroker.net/topic/85477/test-adapter-device-monitoring?_=1791737589435)
 
