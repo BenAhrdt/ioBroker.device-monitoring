@@ -1,7 +1,7 @@
 export const UPDATE_HISTORY_SIZE = 10;
-export const ACKNOWLEDGEMENT_DUPLICATE_WINDOW = 1_000;
+export const SAME_VALUE_DUPLICATE_WINDOW = 1_000;
 
-/** Source update metadata used to identify an acknowledgement duplicate. */
+/** Source update metadata used to identify a rapid same-value duplicate. */
 export interface SourceUpdateMetadata {
 	/** Source value. */
 	value: ioBroker.StateValue;
@@ -9,6 +9,8 @@ export interface SourceUpdateMetadata {
 	ack: boolean;
 	/** Source timestamp in milliseconds. */
 	timestamp: number;
+	/** Source last-change timestamp in milliseconds, when provided by ioBroker. */
+	lastChangedTimestamp?: number;
 }
 
 /** Persisted source metadata used when the in-memory preceding event is unavailable. */
@@ -17,6 +19,31 @@ export interface PersistedUpdateMetadata {
 	value: ioBroker.StateValue | undefined;
 	/** Previously persisted source timestamp. */
 	timestamp: number | undefined;
+}
+
+/**
+ * Determines whether a source event repeats the same value too quickly to be
+ * a separate measurement. This covers both acknowledgement pairs and source
+ * adapters that write the same value with the same acknowledgement flag.
+ *
+ * @param previous Previous source event or persisted monitoring data.
+ * @param current Current source event.
+ */
+export function isSameValueDuplicate(
+	previous: { value: ioBroker.StateValue | undefined; timestamp: number | undefined } | undefined,
+	current: SourceUpdateMetadata,
+): boolean {
+	if (
+		!previous ||
+		previous.value === undefined ||
+		!Object.is(previous.value, current.value) ||
+		typeof previous.timestamp !== 'number' ||
+		!Number.isFinite(previous.timestamp)
+	) {
+		return false;
+	}
+	const elapsed = current.timestamp - previous.timestamp;
+	return elapsed >= 0 && elapsed < SAME_VALUE_DUPLICATE_WINDOW;
 }
 
 /** A numeric value and the source timestamp at which it was observed. */
@@ -38,40 +65,31 @@ export function isAcknowledgementDuplicate(
 	previous: SourceUpdateMetadata | undefined,
 	current: SourceUpdateMetadata,
 ): boolean {
-	if (!previous || !Object.is(previous.value, current.value) || previous.ack === current.ack) {
+	if (!previous || previous.ack === current.ack) {
 		return false;
 	}
-	const elapsed = current.timestamp - previous.timestamp;
-	return elapsed >= 0 && elapsed < ACKNOWLEDGEMENT_DUPLICATE_WINDOW;
+	const sameLastChangedTimestamp =
+		typeof previous.lastChangedTimestamp === 'number' &&
+		Number.isFinite(previous.lastChangedTimestamp) &&
+		typeof current.lastChangedTimestamp === 'number' &&
+		Number.isFinite(current.lastChangedTimestamp) &&
+		previous.lastChangedTimestamp === current.lastChangedTimestamp;
+	return sameLastChangedTimestamp || isSameValueDuplicate(previous, current);
 }
 
 /**
- * Determines whether an acknowledgement is a duplicate based on persisted monitoring data.
- *
- * The persisted history does not contain the preceding acknowledgement flag. A current
- * acknowledged event with the same value shortly after the persisted source timestamp is
- * therefore treated as the acknowledgement of that preceding event. This check also covers
- * cases where the in-memory source cache was overwritten by an intermediary event.
+ * Determines whether a rapid same-value source event is a duplicate based on persisted data.
+ * This also covers cases where the in-memory source cache was overwritten by an intermediary
+ * event or where the source uses the same acknowledgement flag for both writes.
  *
  * @param previous Previously persisted monitoring data.
  * @param current Current source event.
  */
-export function isPersistedAcknowledgementDuplicate(
+export function isPersistedSameValueDuplicate(
 	previous: PersistedUpdateMetadata | undefined,
 	current: SourceUpdateMetadata,
 ): boolean {
-	if (
-		!previous ||
-		previous.value === undefined ||
-		current.ack !== true ||
-		!Object.is(previous.value, current.value) ||
-		typeof previous.timestamp !== 'number' ||
-		!Number.isFinite(previous.timestamp)
-	) {
-		return false;
-	}
-	const elapsed = current.timestamp - previous.timestamp;
-	return elapsed >= 0 && elapsed < ACKNOWLEDGEMENT_DUPLICATE_WINDOW;
+	return isSameValueDuplicate(previous, current);
 }
 
 /**
@@ -80,6 +98,9 @@ export function isPersistedAcknowledgementDuplicate(
  * @param milliseconds Duration to format.
  */
 export function intervalDisplay(milliseconds: number): string {
+	if (milliseconds > 0 && milliseconds < 1_000) {
+		return '<1s';
+	}
 	const seconds = Math.max(0, Math.round(milliseconds / 1000));
 	const days = Math.floor(seconds / 86_400);
 	const hours = Math.floor((seconds % 86_400) / 3_600);

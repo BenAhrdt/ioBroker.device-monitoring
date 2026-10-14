@@ -3,7 +3,7 @@ import { describe, it } from 'mocha';
 import {
 	averageInterval,
 	isAcknowledgementDuplicate,
-	isPersistedAcknowledgementDuplicate,
+	isPersistedSameValueDuplicate,
 	intervalDisplay,
 	parseUpdateHistory,
 	parseValueHistory,
@@ -16,30 +16,36 @@ describe('update history', () => {
 		const previous = { value: 15, ack: false, timestamp: 10_000 };
 
 		expect(isAcknowledgementDuplicate(previous, { value: 15, ack: true, timestamp: 10_999 })).to.equal(true);
+		expect(
+			isAcknowledgementDuplicate(
+				{ value: 15, ack: false, timestamp: 20_000, lastChangedTimestamp: 15_000 },
+				{ value: 15.0001, ack: true, timestamp: 20_500, lastChangedTimestamp: 15_000 },
+			),
+		).to.equal(true);
 		expect(isAcknowledgementDuplicate(previous, { value: 15, ack: true, timestamp: 11_000 })).to.equal(false);
 		expect(isAcknowledgementDuplicate(previous, { value: 16, ack: true, timestamp: 10_500 })).to.equal(false);
 		expect(isAcknowledgementDuplicate(previous, { value: 15, ack: false, timestamp: 10_500 })).to.equal(false);
 	});
 
-	it('uses persisted monitoring data when the preceding source event is not in memory', () => {
+	it('uses persisted monitoring data for rapid same-value source events', () => {
 		expect(
-			isPersistedAcknowledgementDuplicate(
+			isPersistedSameValueDuplicate(
 				{ value: 15, timestamp: 10_000 },
 				{ value: 15, ack: true, timestamp: 10_999 },
 			),
 		).to.equal(true);
 		expect(
-			isPersistedAcknowledgementDuplicate(
+			isPersistedSameValueDuplicate(
 				{ value: 15, timestamp: 10_000 },
 				{ value: 15, ack: true, timestamp: 11_000 },
 			),
 		).to.equal(false);
 		expect(
-			isPersistedAcknowledgementDuplicate(
+			isPersistedSameValueDuplicate(
 				{ value: 15, timestamp: 10_000 },
 				{ value: 15, ack: false, timestamp: 10_999 },
 			),
-		).to.equal(false);
+		).to.equal(true);
 	});
 
 	it('omits empty trailing interval units', () => {
@@ -47,7 +53,7 @@ describe('update history', () => {
 		expect(intervalDisplay(2 * 3_600_000)).to.equal('2h');
 		expect(intervalDisplay(86_400_000)).to.equal('1d');
 		expect(intervalDisplay(3_661_000)).to.equal('1h 1m 1s');
-		expect(intervalDisplay(400)).to.equal('0s');
+		expect(intervalDisplay(400)).to.equal('<1s');
 	});
 
 	it('keeps the ten newest valid unique timestamps', () => {

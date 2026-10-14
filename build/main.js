@@ -4128,13 +4128,14 @@ ${event.message}` : event.message;
       value: sourceState.val,
       ack: sourceState.ack,
       timestamp: sourceState.ts,
+      ...typeof sourceState.lc === "number" && Number.isFinite(sourceState.lc) ? { lastChangedTimestamp: sourceState.lc } : {},
       sourceId: watched.sourceId
     } : void 0;
     const previousSourceUpdate = this.lastSourceUpdates.get(key);
-    const acknowledgementDuplicate = sourceUpdate ? (0, import_update_history.isAcknowledgementDuplicate)(
+    const duplicateSourceUpdate = sourceUpdate ? (0, import_update_history.isAcknowledgementDuplicate)(
       (previousSourceUpdate == null ? void 0 : previousSourceUpdate.sourceId) === watched.sourceId ? previousSourceUpdate : void 0,
       sourceUpdate
-    ) || previousData.sourceId === watched.sourceId && (0, import_update_history.isPersistedAcknowledgementDuplicate)(
+    ) || previousData.sourceId === watched.sourceId && (0, import_update_history.isPersistedSameValueDuplicate)(
       {
         value: previousData.value,
         timestamp: previousData.lastUpdate === null ? void 0 : previousData.lastUpdate
@@ -4144,9 +4145,10 @@ ${event.message}` : event.message;
     if (sourceUpdate) {
       this.lastSourceUpdates.set(key, sourceUpdate);
     }
-    if (acknowledgementDuplicate && !forceRefresh) {
+    if (duplicateSourceUpdate && !forceRefresh) {
       return;
     }
+    const recordSourceUpdate = !duplicateSourceUpdate;
     await this.setStateChangedAsync(`${base}.value`, { val: value, ack: true });
     const sameSource = !this.resetUpdateHistories.has(base) && previousData.sourceId === watched.sourceId;
     let updateHistory = sameSource ? (0, import_update_history.parseUpdateHistory)(previousData.updateHistory) : [];
@@ -4155,7 +4157,7 @@ ${event.message}` : event.message;
     }
     const timestamp = sourceUpdate == null ? void 0 : sourceUpdate.timestamp;
     const lastTimestamp = updateHistory.at(-1);
-    if (typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0 && (lastTimestamp === void 0 || timestamp > lastTimestamp)) {
+    if (typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0 && recordSourceUpdate && (lastTimestamp === void 0 || timestamp > lastTimestamp)) {
       updateHistory = [...updateHistory, timestamp].slice(-import_update_history.UPDATE_HISTORY_SIZE);
     }
     let valueHistory = sameSource ? (0, import_update_history.parseValueHistory)(previousData.valueHistory) : [];
@@ -4164,7 +4166,7 @@ ${event.message}` : event.message;
     }
     if (typeof timestamp === "number" && Number.isFinite(timestamp) && timestamp > 0) {
       const lastValueTimestamp = (_b = valueHistory.at(-1)) == null ? void 0 : _b.timestamp;
-      if (typeof value === "number" && Number.isFinite(value) && (lastValueTimestamp === void 0 || timestamp > lastValueTimestamp)) {
+      if (typeof value === "number" && Number.isFinite(value) && recordSourceUpdate && (lastValueTimestamp === void 0 || timestamp > lastValueTimestamp)) {
         valueHistory = [...valueHistory, { timestamp, value }].slice(-import_update_history.UPDATE_HISTORY_SIZE);
       }
     }
@@ -4173,7 +4175,7 @@ ${event.message}` : event.message;
     const updateInterval = lastUpdate === null || previousUpdate === null ? null : lastUpdate - previousUpdate;
     const averageUpdateInterval = (0, import_update_history.averageInterval)(updateHistory);
     const updateTimedOut = (0, import_evaluation.isUpdateTimedOut)(sourceState, watched.staleWarning);
-    const sourceChanged = !sameSource || !Object.is(value, previousData.value) || typeof timestamp === "number" && Number.isFinite(timestamp) && typeof previousData.lastUpdate === "number" && Number.isFinite(previousData.lastUpdate) && timestamp > previousData.lastUpdate;
+    const sourceChanged = !sameSource || !Object.is(value, previousData.value) || typeof timestamp === "number" && Number.isFinite(timestamp) && typeof previousData.lastUpdate === "number" && Number.isFinite(previousData.lastUpdate) && !duplicateSourceUpdate && timestamp > previousData.lastUpdate;
     const averageValue = (0, import_update_history.timeWeightedAverage)(
       valueHistory,
       watched.staleWarning.enabled ? watched.staleWarning.minutes * 6e4 : void 0

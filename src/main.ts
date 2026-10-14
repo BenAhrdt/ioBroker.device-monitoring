@@ -53,7 +53,7 @@ import {
 	parseValueHistory,
 	timeWeightedAverage,
 	isAcknowledgementDuplicate,
-	isPersistedAcknowledgementDuplicate,
+	isPersistedSameValueDuplicate,
 	type SourceUpdateMetadata,
 	UPDATE_HISTORY_SIZE,
 } from './lib/update-history';
@@ -4619,17 +4619,20 @@ class DeviceMonitoring extends utils.Adapter {
 						value: sourceState.val,
 						ack: sourceState.ack,
 						timestamp: sourceState.ts,
+						...(typeof sourceState.lc === 'number' && Number.isFinite(sourceState.lc)
+							? { lastChangedTimestamp: sourceState.lc }
+							: {}),
 						sourceId: watched.sourceId,
 					} satisfies SourceUpdateMetadata & { sourceId: string })
 				: undefined;
 		const previousSourceUpdate = this.lastSourceUpdates.get(key);
-		const acknowledgementDuplicate = sourceUpdate
+		const duplicateSourceUpdate = sourceUpdate
 			? isAcknowledgementDuplicate(
 					previousSourceUpdate?.sourceId === watched.sourceId ? previousSourceUpdate : undefined,
 					sourceUpdate,
 				) ||
 				(previousData.sourceId === watched.sourceId &&
-					isPersistedAcknowledgementDuplicate(
+					isPersistedSameValueDuplicate(
 						{
 							value: previousData.value,
 							timestamp: previousData.lastUpdate === null ? undefined : previousData.lastUpdate,
@@ -4640,9 +4643,13 @@ class DeviceMonitoring extends utils.Adapter {
 		if (sourceUpdate) {
 			this.lastSourceUpdates.set(key, sourceUpdate);
 		}
-		if (acknowledgementDuplicate && !forceRefresh) {
+		if (duplicateSourceUpdate && !forceRefresh) {
 			return;
 		}
+		// A forced refresh still rebuilds the display from the current source state,
+		// but it must not turn the already persisted acknowledgement into a new
+		// measurement for the interval history.
+		const recordSourceUpdate = !duplicateSourceUpdate;
 		// Keep the current source value up to date even if a later metadata or history write fails.
 		await this.setStateChangedAsync(`${base}.value`, { val: value, ack: true });
 		const sameSource = !this.resetUpdateHistories.has(base) && previousData.sourceId === watched.sourceId;
@@ -4658,6 +4665,7 @@ class DeviceMonitoring extends utils.Adapter {
 			typeof timestamp === 'number' &&
 			Number.isFinite(timestamp) &&
 			timestamp > 0 &&
+			recordSourceUpdate &&
 			(lastTimestamp === undefined || timestamp > lastTimestamp)
 		) {
 			updateHistory = [...updateHistory, timestamp].slice(-UPDATE_HISTORY_SIZE);
@@ -4671,6 +4679,7 @@ class DeviceMonitoring extends utils.Adapter {
 			if (
 				typeof value === 'number' &&
 				Number.isFinite(value) &&
+				recordSourceUpdate &&
 				(lastValueTimestamp === undefined || timestamp > lastValueTimestamp)
 			) {
 				valueHistory = [...valueHistory, { timestamp, value }].slice(-UPDATE_HISTORY_SIZE);
@@ -4688,6 +4697,7 @@ class DeviceMonitoring extends utils.Adapter {
 				Number.isFinite(timestamp) &&
 				typeof previousData.lastUpdate === 'number' &&
 				Number.isFinite(previousData.lastUpdate) &&
+				!duplicateSourceUpdate &&
 				timestamp > previousData.lastUpdate);
 		const averageValue = timeWeightedAverage(
 			valueHistory,

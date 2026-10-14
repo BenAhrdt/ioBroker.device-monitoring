@@ -140,6 +140,9 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Rebuild card details on startup, ignore rapid source duplicates, and display sub-second intervals as `<1s`.
+
 ### 0.0.44 (2026-10-14)
 * (BenAhrdt) Rebuild device-card details during the initial refresh even when the current source event is an already processed acknowledgement duplicate.
 

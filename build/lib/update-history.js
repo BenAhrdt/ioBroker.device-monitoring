@@ -18,34 +18,41 @@ var __copyProps = (to, from, except, desc) => {
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var update_history_exports = {};
 __export(update_history_exports, {
-  ACKNOWLEDGEMENT_DUPLICATE_WINDOW: () => ACKNOWLEDGEMENT_DUPLICATE_WINDOW,
+  SAME_VALUE_DUPLICATE_WINDOW: () => SAME_VALUE_DUPLICATE_WINDOW,
   UPDATE_HISTORY_SIZE: () => UPDATE_HISTORY_SIZE,
   averageInterval: () => averageInterval,
   intervalDisplay: () => intervalDisplay,
   isAcknowledgementDuplicate: () => isAcknowledgementDuplicate,
-  isPersistedAcknowledgementDuplicate: () => isPersistedAcknowledgementDuplicate,
+  isPersistedSameValueDuplicate: () => isPersistedSameValueDuplicate,
+  isSameValueDuplicate: () => isSameValueDuplicate,
   parseUpdateHistory: () => parseUpdateHistory,
   parseValueHistory: () => parseValueHistory,
   timeWeightedAverage: () => timeWeightedAverage
 });
 module.exports = __toCommonJS(update_history_exports);
 const UPDATE_HISTORY_SIZE = 10;
-const ACKNOWLEDGEMENT_DUPLICATE_WINDOW = 1e3;
-function isAcknowledgementDuplicate(previous, current) {
-  if (!previous || !Object.is(previous.value, current.value) || previous.ack === current.ack) {
+const SAME_VALUE_DUPLICATE_WINDOW = 1e3;
+function isSameValueDuplicate(previous, current) {
+  if (!previous || previous.value === void 0 || !Object.is(previous.value, current.value) || typeof previous.timestamp !== "number" || !Number.isFinite(previous.timestamp)) {
     return false;
   }
   const elapsed = current.timestamp - previous.timestamp;
-  return elapsed >= 0 && elapsed < ACKNOWLEDGEMENT_DUPLICATE_WINDOW;
+  return elapsed >= 0 && elapsed < SAME_VALUE_DUPLICATE_WINDOW;
 }
-function isPersistedAcknowledgementDuplicate(previous, current) {
-  if (!previous || previous.value === void 0 || current.ack !== true || !Object.is(previous.value, current.value) || typeof previous.timestamp !== "number" || !Number.isFinite(previous.timestamp)) {
+function isAcknowledgementDuplicate(previous, current) {
+  if (!previous || previous.ack === current.ack) {
     return false;
   }
-  const elapsed = current.timestamp - previous.timestamp;
-  return elapsed >= 0 && elapsed < ACKNOWLEDGEMENT_DUPLICATE_WINDOW;
+  const sameLastChangedTimestamp = typeof previous.lastChangedTimestamp === "number" && Number.isFinite(previous.lastChangedTimestamp) && typeof current.lastChangedTimestamp === "number" && Number.isFinite(current.lastChangedTimestamp) && previous.lastChangedTimestamp === current.lastChangedTimestamp;
+  return sameLastChangedTimestamp || isSameValueDuplicate(previous, current);
+}
+function isPersistedSameValueDuplicate(previous, current) {
+  return isSameValueDuplicate(previous, current);
 }
 function intervalDisplay(milliseconds) {
+  if (milliseconds > 0 && milliseconds < 1e3) {
+    return "<1s";
+  }
   const seconds = Math.max(0, Math.round(milliseconds / 1e3));
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor(seconds % 86400 / 3600);
@@ -112,12 +119,13 @@ function timeWeightedAverage(samples, maxGapMilliseconds) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
-  ACKNOWLEDGEMENT_DUPLICATE_WINDOW,
+  SAME_VALUE_DUPLICATE_WINDOW,
   UPDATE_HISTORY_SIZE,
   averageInterval,
   intervalDisplay,
   isAcknowledgementDuplicate,
-  isPersistedAcknowledgementDuplicate,
+  isPersistedSameValueDuplicate,
+  isSameValueDuplicate,
   parseUpdateHistory,
   parseValueHistory,
   timeWeightedAverage
