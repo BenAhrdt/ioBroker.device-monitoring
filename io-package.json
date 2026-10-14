@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.41",
+    "version": "0.0.42",
     "news": {
+      "0.0.42": {
+        "en": "Also suppress same-value acknowledgement events within one second when the preceding source event is only available in persisted monitoring data.",
+        "de": "Unterdrückt auch Quittereignisse mit gleichem Wert innerhalb einer Sekunde, wenn das Quellereignis nur in Dauerdaten verfügbar ist.",
+        "ru": "Также подавляйте события подтверждения одинаковых значений в течение одной секунды, если предыдущее исходное событие доступно только в постоянных данных мониторинга.",
+        "pt": "Suprima também os eventos de confirmação de mesmo valor em um segundo quando o evento de origem anterior só está disponível em dados persistentes.",
+        "nl": "Onderdruk ook bevestigingsgebeurtenissen van dezelfde waarde binnen één seconde wanneer de voorgaande brongebeurtenis alleen beschikbaar is in permanente bewakingsgegevens.",
+        "fr": "Supprimez également les accusés de réception de même valeur en une seconde lorsque l'événement source précédent n'est disponible que dans les données de suivi.",
+        "it": "Inoltre, sopprime gli eventi di conferma dello stesso valore entro un secondo se il precedente è disponibile solo nei dati persistenti.",
+        "es": "También suprima los eventos de acuse de recibo del mismo valor en un segundo cuando el anterior solo esté disponible en los datos de monitoreo persistentes.",
+        "pl": "Usuń również zdarzenia potwierdzające tę samą wartość w ciągu jednej sekundy, gdy poprzednie zdarzenie źródłowe jest dostępne tylko w trwałych danych monitorowania.",
+        "uk": "Також придушуйте події підтвердження того ж значення протягом однієї секунди, коли попередня подія джерела доступна лише у збережених даних моніторингу.",
+        "zh-cn": "当前面的源事件仅在持久监控数据中可用时，还可以在一秒钟内抑制相同值的确认事件。"
+      },
       "0.0.41": {
         "en": "Ignore same-value acknowledgement duplicates in update intervals; provide the standard functions `value.battery (standard)` (warning below 15, alarm below 10, 15-minute timeout), `indicator.alarm (standard)`, and `indicator.maintenance (standard)`, including role-based defaults for bulk state search. Function templates can be explicitly applied to all assigned monitored states.",
         "de": "Ignoriere Bestätigungsduplikate mit gleichem Wert in Aktualisierungsintervallen; biete die Standardfunktionen `value.battery (standard) `(Warnung unter 15, Alarm unter 10, 15-Minuten-Timeout), `indicator.alarm (standard)` und `indicator.maintenance (standard) `an, einschließlich rollenbasierter Standardwerte für die Bulk-Statussuche. Funktionsvorlagen gelten explizit für alle überwachten Staaten.",
@@ -80,19 +93,6 @@
         "pl": "Zachowaj dostępne dzienniki testów głównych gałęzi, gdy wydanie następuje po regularnym naciśnięciu.",
         "uk": "Зберігайте журнали тестування головної гілки доступними, коли випуск слідує за звичайним натисканням.",
         "zh-cn": "定期推送版本后，保持主分支测试日志可用。"
-      },
-      "0.0.35": {
-        "en": "Complete the supported admin translations for recurring reminders, notification quiet periods, and recovery states.",
-        "de": "Füllen Sie die unterstützten Admin-Übersetzungen für Erinnerungen, Wartezeiten und Wiederherstellungsstatus aus.",
-        "ru": "Выполните поддерживаемые переводы администраторов для повторяющихся напоминаний, периодов ожидания уведомлений и состояний восстановления.",
-        "pt": "Conclua as traduções administrativas suportadas para lembretes, notificações e estados de recuperação.",
-        "nl": "Voltooi de ondersteunde beheerdersvertalingen voor terugkerende herinneringen, stilteperiodes van meldingen en herstelstatussen.",
-        "fr": "Effectuez les traductions administratives prises en charge pour les rappels récurrents, les périodes calmes et les états de reprise.",
-        "it": "Completa le traduzioni admin supportate per i promemoria ricorrenti, le notifiche e gli stati di recupero.",
-        "es": "Complete las traducciones administrativas admitidas para recordatorios recurrentes, periodos de inactividad y estados de recuperación",
-        "pl": "Ukończ obsługiwane tłumaczenia administratora dla powtarzających się przypomnień, okresów cichych powiadomień i stanów odzyskiwania.",
-        "uk": "Виконайте підтримувані переклади адміністратора для повторюваних нагадувань, періодів тиші сповіщень та станів відновлення.",
-        "zh-cn": "完成对定期提醒、通知静默期和恢复状态的支持的管理员翻译。"
       }
     },
     "titleLang": {

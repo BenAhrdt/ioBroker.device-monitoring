@@ -1,4 +1,7 @@
 # Older changelog entries
+## 0.0.37 (2026-10-03)
+* (BenAhrdt) Restore the ioBroker-recommended workflow concurrency configuration for repository checks.
+
 ## 0.0.36 (2026-10-03)
 * (BenAhrdt) Keep main-branch test logs available when a release follows a regular push.
 
