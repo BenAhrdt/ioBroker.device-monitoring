@@ -140,7 +140,7 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.43 (2026-10-14)
 * (BenAhrdt) Restore persisted device-card details after adapter restarts when unchanged source events are skipped as acknowledgement duplicates.
 
 ### 0.0.42 (2026-10-14)
@@ -154,10 +154,6 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 
 ### 0.0.39 (2026-10-09)
 * (BenAhrdt) Restore language-dependent notification templates, quiet-period names, and notification previews in the adapter defaults; migrate built-in English/German values without overwriting custom templates.
-
-### 0.0.38 (2026-10-09)
-* (BenAhrdt) Add configurable absolute and percentage-change warning and alarm thresholds against the previous numeric value, with separate positive and negative directions and at least one direction always active; percentage thresholds are non-negative and not capped at 100%. Change-based notifications include the previous value. Add a global 10-second response time for invalid sources and values.
-* (BenAhrdt) Use English defaults for notification templates and previews, localize dynamic Device Manager conflict messages, and remove the empty disclaimer section.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 

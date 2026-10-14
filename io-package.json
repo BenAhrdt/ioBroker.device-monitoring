@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.42",
+    "version": "0.0.43",
     "news": {
+      "0.0.43": {
+        "en": "Restore persisted device-card details after adapter restarts when unchanged source events are skipped as acknowledgement duplicates.",
+        "de": "Stellt Daten der Gerätekarte nach Adapter-Neustarts wieder her, wenn unveränderte Quellereignisse als Duplikate übersprungen werden.",
+        "ru": "Восстановите сохраненные данные карты устройства после перезапуска адаптера, если неизмененные исходные события будут пропущены как дубликаты подтверждения.",
+        "pt": "Restaure os detalhes da placa de dispositivo após o reinício do adaptador, ignorando eventos de origem inalterados.",
+        "nl": "De gegevens van de toestelkaart herstellen nadat de adapter opnieuw is opgestart, wanneer ongewijzigde brongebeurtenissen worden overgeslagen als bevestigingsduplicaten.",
+        "fr": "Restaurez les informations de la carte après le redémarrage de l'adaptateur si les événements source inchangés sont ignorés en cas d'accusé de réception.",
+        "it": "Ripristina i dati persistenti della scheda dopo il riavvio dell'adattatore se gli eventi sorgente immutati vengono ignorati.",
+        "es": "Restaure los detalles de la tarjeta de dispositivo tras reiniciarse el adaptador si los eventos de origen sin cambios se omiten como confirmaciones duplicadas.",
+        "pl": "Przywróć trwałe szczegóły karty urządzenia po ponownym uruchomieniu adaptera, gdy niezmienione zdarzenia źródłowe zostaną pominięte jako duplikaty potwierdzenia.",
+        "uk": "Відновлення збережених відомостей картки пристрою після перезапуску адаптера, якщо незмінені вихідні події пропущені як дублікати підтвердження.",
+        "zh-cn": "当未更改的源事件作为确认重复项跳过时，适配器重新启动后，还原保留的设备卡详细信息。"
+      },
       "0.0.42": {
         "en": "Also suppress same-value acknowledgement events within one second when the preceding source event is only available in persisted monitoring data.",
         "de": "Unterdrückt auch Quittereignisse mit gleichem Wert innerhalb einer Sekunde, wenn das Quellereignis nur in Dauerdaten verfügbar ist.",
@@ -80,19 +93,6 @@
         "pl": "Przywróć zalecaną przez IOBroker konfigurację współbieżności przepływu pracy dla kontroli repozytorium.",
         "uk": "Відновити конфігурацію паралельності робочого процесу, рекомендовану IObroker для перевірки сховищ.",
         "zh-cn": "恢复 IOBroker 推荐的存储库检查工作流程并发配置。"
-      },
-      "0.0.36": {
-        "en": "Keep main-branch test logs available when a release follows a regular push.",
-        "de": "Halten Sie Testlogs bereit, wenn ein Release auf einen Push folgt.",
-        "ru": "Сохраняйте журналы тестирования основной ветки доступными, если релиз выходит регулярно.",
-        "pt": "Mantenha os logs de teste da filial principal após um push regular.",
-        "nl": "Houd testlogboeken voor de hoofdvestiging beschikbaar wanneer een release volgt op een regelmatige push.",
-        "fr": "Tenez les journaux de test de la branche principale à la suite d'un push.",
-        "it": "Tenga disponibili i log dei test del ramo principale quando un rilascio è regolare.",
-        "es": "Mantenga los registros de pruebas de la rama principal cuando una versión es normal.",
-        "pl": "Zachowaj dostępne dzienniki testów głównych gałęzi, gdy wydanie następuje po regularnym naciśnięciu.",
-        "uk": "Зберігайте журнали тестування головної гілки доступними, коли випуск слідує за звичайним натисканням.",
-        "zh-cn": "定期推送版本后，保持主分支测试日志可用。"
       }
     },
     "titleLang": {

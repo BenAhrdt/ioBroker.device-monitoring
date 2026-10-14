@@ -1,4 +1,8 @@
 # Older changelog entries
+## 0.0.38 (2026-10-09)
+* (BenAhrdt) Add configurable absolute and percentage-change warning and alarm thresholds against the previous numeric value, with separate positive and negative directions and at least one direction always active; percentage thresholds are non-negative and not capped at 100%. Change-based notifications include the previous value. Add a global 10-second response time for invalid sources and values.
+* (BenAhrdt) Use English defaults for notification templates and previews, localize dynamic Device Manager conflict messages, and remove the empty disclaimer section.
+
 ## 0.0.37 (2026-10-03)
 * (BenAhrdt) Restore the ioBroker-recommended workflow concurrency configuration for repository checks.
 
