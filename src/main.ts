@@ -4489,8 +4489,23 @@ class DeviceMonitoring extends utils.Adapter {
 		const current = previous
 			.catch(() => undefined)
 			.then(async () => {
-				const details = device.states
-					.map(watched => this.cardDetails.get(`${device.id}.${watched.id}`) || '')
+				const details = (
+					await Promise.all(
+						device.states.map(async watched => {
+							const key = `${device.id}.${watched.id}`;
+							if (!this.cardDetails.has(key)) {
+								// A persisted duplicate source event can skip updateDetailsDisplay after
+								// restart. Restore the existing HTML instead of replacing the card with
+								// an empty value.
+								const persisted = await this.getStateAsync(`${device.id}.${watched.id}.data.details`);
+								if (typeof persisted?.val === 'string') {
+									this.cardDetails.set(key, persisted.val);
+								}
+							}
+							return this.cardDetails.get(key) || '';
+						}),
+					)
+				)
 					.filter(Boolean)
 					.join('');
 				await this.setStateChangedAsync(`devices.${device.id}.${DEVICE_CARD_DETAILS_ID}.details`, {

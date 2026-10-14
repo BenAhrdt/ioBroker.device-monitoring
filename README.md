@@ -140,6 +140,9 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Restore persisted device-card details after adapter restarts when unchanged source events are skipped as acknowledgement duplicates.
+
 ### 0.0.42 (2026-10-14)
 * (BenAhrdt) Also suppress same-value acknowledgement events within one second when the preceding source event is only available in persisted monitoring data.
 

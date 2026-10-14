@@ -4040,7 +4040,18 @@ ${event.message}` : event.message;
     var _a;
     const previous = (_a = this.cardDetailsQueues.get(device.id)) != null ? _a : Promise.resolve();
     const current = previous.catch(() => void 0).then(async () => {
-      const details = device.states.map((watched) => this.cardDetails.get(`${device.id}.${watched.id}`) || "").filter(Boolean).join("");
+      const details = (await Promise.all(
+        device.states.map(async (watched) => {
+          const key = `${device.id}.${watched.id}`;
+          if (!this.cardDetails.has(key)) {
+            const persisted = await this.getStateAsync(`${device.id}.${watched.id}.data.details`);
+            if (typeof (persisted == null ? void 0 : persisted.val) === "string") {
+              this.cardDetails.set(key, persisted.val);
+            }
+          }
+          return this.cardDetails.get(key) || "";
+        })
+      )).filter(Boolean).join("");
       await this.setStateChangedAsync(`devices.${device.id}.${DEVICE_CARD_DETAILS_ID}.details`, {
         val: details,
         ack: true
