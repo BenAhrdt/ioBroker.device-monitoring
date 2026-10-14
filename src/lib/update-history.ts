@@ -11,6 +11,14 @@ export interface SourceUpdateMetadata {
 	timestamp: number;
 }
 
+/** Persisted source metadata used when the in-memory preceding event is unavailable. */
+export interface PersistedUpdateMetadata {
+	/** Previously monitored value. */
+	value: ioBroker.StateValue | undefined;
+	/** Previously persisted source timestamp. */
+	timestamp: number | undefined;
+}
+
 /** A numeric value and the source timestamp at which it was observed. */
 export interface NumericValueSample {
 	/** Source timestamp in milliseconds. */
@@ -31,6 +39,35 @@ export function isAcknowledgementDuplicate(
 	current: SourceUpdateMetadata,
 ): boolean {
 	if (!previous || !Object.is(previous.value, current.value) || previous.ack === current.ack) {
+		return false;
+	}
+	const elapsed = current.timestamp - previous.timestamp;
+	return elapsed >= 0 && elapsed < ACKNOWLEDGEMENT_DUPLICATE_WINDOW;
+}
+
+/**
+ * Determines whether an acknowledgement is a duplicate based on persisted monitoring data.
+ *
+ * The persisted history does not contain the preceding acknowledgement flag. A current
+ * acknowledged event with the same value shortly after the persisted source timestamp is
+ * therefore treated as the acknowledgement of that preceding event. This check also covers
+ * cases where the in-memory source cache was overwritten by an intermediary event.
+ *
+ * @param previous Previously persisted monitoring data.
+ * @param current Current source event.
+ */
+export function isPersistedAcknowledgementDuplicate(
+	previous: PersistedUpdateMetadata | undefined,
+	current: SourceUpdateMetadata,
+): boolean {
+	if (
+		!previous ||
+		previous.value === undefined ||
+		current.ack !== true ||
+		!Object.is(previous.value, current.value) ||
+		typeof previous.timestamp !== 'number' ||
+		!Number.isFinite(previous.timestamp)
+	) {
 		return false;
 	}
 	const elapsed = current.timestamp - previous.timestamp;

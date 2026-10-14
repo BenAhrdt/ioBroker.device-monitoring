@@ -3,6 +3,7 @@ import { describe, it } from 'mocha';
 import {
 	averageInterval,
 	isAcknowledgementDuplicate,
+	isPersistedAcknowledgementDuplicate,
 	intervalDisplay,
 	parseUpdateHistory,
 	parseValueHistory,
@@ -18,6 +19,27 @@ describe('update history', () => {
 		expect(isAcknowledgementDuplicate(previous, { value: 15, ack: true, timestamp: 11_000 })).to.equal(false);
 		expect(isAcknowledgementDuplicate(previous, { value: 16, ack: true, timestamp: 10_500 })).to.equal(false);
 		expect(isAcknowledgementDuplicate(previous, { value: 15, ack: false, timestamp: 10_500 })).to.equal(false);
+	});
+
+	it('uses persisted monitoring data when the preceding source event is not in memory', () => {
+		expect(
+			isPersistedAcknowledgementDuplicate(
+				{ value: 15, timestamp: 10_000 },
+				{ value: 15, ack: true, timestamp: 10_999 },
+			),
+		).to.equal(true);
+		expect(
+			isPersistedAcknowledgementDuplicate(
+				{ value: 15, timestamp: 10_000 },
+				{ value: 15, ack: true, timestamp: 11_000 },
+			),
+		).to.equal(false);
+		expect(
+			isPersistedAcknowledgementDuplicate(
+				{ value: 15, timestamp: 10_000 },
+				{ value: 15, ack: false, timestamp: 10_999 },
+			),
+		).to.equal(false);
 	});
 
 	it('omits empty trailing interval units', () => {

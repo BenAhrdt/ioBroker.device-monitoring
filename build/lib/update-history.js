@@ -23,6 +23,7 @@ __export(update_history_exports, {
   averageInterval: () => averageInterval,
   intervalDisplay: () => intervalDisplay,
   isAcknowledgementDuplicate: () => isAcknowledgementDuplicate,
+  isPersistedAcknowledgementDuplicate: () => isPersistedAcknowledgementDuplicate,
   parseUpdateHistory: () => parseUpdateHistory,
   parseValueHistory: () => parseValueHistory,
   timeWeightedAverage: () => timeWeightedAverage
@@ -32,6 +33,13 @@ const UPDATE_HISTORY_SIZE = 10;
 const ACKNOWLEDGEMENT_DUPLICATE_WINDOW = 1e3;
 function isAcknowledgementDuplicate(previous, current) {
   if (!previous || !Object.is(previous.value, current.value) || previous.ack === current.ack) {
+    return false;
+  }
+  const elapsed = current.timestamp - previous.timestamp;
+  return elapsed >= 0 && elapsed < ACKNOWLEDGEMENT_DUPLICATE_WINDOW;
+}
+function isPersistedAcknowledgementDuplicate(previous, current) {
+  if (!previous || previous.value === void 0 || current.ack !== true || !Object.is(previous.value, current.value) || typeof previous.timestamp !== "number" || !Number.isFinite(previous.timestamp)) {
     return false;
   }
   const elapsed = current.timestamp - previous.timestamp;
@@ -109,6 +117,7 @@ function timeWeightedAverage(samples, maxGapMilliseconds) {
   averageInterval,
   intervalDisplay,
   isAcknowledgementDuplicate,
+  isPersistedAcknowledgementDuplicate,
   parseUpdateHistory,
   parseValueHistory,
   timeWeightedAverage

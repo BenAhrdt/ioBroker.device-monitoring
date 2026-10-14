@@ -53,6 +53,7 @@ import {
 	parseValueHistory,
 	timeWeightedAverage,
 	isAcknowledgementDuplicate,
+	isPersistedAcknowledgementDuplicate,
 	type SourceUpdateMetadata,
 	UPDATE_HISTORY_SIZE,
 } from './lib/update-history';
@@ -4605,7 +4606,15 @@ class DeviceMonitoring extends utils.Adapter {
 			? isAcknowledgementDuplicate(
 					previousSourceUpdate?.sourceId === watched.sourceId ? previousSourceUpdate : undefined,
 					sourceUpdate,
-				)
+				) ||
+				(previousData.sourceId === watched.sourceId &&
+					isPersistedAcknowledgementDuplicate(
+						{
+							value: previousData.value,
+							timestamp: previousData.lastUpdate === null ? undefined : previousData.lastUpdate,
+						},
+						sourceUpdate,
+					))
 			: false;
 		if (sourceUpdate) {
 			this.lastSourceUpdates.set(key, sourceUpdate);

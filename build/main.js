@@ -4123,6 +4123,12 @@ ${event.message}` : event.message;
     const acknowledgementDuplicate = sourceUpdate ? (0, import_update_history.isAcknowledgementDuplicate)(
       (previousSourceUpdate == null ? void 0 : previousSourceUpdate.sourceId) === watched.sourceId ? previousSourceUpdate : void 0,
       sourceUpdate
+    ) || previousData.sourceId === watched.sourceId && (0, import_update_history.isPersistedAcknowledgementDuplicate)(
+      {
+        value: previousData.value,
+        timestamp: previousData.lastUpdate === null ? void 0 : previousData.lastUpdate
+      },
+      sourceUpdate
     ) : false;
     if (sourceUpdate) {
       this.lastSourceUpdates.set(key, sourceUpdate);
