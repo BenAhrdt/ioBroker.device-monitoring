@@ -3455,7 +3455,7 @@ class DeviceMonitoring extends utils.Adapter {
     for (const device of this.devices) {
       for (const watched of device.states) {
         const state = await this.getForeignStateAsync(watched.sourceId);
-        await this.updateValue(device, watched, state);
+        await this.updateValue(device, watched, state, true);
       }
       await this.updateDeviceSummary(device);
       await this.updateDeviceCardDetails(device);
@@ -4104,11 +4104,11 @@ ${event.message}` : event.message;
     this.cardDetails.set(`${device.id}.${watched.id}`, details);
     await this.updateDeviceCardDetails(device);
   }
-  async updateValue(device, watched, sourceState) {
+  async updateValue(device, watched, sourceState, forceRefresh = false) {
     var _a;
     const key = `${device.id}.${watched.id}`;
     const previous = (_a = this.updateHistoryQueues.get(key)) != null ? _a : Promise.resolve();
-    const current = previous.catch(() => void 0).then(() => this.updateValueNow(device, watched, sourceState));
+    const current = previous.catch(() => void 0).then(() => this.updateValueNow(device, watched, sourceState, forceRefresh));
     this.updateHistoryQueues.set(key, current);
     try {
       await current;
@@ -4118,7 +4118,7 @@ ${event.message}` : event.message;
       }
     }
   }
-  async updateValueNow(device, watched, sourceState) {
+  async updateValueNow(device, watched, sourceState, forceRefresh) {
     var _a, _b, _c, _d;
     const key = `${device.id}.${watched.id}`;
     const base = `devices.${device.id}.${watched.id}`;
@@ -4144,7 +4144,7 @@ ${event.message}` : event.message;
     if (sourceUpdate) {
       this.lastSourceUpdates.set(key, sourceUpdate);
     }
-    if (acknowledgementDuplicate) {
+    if (acknowledgementDuplicate && !forceRefresh) {
       return;
     }
     await this.setStateChangedAsync(`${base}.value`, { val: value, ack: true });

@@ -3775,7 +3775,9 @@ class DeviceMonitoring extends utils.Adapter {
 		for (const device of this.devices) {
 			for (const watched of device.states) {
 				const state = await this.getForeignStateAsync(watched.sourceId);
-				await this.updateValue(device, watched, state);
+				// Rebuild the current display after every adapter start, even when the
+				// source event is the same persisted event that was already processed.
+				await this.updateValue(device, watched, state, true);
 			}
 			await this.updateDeviceSummary(device);
 			await this.updateDeviceCardDetails(device);
@@ -4585,10 +4587,13 @@ class DeviceMonitoring extends utils.Adapter {
 		device: DeviceConfiguration,
 		watched: WatchedStateConfiguration,
 		sourceState: ioBroker.State | null | undefined,
+		forceRefresh = false,
 	): Promise<void> {
 		const key = `${device.id}.${watched.id}`;
 		const previous = this.updateHistoryQueues.get(key) ?? Promise.resolve();
-		const current = previous.catch(() => undefined).then(() => this.updateValueNow(device, watched, sourceState));
+		const current = previous
+			.catch(() => undefined)
+			.then(() => this.updateValueNow(device, watched, sourceState, forceRefresh));
 		this.updateHistoryQueues.set(key, current);
 		try {
 			await current;
@@ -4602,6 +4607,7 @@ class DeviceMonitoring extends utils.Adapter {
 		device: DeviceConfiguration,
 		watched: WatchedStateConfiguration,
 		sourceState: ioBroker.State | null | undefined,
+		forceRefresh: boolean,
 	): Promise<void> {
 		const key = `${device.id}.${watched.id}`;
 		const base = `devices.${device.id}.${watched.id}`;
@@ -4634,7 +4640,7 @@ class DeviceMonitoring extends utils.Adapter {
 		if (sourceUpdate) {
 			this.lastSourceUpdates.set(key, sourceUpdate);
 		}
-		if (acknowledgementDuplicate) {
+		if (acknowledgementDuplicate && !forceRefresh) {
 			return;
 		}
 		// Keep the current source value up to date even if a later metadata or history write fails.
