@@ -140,7 +140,7 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.44 (2026-10-14)
 * (BenAhrdt) Rebuild device-card details during the initial refresh even when the current source event is an already processed acknowledgement duplicate.
 
 ### 0.0.43 (2026-10-14)
@@ -154,9 +154,6 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 
 ### 0.0.40 (2026-10-12)
 * (BenAhrdt) Improve bulk state-search suggestions: reuse configured state names and source-area target devices, then suggest source device or channel names without artificial global name suffixes.
-
-### 0.0.39 (2026-10-09)
-* (BenAhrdt) Restore language-dependent notification templates, quiet-period names, and notification previews in the adapter defaults; migrate built-in English/German values without overwriting custom templates.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 

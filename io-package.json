@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.43",
+    "version": "0.0.44",
     "news": {
+      "0.0.44": {
+        "en": "Rebuild device-card details during the initial refresh even when the current source event is an already processed acknowledgement duplicate.",
+        "de": "Stellen Sie die Gerätekartendaten beim ersten Update wieder her, auch wenn das Quellereignis bereits bearbeitet wurde.",
+        "ru": "Перестройте данные карты устройства во время первоначального обновления, даже если текущее исходное событие является уже обработанным дубликатом подтверждения.",
+        "pt": "Reconstrua os detalhes da placa do dispositivo durante a atualização inicial, mesmo que o evento de origem atual já seja processado.",
+        "nl": "Stel de gegevens van de apparaatkaart opnieuw op tijdens de eerste vernieuwing, zelfs als de huidige brongebeurtenis een duplicaat van de bevestiging is dat al verwerkt is.",
+        "fr": "Reconstituez les informations de la carte lors de la première actualisation, même si l'événement source en cours est un accusé de réception déjà traité.",
+        "it": "Ricostruisci i dati della scheda durante l'aggiornamento iniziale anche se l'evento sorgente è un duplicato già elaborato.",
+        "es": "Reconstruya los detalles de la tarjeta durante la actualización inicial, incluso cuando el evento fuente actual sea un duplicado de acuse de recibo ya procesado.",
+        "pl": "Odbuduj dane karty urządzenia podczas początkowego odświeżania, nawet jeśli bieżące zdarzenie źródłowe jest już przetworzonym duplikatem potwierdzenia.",
+        "uk": "Відновити дані картки пристрою під час початкового оновлення, навіть якщо поточна подія джерела є вже обробленим дублікатом підтвердження.",
+        "zh-cn": "即使当前的源事件是已处理的确认副本，也可以在初始刷新期间重建设备卡的详细信息。"
+      },
       "0.0.43": {
         "en": "Restore persisted device-card details after adapter restarts when unchanged source events are skipped as acknowledgement duplicates.",
         "de": "Stellt Daten der Gerätekarte nach Adapter-Neustarts wieder her, wenn unveränderte Quellereignisse als Duplikate übersprungen werden.",
@@ -80,19 +93,6 @@
         "pl": "Dodaj konfigurowalne wartości bezwzględne i procentowe ostrzeżenia i progi alarmowe względem poprzedniej wartości liczbowej, z oddzielnymi kierunkami dodatnimi i ujemnymi oraz co najmniej jednym kierunkiem zawsze aktywnym; progi procentowe nie są ujemne i nie ograniczone do 100%. Powiadomienia oparte na zmianach zawierają poprzednią wartość. Dodaj globalny 10-sekundowy czas odpowiedzi dla nieprawidłowych źródeł i wartości.\nUżywaj ustawień domyślnych w języku angielskim dla szablonów powiadomień i podglądów, lokalizuj dynamiczne komunikaty konfliktu Menedżera urządzeń i usuń pustą sekcję zastrzeżeń.",
         "uk": "Додайте настроювані абсолютні пороги попередження та тривоги щодо зміни у відсотках до попереднього числового значення, з окремими позитивними та негативними напрямками та принаймні одним напрямком завжди активним; процентні пороги не від'ємні та не обмежені 100%. Сповіщення на основі змін містять попереднє значення. Додайте глобальний 10-секундний час відгуку для недійсних джерел і значень.\nВикористовуйте англійські значення за замовчуванням для шаблонів сповіщень та попереднього перегляду, локалізуйте динамічні конфліктні повідомлення Диспетчера пристроїв та видаліть порожній розділ відмови від відповідальності.",
         "zh-cn": "针对先前的数值添加可配置的绝对值和百分比变化警告和警报阈值，分别设置正负方向，至少一个方向始终处于活动状态；百分比阈值为非负值，上限不为 100%。基于变更的通知包括先前的值。为无效的来源和值增加 10 秒的全局响应时间。\n使用英文默认设置通知模板和预览，本地化动态设备管理器冲突消息，并删除空白的免责声明部分。"
-      },
-      "0.0.37": {
-        "en": "Restore the ioBroker-recommended workflow concurrency configuration for repository checks.",
-        "de": "Stellen Sie die von IO-Broker empfohlene Parallelität für Repository-Checks wieder her.",
-        "ru": "Восстановите рекомендованную IOBroker конфигурацию параллелизма рабочих процессов для проверок репозитория.",
-        "pt": "Restaure a configuração simultânea recomendada pelo IObroker para verificações de repositório.",
-        "nl": "Herstel de door IOBroker aanbevolen configuratie voor gelijktijdige werkstromen voor controles van de opslagplaatsen.",
-        "fr": "Restaurez la configuration de flux de travail simultanée recommandée par IOBroker pour vérifier les dépôts.",
-        "it": "Ripristina la concorrenza del workflow consigliata da IObroker per i controlli del repository.",
-        "es": "Restaure la configuración de simultaneidad recomendada por IOBroker para las comprobaciones de repositorios.",
-        "pl": "Przywróć zalecaną przez IOBroker konfigurację współbieżności przepływu pracy dla kontroli repozytorium.",
-        "uk": "Відновити конфігурацію паралельності робочого процесу, рекомендовану IObroker для перевірки сховищ.",
-        "zh-cn": "恢复 IOBroker 推荐的存储库检查工作流程并发配置。"
       }
     },
     "titleLang": {
