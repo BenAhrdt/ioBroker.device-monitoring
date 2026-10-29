@@ -140,7 +140,7 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.47 (2026-10-29)
 * (BenAhrdt) Limit configuration rebuilds and monitoring refreshes to affected devices and states to reduce database and Device Manager load.
 
 ### 0.0.46 (2026-10-29)
@@ -156,9 +156,6 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 
 ### 0.0.43 (2026-10-14)
 * (BenAhrdt) Restore persisted device-card details after adapter restarts when unchanged source events are skipped as acknowledgement duplicates.
-
-### 0.0.42 (2026-10-14)
-* (BenAhrdt) Also suppress same-value acknowledgement events within one second when the preceding source event is only available in persisted monitoring data.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 

@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.46",
+    "version": "0.0.47",
     "news": {
+      "0.0.47": {
+        "en": "Limit configuration rebuilds and monitoring refreshes to affected devices and states to reduce database and Device Manager load.",
+        "de": "Um den Datenbank- und Gerätemanager zu entlasten, beschränken Sie die Konfiguration auf betroffene Geräte und Staaten.",
+        "ru": "Ограничьте обновление конфигурации и мониторинг на затронутых устройствах и состояниях, чтобы снизить нагрузку на базу данных и диспетчер устройств.",
+        "pt": "Limite as reconstruções e o monitoramento dos dispositivos e estados afetados para reduzir a carga do banco de dados e do Device Manager.",
+        "nl": "Beperk de configuratie, heropbouw en vernieuwingen van de monitoring naar betrokken apparaten en statussen om de belasting van de database en de apparaatbeheerder te verminderen.",
+        "fr": "Limitez la configuration et le suivi des appareils et états concernés afin de réduire la charge de la base de données et du Device Manager.",
+        "it": "Limita le ricostruzioni e il monitoraggio dei dispositivi e degli stati interessati per ridurre il carico di database e Device Manager.",
+        "es": "Limite la configuración y la supervisión de los dispositivos y estados afectados para reducir la carga de bases de datos y Device Manager",
+        "pl": "Ogranicz przebudowy konfiguracji i odświeżania monitorowania na dotkniętych urządzeniach i stanach, aby zmniejszyć obciążenie bazy danych i Menedżera urządzeń.",
+        "uk": "Обмежте відновлення конфігурації та оновлення моніторингу на пошкоджених пристроях та станах, щоб зменшити навантаження на базу даних та диспетчер пристроїв.",
+        "zh-cn": "将配置重建和监控刷新限制在受影响的设备和状态上，以减少数据库和设备管理器的负载。"
+      },
       "0.0.46": {
         "en": "Wait for running asynchronous state and object operations before adapter shutdown.\nHandle asynchronous event and timer errors to prevent unhandled database rejections.\nReturn structured errors from Device Manager actions and allow longer state-form saves, preventing silent backend timeouts.",
         "de": "Warten Sie vor dem Herunterfahren des Adapters auf asynchrone Status- und Objektoperationen.\nBehandelt asynchrone Event- und Timerfehler, um Datenbankablehnungen zu vermeiden.\nGibt Strukturfehler von Device Manager-Aktionen zurück und ermöglicht längeres Speichern im Backend.",
@@ -80,19 +93,6 @@
         "pl": "Ignoruj duplikaty potwierdzania tej samej wartości w interwałach aktualizacji; podaj standardowe funkcje „value.battery (standard)” (ostrzeżenie poniżej 15, alarm poniżej 10, limit czasu 15-minutowego), „indicator.alarm (standard)” i „indicator.maintenance (standard)”, w tym domyślne ustawienia oparte na rolach dla wyszukiwania zbiorczego stanu. Szablony funkcji mogą być wyraźnie stosowane do wszystkich przypisanych monitorowanych stanów.",
         "uk": "Ігнорувати дублікати підтвердження тих самих значень у інтервалах оновлення; надайте стандартні функції `value.battery (standard) `(попередження нижче 15, сигнал тривоги нижче 10, 15-хвилинний тайм-аут), `indicator.alert (стандартний)` та `indicator.maintenance (standard) `, включаючи значення за замовчуванням на основі ролей для масового пошуку стану. Шаблони функцій можуть бути явно застосовані до всіх призначених контрольованих станів.",
         "zh-cn": "忽略更新间隔内重复的同值确认；提供标准函数 “value.battery（标准）”（警告低于 15，警报低于 10，15 分钟超时）、“indicator.alarm（标准）” 和 “indicator.maintence（标准）”，包括基于角色的批量状态搜索默认值。函数模板可以明确应用于所有分配的监控状态。"
-      },
-      "0.0.40": {
-        "en": "Improve bulk state-search suggestions: reuse configured state names and source-area target devices, then suggest source device or channel names without artificial global name suffixes.",
-        "de": "Verbessern Sie die Suche nach Bundesstaaten: Wiederverwenden Sie konfigurierte Bundesstaaten und Quellzielgeräte und schlagen Sie dann Quellnamen ohne globale Suffixe vor.",
-        "ru": "Улучшите рекомендации по массовому поиску состояний: повторно используйте настроенные названия штатов и целевые устройства из исходной области, а затем предлагайте имена исходных устройств или каналов без искусственных суффиксов глобальных имен.",
-        "pt": "Melhore as sugestões de busca em massa: reutilize nomes de estados e dispositivos de destino configurados e sugira nomes de canais sem sufixos artificiais globais.",
-        "nl": "Suggesties voor bulkzoekopdrachten naar staten verbeteren: gebruik geconfigureerde staatsnamen en doelapparaten uit het brongebied opnieuw en stel vervolgens bronapparaat- of kanaalnamen voor zonder kunstmatige algemene naamachtervoegsels.",
-        "fr": "Améliorez les suggestions de recherche d'états en masse : réutilisez les noms d'état configurés et les appareils cibles de la zone source, puis suggérez des noms d'appareils ou de chaînes sans suffixe global artificiel.",
-        "it": "Migliora i suggerimenti per la ricerca di massa: riutilizza i nomi di stato configurati e i dispositivi di destinazione, poi suggerisce i nomi dei canali senza suffissi globali artificiali.",
-        "es": "Mejore las sugerencias de búsqueda masiva de estados: reutilice los nombres de estado y los dispositivos de destino del área de origen y, a continuación, sugiera nombres de dispositivos o canales sin sufijos globales artificiales.",
-        "pl": "Ulepsz sugestie dotyczące wyszukiwania zbiorczego stanu: użyj ponownie skonfigurowanych nazw stanów i urządzeń docelowych obszaru źródłowego, a następnie sugeruj nazwy urządzeń źródłowych lub kanałów bez sztucznych przyrostków nazw globalnych.",
-        "uk": "Покращення пропозицій щодо масового пошуку стану: повторно використовуйте налаштовані назви станів та цільові пристрої вихідної області, а потім пропонуйте назви вихідних пристроїв або каналів без штучних суфіксів глобальних імен.",
-        "zh-cn": "改进批量状态搜索建议：重复使用已配置的状态名称和源区域目标设备，然后建议不使用人为的全局名称后缀的源设备或频道名称。"
       }
     },
     "titleLang": {
