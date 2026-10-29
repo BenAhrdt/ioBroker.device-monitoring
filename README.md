@@ -140,7 +140,7 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.46 (2026-10-29)
 * (BenAhrdt) Wait for running asynchronous state and object operations before adapter shutdown.
 * (BenAhrdt) Handle asynchronous event and timer errors to prevent unhandled database rejections.
 * (BenAhrdt) Return structured errors from Device Manager actions and allow longer state-form saves, preventing silent backend timeouts.
@@ -156,9 +156,6 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 
 ### 0.0.42 (2026-10-14)
 * (BenAhrdt) Also suppress same-value acknowledgement events within one second when the preceding source event is only available in persisted monitoring data.
-
-### 0.0.41 (2026-10-12)
-* (BenAhrdt) Ignore same-value acknowledgement duplicates in update intervals; provide the standard functions `value.battery (standard)` (warning below 15, alarm below 10, 15-minute timeout), `indicator.alarm (standard)`, and `indicator.maintenance (standard)`, including role-based defaults for bulk state search. Function templates can be explicitly applied to all assigned monitored states.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 

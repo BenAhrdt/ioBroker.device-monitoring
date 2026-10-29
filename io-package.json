@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.45",
+    "version": "0.0.46",
     "news": {
+      "0.0.46": {
+        "en": "Wait for running asynchronous state and object operations before adapter shutdown.\nHandle asynchronous event and timer errors to prevent unhandled database rejections.\nReturn structured errors from Device Manager actions and allow longer state-form saves, preventing silent backend timeouts.",
+        "de": "Warten Sie vor dem Herunterfahren des Adapters auf asynchrone Status- und Objektoperationen.\nBehandelt asynchrone Event- und Timerfehler, um Datenbankablehnungen zu vermeiden.\nGibt Strukturfehler von Device Manager-Aktionen zurück und ermöglicht längeres Speichern im Backend.",
+        "ru": "Дождитесь выполнения асинхронных операций с состоянием и объектами перед выключением адаптера.\nОбрабатывайте ошибки асинхронных событий и таймеров, чтобы предотвратить необработанные отклонения базы данных.\nВозвращайте структурированные ошибки в действиях диспетчера устройств и сохраняйте формы состояния дольше, предотвращая тайм-ауты серверной части.",
+        "pt": "Aguarde operações assíncronas de estado e objeto antes de desligar o adaptador.\nGerencie erros assíncronos de eventos e temporizadores para evitar rejeições de dados.\nRetorne erros estruturados das ações do Device Manager e salve mais estados, evitando tempos limite de backend.",
+        "nl": "Wacht tot de asynchrone status- en objectbewerkingen zijn uitgevoerd voordat de adapter wordt uitgeschakeld.\nAsynchrone gebeurtenissen en timerfouten afhandelen om onverwerkte afwijzingen van de database te voorkomen.\nRetourneer gestructureerde fouten uit acties van Apparaatbeheer en maak het mogelijk om statusformulieren langer op te slaan, waardoor stille time-outs voor de backend worden voorkomen.",
+        "fr": "Attendez les opérations asynchrones sur l'état et les objets avant d'arrêter l'adaptateur.\nGérez les erreurs asynchrones et de minuterie pour éviter les rejets non gérés de bases de données.\nCorrigez les erreurs structurées liées aux actions du Device Manager et prolongez les sauvegardes d'état, en évitant les timeouts du backend.",
+        "it": "Attendi operazioni asincrone su stati e oggetti prima di spegnere l'adattatore.\nGestire gli errori asincroni di eventi e timer per evitare rifiuti inutili del database.\nRestituisce errori strutturati dalle azioni di Device Manager e salva più a lungo, evitando timeout silenziosi.",
+        "es": "Espere a ejecutar operaciones asincrónicas de estado y objeto antes de apagar el adaptador.\nGestione los errores asíncronos y eventos para evitar el rechazo no controlado de la base de datos.\nDevuelve errores estructurados de las acciones de Device Manager y permite guardar estados durante más tiempo, lo que evita tiempos de espera silenciosos",
+        "pl": "Przed wyłączeniem adaptera poczekaj na uruchomienie operacji stanu asynchronicznego i obiektu.\nObsługuj asynchroniczne błędy zdarzeń i timera, aby zapobiec nieobsługiwanym odrzuceniom bazy danych.\nZwraca błędy strukturalne z działań Menedżera urządzeń i pozwala na dłuższe zapisywanie formularzy stanu, zapobiegając cichym przerwom czasowym zaplecza.",
+        "uk": "Зачекайте запуску асинхронних операцій стану та об'єктів перед вимкненням адаптера.\nОбробка помилок асинхронних подій та таймера, щоб запобігти необробленим відхиленням бази даних.\nПовертає структуровані помилки під час дій диспетчера пристроїв і дозволяє довше зберігати стан, запобігаючи тихому тайм-ауту.",
+        "zh-cn": "等待运行异步状态和对象操作，然后再关闭适配器。\n处理异步事件和计时器错误，以防止未处理的数据库拒绝。\n返回设备管理器操作中的结构化错误，并允许更长的状态形式保存时间，从而防止后端静默超时。"
+      },
       "0.0.45": {
         "en": "Rebuild card details on startup, ignore rapid source duplicates, and display sub-second intervals as `<1s`.",
         "de": "Kartendetails beim Start neu erstellen, Quellduplikate ignorieren und Sekundenintervalle als `<1s` anzeigen.",
@@ -80,19 +93,6 @@
         "pl": "Ulepsz sugestie dotyczące wyszukiwania zbiorczego stanu: użyj ponownie skonfigurowanych nazw stanów i urządzeń docelowych obszaru źródłowego, a następnie sugeruj nazwy urządzeń źródłowych lub kanałów bez sztucznych przyrostków nazw globalnych.",
         "uk": "Покращення пропозицій щодо масового пошуку стану: повторно використовуйте налаштовані назви станів та цільові пристрої вихідної області, а потім пропонуйте назви вихідних пристроїв або каналів без штучних суфіксів глобальних імен.",
         "zh-cn": "改进批量状态搜索建议：重复使用已配置的状态名称和源区域目标设备，然后建议不使用人为的全局名称后缀的源设备或频道名称。"
-      },
-      "0.0.39": {
-        "en": "Restore language-dependent notification templates, quiet-period names, and notification previews in the adapter defaults; migrate built-in English/German values without overwriting custom templates.",
-        "de": "Stellt sprachabhängige Meldevorlagen, Namen und Vorschauen in den Adapterstandards wieder her; migriert englische und deutsche Werte, ohne eigene Vorlagen zu überschreiben.",
-        "ru": "Восстановите в настройках адаптера по умолчанию зависящие от языка шаблоны уведомлений, имена периодов покоя и предварительный просмотр уведомлений; перенесите встроенные значения на английском и немецком языках без перезаписи пользовательских шаблонов.",
-        "pt": "Restaure modelos de notificação dependentes do idioma, nomes de períodos silenciosos e prévias nos padrões do adaptador; migre valores internos de inglês/alemão sem sobrescrever modelos personalizados.",
-        "nl": "Zet taalafhankelijke meldingssjablonen, namen van stille perioden en voorvertoningen van meldingen terug in de standaardinstellingen van de adapter; migreer ingebouwde Engelse/Duitse waarden zonder aangepaste sjablonen te overschrijven.",
-        "fr": "Restaurez les modèles de notifications selon la langue, les noms des périodes calmes et l'aperçu des notifications par défaut ; migrez les valeurs anglais/allemand intégrées sans remplacer les modèles personnalisés.",
-        "it": "Ripristina i modelli di notifica, i nomi silenziosi e le anteprime delle notifiche nei valori predefiniti dell'adattatore; migra i valori incorporati inglese/tedesco senza sovrascrivere i modelli personalizzati.",
-        "es": "Restaure las plantillas de notificaciones, los nombres de los períodos de inactividad y las vistas previas de las notificaciones en los valores predeterminados del adaptador; migre los valores integrados del inglés y el alemán sin sobrescribir",
-        "pl": "Przywróć zależne od języka szablony powiadomień, nazwy okresu cichego i podglądy powiadomień w domyślnych ustawieniach adaptera; migruj wbudowane wartości angielskie/niemieckie bez nadpisywania niestandardowych szablonów.",
-        "uk": "Відновити мовно-залежні шаблони сповіщень, імена тихих періодів та попередній перегляд сповіщень у типових налаштуваннях адаптера; перенести вбудовані значення англійської/німецької мови без перезапису користувацьких шаблонів.",
-        "zh-cn": "在适配器默认设置中恢复与语言相关的通知模板、静默时段名称和通知预览；在不覆盖自定义模板的情况下迁移内置的英语/德语值。"
       }
     },
     "titleLang": {
