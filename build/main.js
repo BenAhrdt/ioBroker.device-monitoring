@@ -2234,6 +2234,9 @@ class DeviceMonitoring extends utils.Adapter {
   notificationLevelSubscriptions = /* @__PURE__ */ new Set();
   invalidSources = /* @__PURE__ */ new Set();
   sourceUnits = /* @__PURE__ */ new Map();
+  sourceStates = /* @__PURE__ */ new Map();
+  monitoringDataCache = /* @__PURE__ */ new Map();
+  deviceInfoCache = /* @__PURE__ */ new Map();
   updateHistoryQueues = /* @__PURE__ */ new Map();
   lastSourceUpdates = /* @__PURE__ */ new Map();
   notificationStatuses = /* @__PURE__ */ new Map();
@@ -2588,6 +2591,7 @@ class DeviceMonitoring extends utils.Adapter {
     if (!state) {
       return;
     }
+    this.sourceStates.set(id, state);
     const notificationLevelStateId = this.getNotificationLevelStateRelativeId(id);
     if (notificationLevelStateId) {
       if (state.ack === false && isNotificationLevelValue(state.val)) {
@@ -2611,7 +2615,7 @@ class DeviceMonitoring extends utils.Adapter {
       }
     }
     if (affectedDevices.size) {
-      await this.updateDeviceInfo();
+      await this.updateDeviceInfo(affectedDevices);
     }
   }
   getNotificationLevelStateRelativeId(id) {
@@ -2662,6 +2666,7 @@ class DeviceMonitoring extends utils.Adapter {
             await this.getSourceUnit(id)
           );
           const state = await this.getForeignStateAsync(id);
+          this.sourceStates.set(id, state || null);
           await this.updateValue(device, watched, state);
           affectedDevices.add(device.id);
         }
@@ -2674,7 +2679,7 @@ class DeviceMonitoring extends utils.Adapter {
       }
     }
     if (affectedDevices.size) {
-      await this.updateDeviceInfo();
+      await this.updateDeviceInfo(affectedDevices);
       await ((_b = this.deviceManagement) == null ? void 0 : _b.refreshCards());
     }
   }
@@ -2779,7 +2784,6 @@ class DeviceMonitoring extends utils.Adapter {
     await this.saveDevices(this.devices.map((d) => d.id === id ? { ...d, name: name.trim() } : d));
   }
   async removeDevice(id) {
-    await this.delObjectAsync(`devices.${id}`, { recursive: true });
     await this.saveDevices(this.devices.filter((d) => d.id !== id));
   }
   async addWatchedState(deviceId, data) {
@@ -2787,6 +2791,7 @@ class DeviceMonitoring extends utils.Adapter {
     if (!device) {
       return;
     }
+    const previousDevices = structuredClone(this.devices);
     const usedIds = /* @__PURE__ */ new Set([DEVICE_CARD_DETAILS_ID, ...device.states.map((s) => s.id)]);
     const id = uniqueId(safeId(String(data.name), "state"), usedIds);
     this.saveFunctionTemplate(data);
@@ -2794,7 +2799,8 @@ class DeviceMonitoring extends utils.Adapter {
       this.devices.map(
         (d) => d.id === deviceId ? { ...d, states: [...d.states, this.normalizeState(data, id)] } : d
       ),
-      false
+      false,
+      previousDevices
     );
   }
   async addWatchedStates(deviceId, entries) {
@@ -2802,6 +2808,7 @@ class DeviceMonitoring extends utils.Adapter {
     if (!device || !entries.length) {
       return;
     }
+    const previousDevices = structuredClone(this.devices);
     const usedIds = /* @__PURE__ */ new Set([DEVICE_CARD_DETAILS_ID, ...device.states.map((state) => state.id)]);
     const states = entries.map((entry) => {
       const id = uniqueId(safeId(String(entry.name), "state"), usedIds);
@@ -2813,10 +2820,12 @@ class DeviceMonitoring extends utils.Adapter {
       this.devices.map(
         (current) => current.id === deviceId ? { ...current, states: [...current.states, ...states] } : current
       ),
-      false
+      false,
+      previousDevices
     );
   }
   async updateWatchedState(deviceId, stateId, data) {
+    const previousDevices = structuredClone(this.devices);
     this.saveFunctionTemplate(data);
     await this.saveDevices(
       this.devices.map(
@@ -2826,7 +2835,9 @@ class DeviceMonitoring extends utils.Adapter {
             (state) => state.id === stateId ? this.normalizeState(data, stateId) : state
           )
         } : d
-      )
+      ),
+      true,
+      previousDevices
     );
   }
   async replaceWatchedStates(deviceId, data) {
@@ -2834,6 +2845,7 @@ class DeviceMonitoring extends utils.Adapter {
     if (!device) {
       return;
     }
+    const previousDevices = structuredClone(this.devices);
     for (const watched of device.states) {
       this.saveFunctionTemplate(data[watched.id]);
     }
@@ -2853,11 +2865,11 @@ class DeviceMonitoring extends utils.Adapter {
     });
     await this.saveDevices(
       this.devices.map((entry) => entry.id === deviceId ? { ...entry, states } : entry),
-      false
+      false,
+      previousDevices
     );
   }
   async removeWatchedState(deviceId, stateId) {
-    await this.delObjectAsync(`devices.${deviceId}.${stateId}`, { recursive: true });
     await this.saveDevices(
       this.devices.map((d) => d.id === deviceId ? { ...d, states: d.states.filter((s) => s.id !== stateId) } : d)
     );
@@ -2944,7 +2956,63 @@ class DeviceMonitoring extends utils.Adapter {
       };
     });
   }
-  async saveDevices(devices, refreshCards = true) {
+  configurationRequiresFullObjectRebuild(previousDevices, nextDevices) {
+    const previousById = new Map(previousDevices.map((device) => [device.id, device]));
+    for (const device of nextDevices) {
+      const previous = previousById.get(device.id);
+      if (!previous) {
+        return true;
+      }
+      const previousStates = new Map(previous.states.map((state) => [state.id, state]));
+      for (const state of device.states) {
+        const previousState = previousStates.get(state.id);
+        if (!previousState || state.sourceId !== previousState.sourceId) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  async synchronizeChangedObjects(previousDevices, nextDevices) {
+    const previousById = new Map(previousDevices.map((device) => [device.id, device]));
+    const nextById = new Map(nextDevices.map((device) => [device.id, device]));
+    for (const previous of previousDevices) {
+      if (!nextById.has(previous.id)) {
+        await this.delObjectAsync(`devices.${previous.id}`, { recursive: true });
+      }
+    }
+    for (const device of nextDevices) {
+      const previous = previousById.get(device.id);
+      if (!previous) {
+        continue;
+      }
+      if (previous.name !== device.name) {
+        await this.setObjectAsync(`devices.${device.id}`, {
+          type: "device",
+          common: { name: device.name },
+          native: {}
+        });
+      }
+      const previousStates = new Map(previous.states.map((state) => [state.id, state]));
+      const nextStates = new Map(device.states.map((state) => [state.id, state]));
+      for (const previousState of previous.states) {
+        if (!nextStates.has(previousState.id)) {
+          await this.delObjectAsync(`devices.${device.id}.${previousState.id}`, { recursive: true });
+        }
+      }
+      for (const state of device.states) {
+        const previousState = previousStates.get(state.id);
+        if (previousState && (previousState.name !== state.name || previousState.function !== state.function)) {
+          await this.setObjectAsync(`devices.${device.id}.${state.id}`, {
+            type: "channel",
+            common: { name: state.name },
+            native: { sourceId: state.sourceId, function: state.function }
+          });
+        }
+      }
+    }
+  }
+  async saveDevices(devices, refreshCards = true, previousDevices = this.devices) {
     var _a;
     this.devices = devices;
     const activeLimitKeys = new Set(
@@ -2966,6 +3034,11 @@ class DeviceMonitoring extends utils.Adapter {
         this.lastSourceUpdates.delete(key);
       }
     }
+    for (const key of this.monitoringDataCache.keys()) {
+      if (!activeLimitKeys.has(key)) {
+        this.monitoringDataCache.delete(key);
+      }
+    }
     const activeCardDetails = new Set(
       devices.flatMap((device) => device.states.map((watched) => `${device.id}.${watched.id}`))
     );
@@ -2974,10 +3047,47 @@ class DeviceMonitoring extends utils.Adapter {
         this.cardDetails.delete(key);
       }
     }
-    await this.rebuildObjects();
+    if (this.configurationRequiresFullObjectRebuild(previousDevices, devices)) {
+      await this.rebuildObjects();
+    } else {
+      await this.persistConfiguration();
+      await this.synchronizeChangedObjects(previousDevices, devices);
+    }
     await this.removeLegacyDeviceConfig();
     await this.refreshSubscriptions();
-    await this.updateAll();
+    const previousById = new Map(previousDevices.map((device) => [device.id, device]));
+    const affectedDeviceIds = /* @__PURE__ */ new Set();
+    const affectedStateKeys = /* @__PURE__ */ new Set();
+    for (const device of devices) {
+      const previous = previousById.get(device.id);
+      if (!previous) {
+        affectedDeviceIds.add(device.id);
+        for (const state of device.states) {
+          affectedStateKeys.add(`${device.id}.${state.id}`);
+        }
+        continue;
+      }
+      if (previous.name !== device.name) {
+        affectedDeviceIds.add(device.id);
+      }
+      const previousStates = new Map(previous.states.map((state) => [state.id, state]));
+      for (const state of device.states) {
+        const previousState = previousStates.get(state.id);
+        if (!previousState || JSON.stringify(previousState) !== JSON.stringify(state)) {
+          affectedDeviceIds.add(device.id);
+          affectedStateKeys.add(`${device.id}.${state.id}`);
+        }
+      }
+    }
+    for (const previous of previousDevices) {
+      if (!devices.some((device) => device.id === previous.id)) {
+        affectedDeviceIds.add(previous.id);
+        for (const state of previous.states) {
+          affectedStateKeys.add(`${previous.id}.${state.id}`);
+        }
+      }
+    }
+    await this.updateAll(affectedDeviceIds, affectedStateKeys);
     if (refreshCards) {
       await ((_a = this.deviceManagement) == null ? void 0 : _a.refreshCards());
     }
@@ -3050,15 +3160,7 @@ class DeviceMonitoring extends utils.Adapter {
   }
   async rebuildObjects() {
     var _a;
-    await this.setObjectAsync("devices", {
-      type: "folder",
-      common: { name: t("Devices", "Ger\xE4te") },
-      native: {
-        devices: this.devices,
-        nextDeviceNumber: this.nextDeviceNumber,
-        functionTemplates: this.functionTemplates
-      }
-    });
+    await this.persistConfiguration();
     const expected = /* @__PURE__ */ new Set();
     for (const device of this.devices) {
       expected.add(device.id);
@@ -3221,6 +3323,17 @@ class DeviceMonitoring extends utils.Adapter {
       }
     }
   }
+  async persistConfiguration() {
+    await this.setObjectAsync("devices", {
+      type: "folder",
+      common: { name: t("Devices", "Ger\xE4te") },
+      native: {
+        devices: this.devices,
+        nextDeviceNumber: this.nextDeviceNumber,
+        functionTemplates: this.functionTemplates
+      }
+    });
+  }
   async loadDevicesFromObjects() {
     var _a, _b, _c;
     const folder = await this.getObjectAsync("devices");
@@ -3327,15 +3440,10 @@ class DeviceMonitoring extends utils.Adapter {
     }
   }
   async refreshSubscriptions() {
-    for (const id of this.subscribed) {
-      this.unsubscribeForeignStates(id);
-      this.unsubscribeForeignObjects(id);
-    }
-    for (const id of this.notificationLevelSubscriptions) {
-      this.unsubscribeStates(id);
-    }
-    this.subscribed = new Set(this.devices.flatMap((d) => d.states.map((s) => s.sourceId)).filter(Boolean));
-    this.notificationLevelSubscriptions = new Set(
+    const previousSubscribed = this.subscribed;
+    const nextSubscribed = new Set(this.devices.flatMap((d) => d.states.map((s) => s.sourceId)).filter(Boolean));
+    const previousNotificationLevelSubscriptions = this.notificationLevelSubscriptions;
+    const nextNotificationLevelSubscriptions = new Set(
       this.devices.flatMap(
         (device) => device.states.flatMap(
           (watched) => Object.keys(NOTIFICATION_LEVEL_STATE_NAMES).map(
@@ -3344,14 +3452,36 @@ class DeviceMonitoring extends utils.Adapter {
         )
       )
     );
-    for (const id of this.subscribed) {
+    for (const id of previousSubscribed) {
+      if (!nextSubscribed.has(id)) {
+        this.unsubscribeForeignStates(id);
+        this.unsubscribeForeignObjects(id);
+        this.sourceStates.delete(id);
+        this.sourceUnits.delete(id);
+        this.invalidSources.delete(id);
+      }
+    }
+    for (const id of nextSubscribed) {
+      if (previousSubscribed.has(id)) {
+        continue;
+      }
       this.subscribeForeignStates(id);
       this.subscribeForeignObjects(id);
     }
-    for (const id of this.notificationLevelSubscriptions) {
+    for (const id of previousNotificationLevelSubscriptions) {
+      if (!nextNotificationLevelSubscriptions.has(id)) {
+        this.unsubscribeStates(id);
+      }
+    }
+    for (const id of nextNotificationLevelSubscriptions) {
+      if (previousNotificationLevelSubscriptions.has(id)) {
+        continue;
+      }
       this.subscribeStates(id);
     }
-    await this.refreshSourceValidity();
+    this.subscribed = nextSubscribed;
+    this.notificationLevelSubscriptions = nextNotificationLevelSubscriptions;
+    await this.refreshSourceValidity(new Set([...nextSubscribed].filter((id) => !previousSubscribed.has(id))));
   }
   async getValidSourceTypes() {
     const objects = await this.getForeignObjectsAsync("*", "state");
@@ -3365,12 +3495,12 @@ class DeviceMonitoring extends utils.Adapter {
   async getValidSourceIds() {
     return Object.keys(await this.getValidSourceTypes());
   }
-  async refreshSourceValidity() {
-    this.invalidSources.clear();
-    this.sourceUnits.clear();
+  async refreshSourceValidity(sourceIds = this.subscribed) {
     await Promise.all(
-      [...this.subscribed].map(async (id) => {
+      [...sourceIds].map(async (id) => {
         var _a;
+        this.invalidSources.delete(id);
+        this.sourceUnits.delete(id);
         const object = await this.getForeignObjectAsync(id);
         if (object) {
           this.sourceUnits.set(
@@ -3382,6 +3512,14 @@ class DeviceMonitoring extends utils.Adapter {
         }
       })
     );
+  }
+  async getCurrentSourceState(sourceId) {
+    if (this.sourceStates.has(sourceId)) {
+      return this.sourceStates.get(sourceId) || null;
+    }
+    const state = await this.getForeignStateAsync(sourceId);
+    this.sourceStates.set(sourceId, state || null);
+    return state || null;
   }
   parseLimitActivationState(value) {
     if (typeof value !== "string" || !value.trim()) {
@@ -3432,6 +3570,10 @@ class DeviceMonitoring extends utils.Adapter {
   }
   async readMonitoringData(base, sourceId) {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i;
+    const cached = this.monitoringDataCache.get(base);
+    if (cached) {
+      return cached;
+    }
     const [
       currentValue,
       bundledValue,
@@ -3472,7 +3614,7 @@ class DeviceMonitoring extends utils.Adapter {
       this.getStateAsync(`${base}.data.limitViolation`)
     ]);
     if (status || bundledStatus) {
-      return {
+      const data2 = {
         sourceId: typeof (source == null ? void 0 : source.val) === "string" ? source.val : sourceId,
         value: (_a = currentValue == null ? void 0 : currentValue.val) != null ? _a : bundledValue == null ? void 0 : bundledValue.val,
         status: typeof ((_b = status != null ? status : bundledStatus) == null ? void 0 : _b.val) === "string" ? (_c = status != null ? status : bundledStatus) == null ? void 0 : _c.val : void 0,
@@ -3487,13 +3629,15 @@ class DeviceMonitoring extends utils.Adapter {
         valueHistory: (0, import_update_history.parseValueHistory)(valueHistory == null ? void 0 : valueHistory.val),
         limitViolation: this.parseLimitActivationState(limitViolation == null ? void 0 : limitViolation.val)
       };
+      this.monitoringDataCache.set(base, data2);
+      return data2;
     }
     const legacy = await Promise.all(LEGACY_RUNTIME_STATE_IDS.map((id) => this.getStateAsync(`${base}.${id}`)));
     const value = (id) => {
       var _a2;
       return (_a2 = legacy[LEGACY_RUNTIME_STATE_IDS.indexOf(id)]) == null ? void 0 : _a2.val;
     };
-    return {
+    const data = {
       sourceId: typeof value("updateHistorySource") === "string" ? String(value("updateHistorySource")) : void 0,
       value: value("value"),
       status: typeof value("status") === "string" ? value("status") : void 0,
@@ -3507,6 +3651,8 @@ class DeviceMonitoring extends utils.Adapter {
       updateHistory: (0, import_update_history.parseUpdateHistory)(value("updateHistory")),
       valueHistory: []
     };
+    this.monitoringDataCache.set(base, data);
+    return data;
   }
   async removeLegacyRuntimeStates() {
     if (this.legacyRuntimeStatesRemoved) {
@@ -3534,17 +3680,22 @@ class DeviceMonitoring extends utils.Adapter {
     }
     this.legacyRuntimeStatesRemoved = true;
   }
-  async updateAll() {
-    for (const device of this.devices) {
-      for (const watched of device.states) {
-        const state = await this.getForeignStateAsync(watched.sourceId);
+  async updateAll(affectedDeviceIds, affectedStateKeys) {
+    const devices = affectedDeviceIds === void 0 ? this.devices : this.devices.filter((device) => affectedDeviceIds.has(device.id));
+    for (const device of devices) {
+      const states = affectedStateKeys === void 0 ? device.states : device.states.filter((watched) => affectedStateKeys.has(`${device.id}.${watched.id}`));
+      for (const watched of states) {
+        const state = affectedDeviceIds === void 0 ? await this.getForeignStateAsync(watched.sourceId) : await this.getCurrentSourceState(watched.sourceId);
+        this.sourceStates.set(watched.sourceId, state || null);
         await this.updateValue(device, watched, state, true);
       }
       await this.updateDeviceSummary(device);
       await this.updateDeviceCardDetails(device);
     }
-    await this.updateDeviceInfo();
-    await this.removeLegacyRuntimeStates();
+    await this.updateDeviceInfo(affectedDeviceIds);
+    if (affectedDeviceIds === void 0) {
+      await this.removeLegacyRuntimeStates();
+    }
   }
   scheduleSummaryReminder() {
     if (this.summaryReminderJob) {
@@ -3908,35 +4059,50 @@ ${event.message}` : event.message;
     this.messageWriteQueue = write;
     await write;
   }
-  async updateDeviceInfo() {
+  async updateDeviceInfo(affectedDeviceIds) {
     const devices = await Promise.all(
       this.devices.map(async (device) => {
-        const states = await Promise.all(
-          device.states.map(async (watched) => {
-            const sourceState = await this.getForeignStateAsync(watched.sourceId);
-            const updateTimeout = (0, import_evaluation.isUpdateTimedOut)(sourceState, watched.staleWarning);
-            const status = this.getWatchedStatus(
-              watched,
-              sourceState,
-              updateTimeout,
-              `${device.id}.${watched.id}`
-            );
-            return {
-              id: watched.id,
-              name: watched.name,
-              sourceId: watched.sourceId,
-              function: watched.function,
-              sourceValid: status !== "invalid",
-              status,
-              warning: status === "warning",
-              alarm: status === "alarm",
-              updateTimeout
-            };
-          })
-        );
-        return { id: device.id, name: device.name, status: await this.getDeviceStatus(device), states };
+        const shouldUpdate = affectedDeviceIds === void 0 || affectedDeviceIds.has(device.id) || !this.deviceInfoCache.has(device.id);
+        if (shouldUpdate) {
+          const states = await Promise.all(
+            device.states.map(async (watched) => {
+              const sourceState = await this.getCurrentSourceState(watched.sourceId);
+              const updateTimeout = (0, import_evaluation.isUpdateTimedOut)(sourceState, watched.staleWarning);
+              const status = this.getWatchedStatus(
+                watched,
+                sourceState,
+                updateTimeout,
+                `${device.id}.${watched.id}`
+              );
+              return {
+                id: watched.id,
+                name: watched.name,
+                sourceId: watched.sourceId,
+                function: watched.function,
+                sourceValid: status !== "invalid",
+                status,
+                warning: status === "warning",
+                alarm: status === "alarm",
+                updateTimeout
+              };
+            })
+          );
+          this.deviceInfoCache.set(device.id, {
+            id: device.id,
+            name: device.name,
+            status: await this.getDeviceStatus(device),
+            states
+          });
+        }
+        return this.deviceInfoCache.get(device.id);
       })
     );
+    const activeDeviceIds = new Set(this.devices.map((device) => device.id));
+    for (const deviceId of this.deviceInfoCache.keys()) {
+      if (!activeDeviceIds.has(deviceId)) {
+        this.deviceInfoCache.delete(deviceId);
+      }
+    }
     await this.setStateChangedAsync("info.deviceInfo", {
       val: JSON.stringify({ devices }),
       ack: true
@@ -3954,7 +4120,7 @@ ${event.message}` : event.message;
     };
     let status = "ok";
     for (const watched of device.states) {
-      const state = await this.getForeignStateAsync(watched.sourceId);
+      const state = await this.getCurrentSourceState(watched.sourceId);
       const current = this.getWatchedStatus(watched, state, void 0, `${device.id}.${watched.id}`);
       if (rank[current] < rank[status]) {
         status = current;
@@ -4033,9 +4199,10 @@ ${event.message}` : event.message;
       return;
     }
     const sourceState = await this.getForeignStateAsync(watched.sourceId);
+    this.sourceStates.set(watched.sourceId, sourceState || null);
     await this.updateValue(device, watched, sourceState);
     await this.updateDeviceSummary(device);
-    await this.updateDeviceInfo();
+    await this.updateDeviceInfo(/* @__PURE__ */ new Set([device.id]));
   }
   updateLimitActivationState(key, watched, value, sourceState, previousData, sameSource, sourceChanged, now = Date.now()) {
     var _a;
@@ -4295,13 +4462,11 @@ ${event.message}` : event.message;
       valueHistory,
       limitViolation
     };
-    await Promise.all([
+    const stateWrites = [
       this.setStateChangedAsync(`${base}.status`, { val: data.status, ack: true }),
       this.setStateChangedAsync(`${base}.warning`, { val: data.warning, ack: true }),
       this.setStateChangedAsync(`${base}.alarm`, { val: data.alarm, ack: true }),
       this.setStateChangedAsync(`${base}.updateTimeout`, { val: data.updateTimeout, ack: true }),
-      this.setStateChangedAsync(`${base}.sourceId`, { val: data.sourceId, ack: true }),
-      this.setStateChangedAsync(`${base}.remark`, { val: watched.remark || "", ack: true }),
       this.setStateChangedAsync(`${base}.data.lastUpdate`, { val: data.lastUpdate, ack: true }),
       this.setStateChangedAsync(`${base}.data.previousUpdate`, { val: data.previousUpdate, ack: true }),
       this.setStateChangedAsync(`${base}.data.updateInterval`, { val: data.updateInterval, ack: true }),
@@ -4322,7 +4487,15 @@ ${event.message}` : event.message;
         val: JSON.stringify(limitViolation),
         ack: true
       })
-    ]);
+    ];
+    if (forceRefresh || !sameSource || previousData.sourceId !== watched.sourceId) {
+      stateWrites.push(
+        this.setStateChangedAsync(`${base}.sourceId`, { val: data.sourceId, ack: true }),
+        this.setStateChangedAsync(`${base}.remark`, { val: watched.remark || "", ack: true })
+      );
+    }
+    await Promise.all(stateWrites);
+    this.monitoringDataCache.set(base, data);
     this.resetUpdateHistories.delete(base);
     await this.notifyStatusTransition(
       device,

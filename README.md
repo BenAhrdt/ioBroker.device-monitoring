@@ -140,6 +140,9 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Limit configuration rebuilds and monitoring refreshes to affected devices and states to reduce database and Device Manager load.
+
 ### 0.0.46 (2026-10-29)
 * (BenAhrdt) Wait for running asynchronous state and object operations before adapter shutdown.
 * (BenAhrdt) Handle asynchronous event and timer errors to prevent unhandled database rejections.
