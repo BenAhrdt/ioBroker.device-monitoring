@@ -1068,6 +1068,25 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 	public async refreshCards(): Promise<void> {
 		await this.sendCommandToGui({ command: 'all' });
 	}
+	private safeActionHandler<TArgs extends unknown[], TResult>(
+		actionId: string,
+		handler: (...args: TArgs) => Promise<TResult>,
+	): (...args: TArgs) => Promise<TResult | { error: { code: number; message: string } }> {
+		return async (...args: TArgs): Promise<TResult | { error: { code: number; message: string } }> => {
+			try {
+				return await handler(...args);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				this.log.error(`Device Manager action ${actionId} failed: ${message}`);
+				return {
+					error: {
+						code: 500,
+						message,
+					},
+				};
+			}
+		};
+	}
 	protected getInstanceInfo(): any {
 		return {
 			apiVersion: 'v3',
@@ -1079,7 +1098,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 					title: t('+ Add device', '+ Gerät hinzufügen'),
 					variant: 'contained',
 					style: { backgroundColor: '#455a64', color: '#fff' },
-					handler: async (context: any) => {
+					handler: this.safeActionHandler('addDevice', async (context: any) => {
 						const data = await context.showForm(deviceForm(), {
 							title: t('Add device', 'Gerät hinzufügen'),
 							data: { name: '' },
@@ -1090,7 +1109,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 						}
 						await this.adapter.addDevice(String(data.name));
 						return { refresh: true };
-					},
+					}),
 				},
 				{
 					id: 'addStatesByFilter',
@@ -1098,7 +1117,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 					title: t('Search and add states', 'States suchen & hinzufügen'),
 					variant: 'contained',
 					style: { backgroundColor: '#455a64', color: '#fff', marginLeft: '8px' },
-					handler: async (context: any) => {
+					handler: this.safeActionHandler('addStatesByFilter', async (context: any) => {
 						const candidates = await this.adapter.getStateCandidates();
 						const filter = await context.showForm(stateSearchForm(candidates), {
 							title: t('Search states', 'States suchen'),
@@ -1306,7 +1325,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 						const update = this.updatedDeviceInfo(targetId);
 						await this.sendCommandToGui({ command: 'infoUpdate', deviceId: targetId, info: update });
 						return { update };
-					},
+					}),
 				},
 			],
 		};
@@ -1324,7 +1343,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				id: 'addState',
 				icon: 'add',
 				description: t('Add monitored state', 'Überwachungs-State hinzufügen'),
-				handler: async (_id: string, context: any) => {
+				handler: this.safeActionHandler('addState', async (_id: string, context: any) => {
 					const sourceTypes = await this.adapter.getValidSourceTypes();
 					const validSourceIds = Object.keys(sourceTypes);
 					const data = await context.showForm(
@@ -1351,15 +1370,16 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 					// only reconcile existing card items on an action response.
 					await this.sendCommandToGui({ command: 'infoUpdate', deviceId: device.id, info: update });
 					return { update };
-				},
+				}),
 			},
 		];
 		if (device.states.length) {
 			actions.push({
 				id: 'editStates',
 				icon: 'settings',
+				timeout: 120_000,
 				description: t('Edit monitored states', 'Überwachungs-States bearbeiten'),
-				handler: async (_deviceId: string, context: any) => {
+				handler: this.safeActionHandler('editStates', async (_deviceId: string, context: any) => {
 					const sourceTypes = await this.adapter.getValidSourceTypes();
 					const validSourceIds = Object.keys(sourceTypes);
 					const formData = {
@@ -1396,7 +1416,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 					}
 					await this.adapter.replaceWatchedStates(device.id, data);
 					return { update: this.updatedDeviceInfo(device.id) };
-				},
+				}),
 			});
 		}
 		actions.push(
@@ -1404,7 +1424,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				id: 'rename',
 				icon: 'edit',
 				description: t('Rename device', 'Gerät umbenennen'),
-				handler: async (_id: string, context: any) => {
+				handler: this.safeActionHandler('rename', async (_id: string, context: any) => {
 					const data = await context.showForm(deviceForm(), {
 						title: t('Rename device', 'Gerät umbenennen'),
 						data: { name: device.name },
@@ -1415,7 +1435,7 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 					}
 					await this.adapter.renameDevice(device.id, String(data.name));
 					return { refresh: 'devices' };
-				},
+				}),
 			},
 			{
 				id: 'delete',
@@ -1423,10 +1443,10 @@ class DeviceMonitoringManagement extends DeviceManagement<DeviceMonitoring, stri
 				color: 'secondary',
 				description: t('Delete device', 'Gerät löschen'),
 				confirmation: t('Delete this device?', 'Dieses Gerät löschen?'),
-				handler: async () => {
+				handler: this.safeActionHandler('delete', async () => {
 					await this.adapter.removeDevice(device.id);
 					return { refresh: 'devices' };
-				},
+				}),
 			},
 		);
 		return {
@@ -2498,13 +2518,22 @@ class DeviceMonitoring extends utils.Adapter {
 	private notificationCollectionSummaryEnabledForActive = true;
 	private notificationCollectionStateWriteQueue: Promise<void> = Promise.resolve();
 	private bulkSelectionSessions = new Map<string, any>();
+	private unloading = false;
+	private pendingEventOperations = new Set<Promise<void>>();
 	public constructor(options: Partial<utils.AdapterOptions> = {}) {
 		super({ ...options, name: 'device-monitoring' });
-		this.on('ready', this.onReady.bind(this));
-		this.on('stateChange', this.onStateChange.bind(this));
-		this.on('objectChange', this.onObjectChange.bind(this));
-		this.on('message', this.onMessage.bind(this));
+		this.on('ready', () => this.trackEventOperation('startup', () => this.onReady()));
+		this.on('stateChange', (id, state) =>
+			this.trackEventOperation(`state change for ${id}`, () => this.onStateChange(id, state)),
+		);
+		this.on('objectChange', (id, object) =>
+			this.trackEventOperation(`object change for ${id}`, () => this.onObjectChange(id, object)),
+		);
+		this.on('message', message =>
+			this.trackEventOperation(`message ${message.command}`, () => this.onMessage(message)),
+		);
 		this.on('unload', callback => {
+			this.unloading = true;
 			if (this.sortRefreshTimer) {
 				this.clearInterval(this.sortRefreshTimer);
 			}
@@ -2530,10 +2559,52 @@ class DeviceMonitoring extends utils.Adapter {
 				this.clearTimeout(timer);
 			}
 			this.limitActivationTimers.clear();
-			callback();
+			const pendingOperations = [...this.pendingEventOperations];
+			if (!pendingOperations.length) {
+				callback();
+				return;
+			}
+			let callbackCalled = false;
+			const finish = (): void => {
+				if (callbackCalled) {
+					return;
+				}
+				callbackCalled = true;
+				callback();
+			};
+			const timeout = setTimeout(finish, 5_000);
+			void Promise.allSettled(pendingOperations).then(() => {
+				clearTimeout(timeout);
+				finish();
+			});
 		});
 	}
+	private trackEventOperation(operation: string, task: () => Promise<void>): void {
+		if (this.unloading) {
+			return;
+		}
+		let promise: Promise<void>;
+		try {
+			promise = task();
+		} catch (error) {
+			if (!this.unloading) {
+				this.log.error(`${operation} failed: ${String(error)}`);
+			}
+			return;
+		}
+		this.pendingEventOperations.add(promise);
+		void promise
+			.catch(error => {
+				if (!this.unloading) {
+					this.log.error(`${operation} failed: ${String(error)}`);
+				}
+			})
+			.finally(() => this.pendingEventOperations.delete(promise));
+	}
 	private async onReady(): Promise<void> {
+		if (this.unloading) {
+			return;
+		}
 		const systemConfig = await this.getForeignObjectAsync('system.config');
 		const configuredLanguage = systemConfig?.common?.language;
 		this.displayLanguage = isSupportedLanguage(configuredLanguage) ? configuredLanguage : 'en';
@@ -2573,10 +2644,13 @@ class DeviceMonitoring extends utils.Adapter {
 		await this.updateAll();
 		await this.setState('info.connection', true, true);
 		this.sortRefreshTimer = this.setInterval(() => {
-			void this.deviceManagement?.refreshCards();
+			this.trackEventOperation(
+				'refreshing device manager cards',
+				() => this.deviceManagement?.refreshCards() || Promise.resolve(),
+			);
 		}, 10_000);
 		this.staleCheckTimer = this.setInterval(() => {
-			void this.updateAll();
+			this.trackEventOperation('updating monitoring data', () => this.updateAll());
 		}, 60_000);
 		this.scheduleSummaryReminder();
 		this.scheduleConfigurationBackup();
@@ -2726,6 +2800,9 @@ class DeviceMonitoring extends utils.Adapter {
 		}
 	}
 	private async onMessage(message: ioBroker.Message): Promise<void> {
+		if (this.unloading) {
+			return;
+		}
 		if (message.command === 'bulkStateSelection') {
 			try {
 				const request =
@@ -2774,6 +2851,9 @@ class DeviceMonitoring extends utils.Adapter {
 		}
 	}
 	private async onStateChange(id: string, state: ioBroker.State | null | undefined): Promise<void> {
+		if (this.unloading) {
+			return;
+		}
 		if (!state) {
 			return;
 		}
@@ -2821,6 +2901,9 @@ class DeviceMonitoring extends utils.Adapter {
 		return undefined;
 	}
 	private async onObjectChange(id: string, object: ioBroker.Object | null | undefined): Promise<void> {
+		if (this.unloading) {
+			return;
+		}
 		if (!this.subscribed.has(id)) {
 			return;
 		}

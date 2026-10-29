@@ -140,6 +140,11 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Wait for running asynchronous state and object operations before adapter shutdown.
+* (BenAhrdt) Handle asynchronous event and timer errors to prevent unhandled database rejections.
+* (BenAhrdt) Return structured errors from Device Manager actions and allow longer state-form saves, preventing silent backend timeouts.
+
 ### 0.0.45 (2026-10-14)
 * (BenAhrdt) Rebuild card details on startup, ignore rapid source duplicates, and display sub-second intervals as `<1s`.
 
