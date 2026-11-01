@@ -1,4 +1,7 @@
 # Older changelog entries
+## 0.0.43 (2026-10-14)
+* (BenAhrdt) Restore persisted device-card details after adapter restarts when unchanged source events are skipped as acknowledgement duplicates.
+
 ## 0.0.42 (2026-10-14)
 * (BenAhrdt) Also suppress same-value acknowledgement events within one second when the preceding source event is only available in persisted monitoring data.
 

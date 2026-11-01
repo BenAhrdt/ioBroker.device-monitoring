@@ -140,7 +140,7 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
-### **WORK IN PROGRESS**
+### 0.0.48 (2026-11-01)
 * (BenAhrdt) Keep the adapter configuration unchanged when it is only opened and render notification previews instead of their JavaScript expressions.
 
 ### 0.0.47 (2026-10-29)
@@ -156,9 +156,6 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 
 ### 0.0.44 (2026-10-14)
 * (BenAhrdt) Rebuild device-card details during the initial refresh even when the current source event is an already processed acknowledgement duplicate.
-
-### 0.0.43 (2026-10-14)
-* (BenAhrdt) Restore persisted device-card details after adapter restarts when unchanged source events are skipped as acknowledgement duplicates.
 
 [Older changelog entries](CHANGELOG_OLD.md)
 

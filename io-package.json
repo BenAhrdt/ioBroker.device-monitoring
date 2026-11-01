@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "device-monitoring",
-    "version": "0.0.47",
+    "version": "0.0.48",
     "news": {
+      "0.0.48": {
+        "en": "Keep the adapter configuration unchanged when it is only opened and render notification previews instead of their JavaScript expressions.",
+        "de": "Lassen Sie die Adapterkonfiguration unverändert, wenn sie nur geöffnet ist, und geben Sie keine JavaScript-Befehle.",
+        "ru": "Сохраняйте конфигурацию адаптера без изменений, когда он открыт, и вместо выражений JavaScript используйте предварительный просмотр уведомлений.",
+        "pt": "Mantenha a configuração do adaptador inalterada quando ele só é aberto e exiba notificações em vez de expressões JavaScript.",
+        "nl": "Houd de adapterconfiguratie ongewijzigd wanneer deze alleen wordt geopend en geef voorvertoningen van meldingen weer in plaats van hun JavaScript-expressies.",
+        "fr": "Conservez la configuration de l'adaptateur lorsqu'il est ouvert et affiche un aperçu des notifications au lieu de leurs expressions JavaScript.",
+        "it": "Mantieni invariata la configurazione dell'adattatore solo se aperto e visualizza le anteprime delle notifiche",
+        "es": "Mantenga la configuración del adaptador sin cambios cuando solo esté abierto y muestre las notificaciones en lugar de sus expresiones de JavaScript.",
+        "pl": "Zachowaj niezmienioną konfigurację adaptera, gdy tylko jest otwarta, i renderuj podglądy powiadomień zamiast wyrażeń JavaScript.",
+        "uk": "Зберігайте конфігурацію адаптера незмінною, коли вона відкривається, і візуалізуйте попередній перегляд сповіщень замість їхніх виразів JavaScript.",
+        "zh-cn": "仅打开适配器配置并呈现通知预览而不是其 JavaScript 表达式时，保持适配器配置不变。"
+      },
       "0.0.47": {
         "en": "Limit configuration rebuilds and monitoring refreshes to affected devices and states to reduce database and Device Manager load.",
         "de": "Um den Datenbank- und Gerätemanager zu entlasten, beschränken Sie die Konfiguration auf betroffene Geräte und Staaten.",
@@ -80,19 +93,6 @@
         "pl": "Usuń również zdarzenia potwierdzające tę samą wartość w ciągu jednej sekundy, gdy poprzednie zdarzenie źródłowe jest dostępne tylko w trwałych danych monitorowania.",
         "uk": "Також придушуйте події підтвердження того ж значення протягом однієї секунди, коли попередня подія джерела доступна лише у збережених даних моніторингу.",
         "zh-cn": "当前面的源事件仅在持久监控数据中可用时，还可以在一秒钟内抑制相同值的确认事件。"
-      },
-      "0.0.41": {
-        "en": "Ignore same-value acknowledgement duplicates in update intervals; provide the standard functions `value.battery (standard)` (warning below 15, alarm below 10, 15-minute timeout), `indicator.alarm (standard)`, and `indicator.maintenance (standard)`, including role-based defaults for bulk state search. Function templates can be explicitly applied to all assigned monitored states.",
-        "de": "Ignoriere Bestätigungsduplikate mit gleichem Wert in Aktualisierungsintervallen; biete die Standardfunktionen `value.battery (standard) `(Warnung unter 15, Alarm unter 10, 15-Minuten-Timeout), `indicator.alarm (standard)` und `indicator.maintenance (standard) `an, einschließlich rollenbasierter Standardwerte für die Bulk-Statussuche. Funktionsvorlagen gelten explizit für alle überwachten Staaten.",
-        "ru": "Игнорируйте дубликаты подтверждения одинаковых значений в интервалах обновления; используйте стандартные функции value.battery (стандартное) (предупреждение ниже 15, сигнал тревоги ниже 10, тайм-аут 15 минут), indicator.alarm (стандарт) и indicator.maintenance (standard), включая значения по умолчанию на основе ролей для массового поиска состояний. Шаблоны функций можно явно применять ко всем назначенным отслеживаемым состояниям.",
-        "pt": "Ignore confirmações de mesmo valor em intervalos de atualização; forneça as funções padrão `value.battery (standard) `(aviso abaixo de 15, alarme abaixo de 10, tempo limite de 15 minutos), `indicator.alarm (standard)` e `indicator.maintenance (standard) `, incluindo padrões baseados em funções para busca de estado em massa. Os modelos de função podem ser aplicados a todos os estados monitorados.",
-        "nl": "Negeer duplicaten die dezelfde waarde bevestigen tijdens de update-intervallen; zorg voor de standaardfuncties `value.battery (standaard) `(waarschuwing onder de 15, alarm onder de 10, time-out van 15 minuten), `indicator.alarm (standaard)` en `indicator.maintenance (standaard) `, inclusief op rollen gebaseerde standaardinstellingen voor bulkzoekopdrachten naar staten. Functiesjablonen kunnen expliciet worden toegepast op alle toegewezen bewaakte staten.",
-        "fr": "Ignorez les accusés de réception de même valeur lors des mises à jour ; fournissez les fonctions standard « value.battery (standard) » (avertissement inférieur à 15, alarme inférieure à 10, délai d'attente de 15 minutes), « indicator.alarm (standard) » et « indicator.maintenance (standard) », y compris des valeurs par défaut basées sur les rôles pour la recherche d'état en masse. Les modèles de fonctions peuvent être appliqués explicitement à tous les états surveillés.",
-        "it": "Ignori i duplicati di conferma dello stesso valore negli intervalli di aggiornamento; fornisca le funzioni standard `value.battery (standard) `(avviso sotto 15, allarme sotto 10, timeout di 15 minuti), `indicator.alarm (standard)` e `indicator.maintenance (standard) `, incluse le impostazioni predefinite basate sui ruoli per la ricerca di massa. I modelli di funzione si applicano a tutti gli stati monitorati assegnati.",
-        "es": "Ignore los acuses de recibo duplicados del mismo valor en los intervalos de actualización; proporcione las funciones estándar `valor.battery (standard) `(aviso por debajo de 15, alarma por debajo de 10, tiempo de espera de 15 minutos), `indicator.alarm (standard)` e `indicator.maintenance (standard) `, incluidos los valores por defecto para la búsqueda masiva de estados. Las plantillas de funciones se pueden aplicar explícitamente a todos los estados monitorizados.",
-        "pl": "Ignoruj duplikaty potwierdzania tej samej wartości w interwałach aktualizacji; podaj standardowe funkcje „value.battery (standard)” (ostrzeżenie poniżej 15, alarm poniżej 10, limit czasu 15-minutowego), „indicator.alarm (standard)” i „indicator.maintenance (standard)”, w tym domyślne ustawienia oparte na rolach dla wyszukiwania zbiorczego stanu. Szablony funkcji mogą być wyraźnie stosowane do wszystkich przypisanych monitorowanych stanów.",
-        "uk": "Ігнорувати дублікати підтвердження тих самих значень у інтервалах оновлення; надайте стандартні функції `value.battery (standard) `(попередження нижче 15, сигнал тривоги нижче 10, 15-хвилинний тайм-аут), `indicator.alert (стандартний)` та `indicator.maintenance (standard) `, включаючи значення за замовчуванням на основі ролей для масового пошуку стану. Шаблони функцій можуть бути явно застосовані до всіх призначених контрольованих станів.",
-        "zh-cn": "忽略更新间隔内重复的同值确认；提供标准函数 “value.battery（标准）”（警告低于 15，警报低于 10，15 分钟超时）、“indicator.alarm（标准）” 和 “indicator.maintence（标准）”，包括基于角色的批量状态搜索默认值。函数模板可以明确应用于所有分配的监控状态。"
       }
     },
     "titleLang": {
