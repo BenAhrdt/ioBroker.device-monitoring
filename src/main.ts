@@ -2726,11 +2726,13 @@ class DeviceMonitoring extends utils.Adapter {
 					configuredMessage,
 					DEFAULT_MESSAGE_TEMPLATES[type],
 					LEGACY_DEFAULT_MESSAGE_TEMPLATES[type],
-				) &&
-				Object.prototype.hasOwnProperty.call(native, message)
+				)
 			) {
-				delete native[message];
-				changed = true;
+				const localizedDefault = translatedText(DEFAULT_MESSAGE_TEMPLATES[type], this.displayLanguage)!;
+				if (configuredMessage !== localizedDefault) {
+					native[message] = localizedDefault;
+					changed = true;
+				}
 			}
 			const configuredTitle = native[title];
 			if (
@@ -2738,11 +2740,16 @@ class DeviceMonitoring extends utils.Adapter {
 					configuredTitle,
 					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type],
 					LEGACY_DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type],
-				) &&
-				Object.prototype.hasOwnProperty.call(native, title)
+				)
 			) {
-				delete native[title];
-				changed = true;
+				const localizedDefault = translatedText(
+					DEFAULT_NOTIFICATION_TITLE_TEMPLATES[type],
+					this.displayLanguage,
+				)!;
+				if (configuredTitle !== localizedDefault) {
+					native[title] = localizedDefault;
+					changed = true;
+				}
 			}
 		}
 		if (Array.isArray(native.notificationCollectionPeriods)) {
@@ -2769,9 +2776,9 @@ class DeviceMonitoring extends utils.Adapter {
 				}
 				usedPeriodNames.add(resolvedName.toLowerCase());
 				const nextPeriod = { ...period };
-				if (isDefaultName && resolvedName === baseName) {
-					if (Object.prototype.hasOwnProperty.call(nextPeriod, 'name')) {
-						delete nextPeriod.name;
+				if (isDefaultName) {
+					if (period.name !== resolvedName) {
+						nextPeriod.name = resolvedName;
 						periodsChanged = true;
 					}
 				} else if (resolvedName !== baseName && period.name !== resolvedName) {

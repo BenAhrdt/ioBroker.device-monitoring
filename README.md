@@ -140,6 +140,9 @@ Invalid sources and invalid values use the global `invalidResponseTimeSeconds` s
 <!--
 	Placeholder for the next version (at the beginning of the line):	### **WORK IN PROGRESS**
 -->
+### **WORK IN PROGRESS**
+* (BenAhrdt) Keep the adapter configuration unchanged when it is only opened and render notification previews instead of their JavaScript expressions.
+
 ### 0.0.47 (2026-10-29)
 * (BenAhrdt) Limit configuration rebuilds and monitoring refreshes to affected devices and states to reduce database and Device Manager load.
 
