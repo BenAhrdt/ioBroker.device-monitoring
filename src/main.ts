@@ -2575,9 +2575,9 @@ class DeviceMonitoring extends utils.Adapter {
 				callbackCalled = true;
 				callback();
 			};
-			const timeout = setTimeout(finish, 5_000);
+			const timeout = this.setTimeout(finish, 5_000);
 			void Promise.allSettled(pendingOperations).then(() => {
-				clearTimeout(timeout);
+				this.clearTimeout(timeout);
 				finish();
 			});
 		});
